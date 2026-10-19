@@ -1,0 +1,691 @@
+'use client';
+
+import React, { useEffect, useState } from 'react';
+import { useParams, useRouter } from 'next/navigation';
+import Link from 'next/link';
+import { Header } from '../../../components/Header';
+import { StatCard } from '../../../components/StatCard';
+import { fetchApi } from '../../../lib/api';
+import {
+  Button,
+  Badge,
+  Input,
+  Select,
+  Textarea,
+  DatePicker,
+  Modal,
+  Card,
+} from '../../../components/ui';
+import {
+  Handshake,
+  DollarSign,
+  TrendingUp,
+  TrendingDown,
+  Building2,
+  Calendar,
+  Phone,
+  Mail,
+  ArrowLeft,
+  Pencil,
+  Trash2,
+  CheckCircle2,
+  Trophy,
+  FileText,
+} from '../../../components/icons';
+
+export default function SponsorDetailPage() {
+  const params = useParams();
+  const router = useRouter();
+  const id = params?.id as string;
+
+  const [sponsor, setSponsor] = useState<any>(null);
+  const [loading, setLoading] = useState<boolean>(true);
+
+  // Edit Sponsor Modal state
+  const [isEditOpen, setIsEditOpen] = useState<boolean>(false);
+  const [editFormData, setEditFormData] = useState({
+    sponsorName: '',
+    companyName: '',
+    phone: '',
+    email: '',
+    amountInvested: 0,
+    investmentDate: '',
+    contractType: 'general_grant',
+    returnsPaid: 0,
+    returnDate: '',
+    deliverablesAgreed: '',
+    status: 'active',
+    notes: '',
+  });
+
+  // Payout Modal state
+  const [isPayoutOpen, setIsPayoutOpen] = useState<boolean>(false);
+  const [payoutAmount, setPayoutAmount] = useState<number>(0);
+  const [payoutNotes, setPayoutNotes] = useState<string>('');
+
+  const loadSponsor = () => {
+    if (!id) return;
+    setLoading(true);
+    fetchApi<{ success: boolean; sponsor: any }>(`/sponsors/${id}`)
+      .then((res) => {
+        if (res.success) {
+          setSponsor(res.sponsor);
+          const s = res.sponsor;
+          setEditFormData({
+            sponsorName: s.sponsorName || '',
+            companyName: s.companyName || '',
+            phone: s.phone || '',
+            email: s.email || '',
+            amountInvested: s.amountInvested || 0,
+            investmentDate: s.investmentDate
+              ? new Date(s.investmentDate).toISOString().split('T')[0]
+              : '',
+            contractType: s.contractType || 'general_grant',
+            returnsPaid: s.returnsPaid || 0,
+            returnDate: s.returnDate ? new Date(s.returnDate).toISOString().split('T')[0] : '',
+            deliverablesAgreed: s.deliverablesAgreed || '',
+            status: s.status || 'active',
+            notes: s.notes || '',
+          });
+        }
+      })
+      .catch((err) => console.error(err))
+      .finally(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    loadSponsor();
+  }, [id]);
+
+  const handleUpdateSponsor = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const res = await fetchApi<{ success: boolean }>(`/sponsors/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(editFormData),
+      });
+      if (res.success) {
+        setIsEditOpen(false);
+        loadSponsor();
+      }
+    } catch (err) {
+      alert('Failed to update sponsor');
+    }
+  };
+
+  const handleRecordPayout = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!payoutAmount || payoutAmount <= 0) {
+      alert('Please enter a valid payout amount');
+      return;
+    }
+
+    const currentReturns = sponsor.returnsPaid || 0;
+    const newTotal = currentReturns + Number(payoutAmount);
+
+    try {
+      const res = await fetchApi<{ success: boolean }>(`/sponsors/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify({
+          returnsPaid: newTotal,
+          returnDate: new Date().toISOString(),
+          notes: payoutNotes
+            ? `${sponsor.notes ? sponsor.notes + ' | ' : ''}Payout Rs. ${payoutAmount}: ${payoutNotes}`
+            : sponsor.notes,
+        }),
+      });
+      if (res.success) {
+        setIsPayoutOpen(false);
+        setPayoutAmount(0);
+        setPayoutNotes('');
+        loadSponsor();
+      }
+    } catch (err) {
+      alert('Failed to record payout');
+    }
+  };
+
+  const handleDeleteSponsor = async () => {
+    if (!confirm(`Are you sure you want to delete sponsor "${sponsor?.sponsorName}"?`)) return;
+    try {
+      const res = await fetchApi<{ success: boolean }>(`/sponsors/${id}`, { method: 'DELETE' });
+      if (res.success) {
+        router.push('/sponsors');
+      }
+    } catch (err) {
+      alert('Failed to delete sponsor');
+    }
+  };
+
+  const fNum = (val: number | undefined) => (val || 0).toLocaleString('en-US');
+
+  if (loading) {
+    return (
+      <div style={{ padding: '60px', textAlign: 'center', color: 'var(--text-secondary)' }}>
+        Loading Sponsor Profile...
+      </div>
+    );
+  }
+
+  if (!sponsor) {
+    return (
+      <div style={{ padding: '60px', textAlign: 'center', color: 'var(--accent-rose)' }}>
+        Sponsor not found. <Link href="/sponsors">Back to Sponsors</Link>
+      </div>
+    );
+  }
+
+  const invested = sponsor.amountInvested || 0;
+  const returned = sponsor.returnsPaid || 0;
+  const netRetained = invested - returned;
+  const retainedPct = invested > 0 ? Math.round((netRetained / invested) * 100) : 0;
+
+  return (
+    <>
+      <Header
+        title={`${sponsor.sponsorName} - Profile`}
+        subtitle="Sponsor Investment Profile, Contract Terms & Return Payout Ledger"
+      />
+
+      <div className="content-body">
+        {/* Navigation & Actions */}
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            marginBottom: '20px',
+          }}
+        >
+          <Link href="/sponsors" passHref legacyBehavior>
+            <Button variant="secondary" size="sm" icon={<ArrowLeft size={14} />}>
+              Back to All Sponsors
+            </Button>
+          </Link>
+
+          <div className="action-group">
+            <Button
+              variant="primary"
+              size="sm"
+              icon={<DollarSign size={13} />}
+              onClick={() => setIsPayoutOpen(true)}
+            >
+              Record Return Payout
+            </Button>
+            <Button
+              variant="secondary"
+              size="sm"
+              icon={<Pencil size={13} color="var(--accent-blue)" />}
+              onClick={() => setIsEditOpen(true)}
+            >
+              Edit Sponsor
+            </Button>
+            <Button
+              variant="danger"
+              size="sm"
+              icon={<Trash2 size={13} />}
+              onClick={handleDeleteSponsor}
+            >
+              Delete
+            </Button>
+          </div>
+        </div>
+
+        {/* Hero Card */}
+        <Card style={{ marginBottom: '24px' }}>
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'flex-start',
+              flexWrap: 'wrap',
+              gap: '16px',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '18px' }}>
+              <div
+                style={{
+                  width: '68px',
+                  height: '68px',
+                  borderRadius: '16px',
+                  background: 'linear-gradient(135deg, #059669, #0284c7)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '28px',
+                  fontWeight: 900,
+                  color: '#fff',
+                  boxShadow: '0 8px 20px rgba(5, 150, 105, 0.25)',
+                }}
+              >
+                🤝
+              </div>
+
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+                  <Badge variant="purple">
+                    {sponsor.contractType
+                      ? sponsor.contractType.replace(/_/g, ' ').toUpperCase()
+                      : 'GENERAL GRANT'}
+                  </Badge>
+                  <Badge
+                    variant={
+                      sponsor.status === 'active'
+                        ? 'success'
+                        : sponsor.status === 'fulfilled'
+                        ? 'primary'
+                        : 'secondary'
+                    }
+                  >
+                    {sponsor.status ? sponsor.status.toUpperCase() : 'ACTIVE'}
+                  </Badge>
+                  {sponsor.companyName && (
+                    <Badge variant="secondary" icon={<Building2 size={11} />}>
+                      {sponsor.companyName}
+                    </Badge>
+                  )}
+                </div>
+
+                <h1
+                  style={{
+                    fontSize: '26px',
+                    fontWeight: 800,
+                    color: 'var(--text-primary)',
+                    marginBottom: '6px',
+                  }}
+                >
+                  {sponsor.sponsorName}
+                </h1>
+
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '16px',
+                    fontSize: '13px',
+                    color: 'var(--text-secondary)',
+                    flexWrap: 'wrap',
+                  }}
+                >
+                  {sponsor.phone && (
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <Phone size={13} color="var(--accent-blue)" />
+                      {sponsor.phone}
+                    </span>
+                  )}
+                  {sponsor.email && (
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <Mail size={13} />
+                      {sponsor.email}
+                    </span>
+                  )}
+                  <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <Calendar size={13} />
+                    Invested:{' '}
+                    {sponsor.investmentDate
+                      ? new Date(sponsor.investmentDate).toLocaleDateString()
+                      : 'N/A'}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Net Retained Box */}
+            <div style={{ textAlign: 'right' }}>
+              <div style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase' }}>
+                Net Retained Capital
+              </div>
+              <div
+                style={{
+                  fontSize: '28px',
+                  fontWeight: 900,
+                  fontFamily: 'Outfit, sans-serif',
+                  color: 'var(--accent-green)',
+                }}
+              >
+                Rs. {fNum(netRetained)}
+              </div>
+              <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+                {retainedPct}% of Total Inflow Retained
+              </div>
+            </div>
+          </div>
+
+          {/* Linked entities pill bar */}
+          <div
+            style={{
+              marginTop: '16px',
+              padding: '10px 14px',
+              background: '#f8fafc',
+              border: '1px solid var(--border-color)',
+              borderRadius: '8px',
+              fontSize: '13px',
+              color: 'var(--text-secondary)',
+              display: 'flex',
+              gap: '24px',
+              flexWrap: 'wrap',
+              alignItems: 'center',
+            }}
+          >
+            {sponsor.teamId && (
+              <div>
+                Franchise Team:{' '}
+                <Link
+                  href={`/teams/${sponsor.teamId._id}`}
+                  style={{ color: 'var(--text-primary)', fontWeight: 600, textDecoration: 'underline' }}
+                >
+                  {sponsor.teamId.name}
+                </Link>
+              </div>
+            )}
+            {sponsor.tournamentId && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <Trophy size={14} color="var(--accent-blue)" />
+                <span>Sponsored Tournament: </span>
+                <Link
+                  href={`/tournaments/${sponsor.tournamentId._id}`}
+                  style={{
+                    color: 'var(--accent-blue)',
+                    fontWeight: 600,
+                    textDecoration: 'underline',
+                  }}
+                >
+                  {sponsor.tournamentId.name}
+                </Link>
+              </div>
+            )}
+            {sponsor.returnDate && (
+              <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+                Last Payout Date: {new Date(sponsor.returnDate).toLocaleDateString()}
+              </div>
+            )}
+          </div>
+        </Card>
+
+        {/* 4 Stat Cards */}
+        <div className="grid-4" style={{ marginBottom: '24px' }}>
+          <StatCard
+            variant="blue"
+            title="Capital Invested"
+            value={`Rs. ${fNum(invested)}`}
+            subtitle="Sponsorship Grant"
+            icon={<TrendingUp size={20} color="var(--accent-blue)" />}
+          />
+          <StatCard
+            variant="rose"
+            title="Returns Paid Out"
+            value={`Rs. ${fNum(returned)}`}
+            subtitle="From Prize Money / P&L"
+            icon={<TrendingDown size={20} color="var(--accent-rose)" />}
+          />
+          <StatCard
+            variant="emerald"
+            title="Net Retained Funds"
+            value={`Rs. ${fNum(netRetained)}`}
+            subtitle={`${retainedPct}% Retained`}
+            icon={<DollarSign size={20} color="var(--accent-green)" />}
+          />
+          <StatCard
+            variant="purple"
+            title="Contract Status"
+            value={sponsor.status ? sponsor.status.toUpperCase() : 'ACTIVE'}
+            subtitle={sponsor.contractType?.replace(/_/g, ' ') || 'Grant'}
+            icon={<CheckCircle2 size={20} color="var(--accent-purple)" />}
+          />
+        </div>
+
+        {/* 2-Columns: Contract Deliverables & Notes */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+          {/* Deliverables Card */}
+          <Card>
+            <h3
+              style={{
+                fontSize: '16px',
+                fontWeight: 700,
+                color: 'var(--text-primary)',
+                marginBottom: '14px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+              }}
+            >
+              <FileText size={16} color="var(--accent-blue)" />
+              Agreed Deliverables & Visibility
+            </h3>
+
+            <div style={{ fontSize: '14px', lineHeight: '1.6', color: 'var(--text-secondary)' }}>
+              {sponsor.deliverablesAgreed ? (
+                <div
+                  style={{
+                    background: '#f8fafc',
+                    padding: '14px',
+                    borderRadius: '8px',
+                    border: '1px solid var(--border-color)',
+                  }}
+                >
+                  {sponsor.deliverablesAgreed}
+                </div>
+              ) : (
+                <div style={{ padding: '20px', textAlign: 'center', color: 'var(--text-muted)' }}>
+                  No special deliverables or kit branding requirements specified.
+                </div>
+              )}
+            </div>
+          </Card>
+
+          {/* Notes & Payout History */}
+          <Card>
+            <h3
+              style={{
+                fontSize: '16px',
+                fontWeight: 700,
+                color: 'var(--text-primary)',
+                marginBottom: '14px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+              }}
+            >
+              <Handshake size={16} color="var(--accent-purple)" />
+              Sponsorship Ledger & Captain Notes
+            </h3>
+
+            <div style={{ fontSize: '14px', lineHeight: '1.6', color: 'var(--text-secondary)' }}>
+              {sponsor.notes ? (
+                <div
+                  style={{
+                    background: '#f8fafc',
+                    padding: '14px',
+                    borderRadius: '8px',
+                    border: '1px solid var(--border-color)',
+                  }}
+                >
+                  {sponsor.notes}
+                </div>
+              ) : (
+                <div style={{ padding: '20px', textAlign: 'center', color: 'var(--text-muted)' }}>
+                  No internal notes recorded.
+                </div>
+              )}
+            </div>
+          </Card>
+        </div>
+      </div>
+
+      {/* Edit Sponsor Modal */}
+      <Modal
+        isOpen={isEditOpen}
+        onClose={() => setIsEditOpen(false)}
+        title={`Edit Sponsor: ${sponsor.sponsorName}`}
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setIsEditOpen(false)}>
+              Cancel
+            </Button>
+            <Button variant="primary" onClick={handleUpdateSponsor}>
+              Save Sponsor
+            </Button>
+          </>
+        }
+      >
+        <form onSubmit={handleUpdateSponsor}>
+          <div className="grid-2">
+            <Input
+              label="Sponsor Contact Name *"
+              value={editFormData.sponsorName}
+              onChange={(e) => setEditFormData({ ...editFormData, sponsorName: e.target.value })}
+              required
+            />
+            <Input
+              label="Company / Brand Name"
+              value={editFormData.companyName}
+              onChange={(e) => setEditFormData({ ...editFormData, companyName: e.target.value })}
+            />
+          </div>
+
+          <div className="grid-2">
+            <Input
+              label="Phone"
+              value={editFormData.phone}
+              onChange={(e) => setEditFormData({ ...editFormData, phone: e.target.value })}
+            />
+            <Input
+              label="Email"
+              type="email"
+              value={editFormData.email}
+              onChange={(e) => setEditFormData({ ...editFormData, email: e.target.value })}
+            />
+          </div>
+
+          <div className="grid-3">
+            <Input
+              label="Amount Invested (Rs.) *"
+              type="number"
+              value={editFormData.amountInvested}
+              onChange={(e) =>
+                setEditFormData({ ...editFormData, amountInvested: Number(e.target.value) })
+              }
+              required
+            />
+            <Input
+              label="Returns Paid (Rs.)"
+              type="number"
+              value={editFormData.returnsPaid}
+              onChange={(e) =>
+                setEditFormData({ ...editFormData, returnsPaid: Number(e.target.value) })
+              }
+            />
+            <Select
+              label="Status"
+              value={editFormData.status}
+              onChange={(e) => setEditFormData({ ...editFormData, status: e.target.value })}
+              options={[
+                { value: 'active', label: 'Active' },
+                { value: 'fulfilled', label: 'Fulfilled' },
+                { value: 'cancelled', label: 'Cancelled' },
+              ]}
+            />
+          </div>
+
+          <div className="grid-2">
+            <DatePicker
+              label="Investment Date"
+              value={editFormData.investmentDate}
+              onChange={(e) =>
+                setEditFormData({ ...editFormData, investmentDate: e.target.value })
+              }
+            />
+            <Select
+              label="Contract Type"
+              value={editFormData.contractType}
+              onChange={(e) =>
+                setEditFormData({ ...editFormData, contractType: e.target.value })
+              }
+              options={[
+                { value: 'general_grant', label: 'General Grant' },
+                { value: 'kit_sponsor', label: 'Kit & Jersey Sponsor' },
+                { value: 'tournament_exclusive', label: 'Tournament Exclusive' },
+                { value: 'profit_sharing', label: 'Profit / Prize Sharing' },
+              ]}
+            />
+          </div>
+
+          <Textarea
+            label="Deliverables Agreed"
+            rows={2}
+            value={editFormData.deliverablesAgreed}
+            onChange={(e) =>
+              setEditFormData({ ...editFormData, deliverablesAgreed: e.target.value })
+            }
+          />
+
+          <Textarea
+            label="Notes"
+            rows={2}
+            value={editFormData.notes}
+            onChange={(e) => setEditFormData({ ...editFormData, notes: e.target.value })}
+          />
+        </form>
+      </Modal>
+
+      {/* Record Return Payout Modal */}
+      <Modal
+        isOpen={isPayoutOpen}
+        onClose={() => setIsPayoutOpen(false)}
+        title={`Record Return Payout: ${sponsor.sponsorName}`}
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setIsPayoutOpen(false)}>
+              Cancel
+            </Button>
+            <Button variant="primary" onClick={handleRecordPayout}>
+              Confirm Payout
+            </Button>
+          </>
+        }
+      >
+        <form onSubmit={handleRecordPayout}>
+          <div
+            style={{
+              marginBottom: '16px',
+              padding: '12px',
+              background: '#f8fafc',
+              border: '1px solid var(--border-color)',
+              borderRadius: '8px',
+              fontSize: '13px',
+              color: 'var(--text-secondary)',
+            }}
+          >
+            <div>
+              Current Invested: <strong>Rs. {fNum(invested)}</strong>
+            </div>
+            <div>
+              Already Returned: <strong>Rs. {fNum(returned)}</strong>
+            </div>
+            <div>
+              Remaining Retained:{' '}
+              <strong style={{ color: 'var(--accent-green)' }}>Rs. {fNum(netRetained)}</strong>
+            </div>
+          </div>
+
+          <Input
+            label="New Payout Amount (Rs.) *"
+            type="number"
+            placeholder="e.g. 5000"
+            value={payoutAmount || ''}
+            onChange={(e) => setPayoutAmount(Number(e.target.value))}
+            required
+            autoFocus
+          />
+
+          <Input
+            label="Payout Reason / Note"
+            placeholder="e.g. Returned from Catchy Classic 24 winning prize money"
+            value={payoutNotes}
+            onChange={(e) => setPayoutNotes(e.target.value)}
+          />
+        </form>
+      </Modal>
+    </>
+  );
+}

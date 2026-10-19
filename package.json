@@ -1,0 +1,15 @@
+{
+  "name": "captains-portal",
+  "version": "1.0.0",
+  "description": "Captains Portal - Sports Team, Matches, Tournament ROI & Financial Management System",
+  "scripts": {
+    "dev:backend": "npm --prefix backend run dev",
+    "dev:frontend": "npm --prefix frontend run dev",
+    "seed:backend": "npm --prefix backend run seed",
+    "build:backend": "npm --prefix backend run build",
+    "build:frontend": "npm --prefix frontend run build"
+  },
+  "keywords": ["cricket", "captains-portal", "sports-management", "nextjs", "express", "mongodb"],
+  "author": "Faraz Shaikh",
+  "license": "ISC"
+}
