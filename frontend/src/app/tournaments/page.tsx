@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { Header } from '../../components/Header';
 import { fetchApi } from '../../lib/api';
 import {
@@ -33,6 +34,7 @@ import {
 } from '../../components/icons';
 
 export default function TournamentsPage() {
+  const router = useRouter();
   const [tournaments, setTournaments] = useState<any[]>([]);
   const [teams, setTeams] = useState<any[]>([]);
   const [selectedTeamId, setSelectedTeamId] = useState<string>('');
@@ -212,7 +214,7 @@ export default function TournamentsPage() {
       <div className="content-body">
         {/* Controls: Search, Status Filter, View Toggle, Add Button */}
         <div className="filter-bar">
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+          <div className="filter-bar-left">
             <div style={{ width: '260px' }}>
               <Input
                 placeholder="Search tournaments or venues..."
@@ -222,20 +224,21 @@ export default function TournamentsPage() {
               />
             </div>
 
-            <div className="pill-group">
-              {['all', 'ongoing', 'champions', 'completed'].map((st) => (
-                <button
-                  key={st}
-                  className={`pill-btn ${statusFilter === st ? 'active' : ''}`}
-                  onClick={() => setStatusFilter(st)}
-                >
-                  {st.toUpperCase()}
-                </button>
-              ))}
+            <div style={{ width: '190px' }}>
+              <Select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+                options={[
+                  { value: 'all', label: 'All Statuses' },
+                  { value: 'ongoing', label: 'Ongoing Tournaments' },
+                  { value: 'champions', label: 'Champions (Won)' },
+                  { value: 'completed', label: 'Completed' },
+                ]}
+              />
             </div>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <div className="filter-bar-right">
             <ViewSwitcher viewMode={viewMode} onChange={setViewMode} />
 
             <Button
@@ -273,7 +276,7 @@ export default function TournamentsPage() {
                   const netPnl = trn.financials?.netPnl ?? 0;
                   const isProfitable = netPnl >= 0;
                   return (
-                    <TableRow key={trn._id}>
+                    <TableRow key={trn._id} onClick={() => router.push(`/tournaments/${trn._id}`)}>
                       <TableCell>
                         <Link
                           href={`/tournaments/${trn._id}`}
@@ -323,21 +326,11 @@ export default function TournamentsPage() {
                       </TableCell>
                       <TableCell align="right">
                         <div className="action-group" style={{ justifyContent: 'flex-end' }}>
-                          <Link href={`/tournaments/${trn._id}`} passHref legacyBehavior>
-                            <Button
-                              variant="secondary"
-                              size="sm"
-                              icon={<EyeIcon size={12} color="var(--accent-blue)" />}
-                              title="View Tournament Profile"
-                            >
-                              Details
-                            </Button>
-                          </Link>
                           <Button
                             variant="secondary"
                             size="sm"
                             isIconOnly
-                            icon={<PencilIcon size={13} color="var(--accent-blue)" />}
+                            icon={<PencilIcon size={14} color="var(--accent-blue)" />}
                             onClick={() => handleEditOpen(trn)}
                             title="Edit Tournament"
                           />
@@ -345,7 +338,7 @@ export default function TournamentsPage() {
                             variant="danger"
                             size="sm"
                             isIconOnly
-                            icon={<TrashIcon size={13} />}
+                            icon={<TrashIcon size={14} />}
                             onClick={() => handleDelete(trn._id, trn.name)}
                             title="Delete Tournament"
                           />
@@ -419,7 +412,7 @@ export default function TournamentsPage() {
                         variant="secondary"
                         size="sm"
                         isIconOnly
-                        icon={<PencilIcon size={13} color="var(--accent-blue)" />}
+                        icon={<PencilIcon size={14} color="var(--accent-blue)" />}
                         onClick={() => handleEditOpen(trn)}
                         title="Edit Tournament"
                       />
@@ -427,7 +420,7 @@ export default function TournamentsPage() {
                         variant="danger"
                         size="sm"
                         isIconOnly
-                        icon={<TrashIcon size={13} />}
+                        icon={<TrashIcon size={14} />}
                         onClick={() => handleDelete(trn._id, trn.name)}
                         title="Delete Tournament"
                       />

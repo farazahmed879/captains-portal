@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { Header } from '../../components/Header';
 import { fetchApi } from '../../lib/api';
 import {
@@ -40,12 +41,14 @@ import {
 } from '../../components/icons';
 
 export default function MatchesPage() {
+  const router = useRouter();
   const [matches, setMatches] = useState<any[]>([]);
   const [teams, setTeams] = useState<any[]>([]);
   const [tournaments, setTournaments] = useState<any[]>([]);
   const [players, setPlayers] = useState<any[]>([]);
   const [selectedTeamId, setSelectedTeamId] = useState<string>('');
   const [selectedTournamentFilter, setSelectedTournamentFilter] = useState<string>('');
+  const [resultFilter, setResultFilter] = useState<string>('');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [viewMode, setViewMode] = useState<'table' | 'grid'>('table');
   const [currentPage, setCurrentPage] = useState<number>(1);
@@ -58,6 +61,13 @@ export default function MatchesPage() {
   const [isPaymentsOpen, setIsPaymentsOpen] = useState<boolean>(false);
   const [selectedMatch, setSelectedMatch] = useState<any>(null);
   const [matchPayments, setMatchPayments] = useState<any[]>([]);
+  const [showAddPlayerPayment, setShowAddPlayerPayment] = useState<boolean>(false);
+  const [newPayment, setNewPayment] = useState({
+    playerId: '',
+    feeAssigned: 1000,
+    feePaid: 1000,
+    paymentMethod: 'cash',
+  });
 
   // Create Form Data
   const [formData, setFormData] = useState({
@@ -237,6 +247,59 @@ export default function MatchesPage() {
     }
   };
 
+  const handleAddPlayerPayment = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedMatch || !newPayment.playerId) return;
+    try {
+      const res = await fetchApi<{ success: boolean; payment: any }>('/payments', {
+        method: 'POST',
+        body: JSON.stringify({
+          matchId: selectedMatch._id,
+          playerId: newPayment.playerId,
+          feeAssigned: Number(newPayment.feeAssigned) || 0,
+          feePaid: Number(newPayment.feePaid) || 0,
+          paymentMethod: newPayment.paymentMethod,
+        }),
+      });
+      if (res.success) {
+        setMatchPayments((prev) => {
+          const idx = prev.findIndex((p) => (p.playerId?._id || p.playerId) === newPayment.playerId);
+          if (idx !== -1) {
+            const copy = [...prev];
+            copy[idx] = res.payment;
+            return copy;
+          }
+          return [...prev, res.payment];
+        });
+        setNewPayment({
+          playerId: '',
+          feeAssigned: 1000,
+          feePaid: 1000,
+          paymentMethod: 'cash',
+        });
+        setShowAddPlayerPayment(false);
+        loadData();
+      }
+    } catch (err) {
+      alert('Failed to add player fee');
+    }
+  };
+
+  const handleDeletePayment = async (paymentId: string) => {
+    if (!confirm('Remove this player payment record?')) return;
+    try {
+      const res = await fetchApi<{ success: boolean }>(`/payments/${paymentId}`, {
+        method: 'DELETE',
+      });
+      if (res.success) {
+        setMatchPayments((prev) => prev.filter((p) => p._id !== paymentId));
+        loadData();
+      }
+    } catch (err) {
+      alert('Failed to remove player payment');
+    }
+  };
+
   const fNum = (val: number | undefined) => (val || 0).toLocaleString('en-US');
 
   const filteredMatches = matches.filter((m) => {
@@ -244,7 +307,8 @@ export default function MatchesPage() {
     const venueMatch = (m.venue || '').toLowerCase().includes(q);
     const oppMatch = (m.opponentTeam || '').toLowerCase().includes(q);
     const tourMatch = (m.tournamentId?.name || '').toLowerCase().includes(q);
-    return venueMatch || oppMatch || tourMatch;
+    const resMatch = !resultFilter || (m.result || '').toLowerCase() === resultFilter.toLowerCase();
+    return (venueMatch || oppMatch || tourMatch) && resMatch;
   });
 
   const totalPages = Math.ceil(filteredMatches.length / pageSize) || 1;
@@ -274,28 +338,10 @@ export default function MatchesPage() {
       />
 
       <div className="content-body">
-        {/* Tournament Filter Pills Bar */}
+        {/* Filter Bar: Search, Tournament Filter, Result Filter, View Switcher, Add Match */}
         <div className="filter-bar">
-          <div className="pill-group">
-            <button
-              className={`pill-btn ${selectedTournamentFilter === '' ? 'active' : ''}`}
-              onClick={() => setSelectedTournamentFilter('')}
-            >
-              All Matches ({matches.length})
-            </button>
-            {tournaments.map((trn) => (
-              <button
-                key={trn._id}
-                className={`pill-btn ${selectedTournamentFilter === trn._id ? 'active' : ''}`}
-                onClick={() => setSelectedTournamentFilter(trn._id)}
-              >
-                {trn.name}
-              </button>
-            ))}
-          </div>
-
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <div style={{ width: '220px' }}>
+          <div className="filter-bar-left">
+            <div style={{ width: '240px' }}>
               <Input
                 placeholder="Search venue or opponent..."
                 value={searchQuery}
@@ -307,6 +353,38 @@ export default function MatchesPage() {
               />
             </div>
 
+            <div style={{ width: '210px' }}>
+              <Select
+                value={selectedTournamentFilter}
+                onChange={(e) => {
+                  setSelectedTournamentFilter(e.target.value);
+                  setCurrentPage(1);
+                }}
+                options={[
+                  { value: '', label: `All Tournaments (${matches.length})` },
+                  ...tournaments.map((trn) => ({ value: trn._id, label: trn.name })),
+                ]}
+              />
+            </div>
+
+            <div style={{ width: '140px' }}>
+              <Select
+                value={resultFilter}
+                onChange={(e) => {
+                  setResultFilter(e.target.value);
+                  setCurrentPage(1);
+                }}
+                options={[
+                  { value: '', label: 'All Results' },
+                  { value: 'won', label: 'Won' },
+                  { value: 'lost', label: 'Lost' },
+                  { value: 'upcoming', label: 'Upcoming' },
+                ]}
+              />
+            </div>
+          </div>
+
+          <div className="filter-bar-right">
             <ViewSwitcher viewMode={viewMode} onChange={setViewMode} />
 
             <Button
@@ -339,7 +417,7 @@ export default function MatchesPage() {
                   <TableEmpty colSpan={6} message="No matches found matching your filters." />
                 ) : (
                   paginatedMatches.map((m) => (
-                    <TableRow key={m._id}>
+                    <TableRow key={m._id} onClick={() => router.push(`/matches/${m._id}`)}>
                       <TableCell>
                         <div style={{ fontWeight: 700, color: 'var(--text-primary)' }}>
                           {m.tournamentId?.name ||
@@ -441,19 +519,10 @@ export default function MatchesPage() {
 
                       <TableCell align="right">
                         <div className="action-group" style={{ justifyContent: 'flex-end' }}>
-                          <Link href={`/matches/${m._id}`} passHref legacyBehavior>
-                            <Button
-                              variant="secondary"
-                              size="sm"
-                              isIconOnly
-                              icon={<Eye size={13} color="var(--accent-blue)" />}
-                              title="View Match Details & Breakdown"
-                            />
-                          </Link>
                           <Button
                             variant="secondary"
                             size="sm"
-                            icon={<Users size={13} />}
+                            icon={<Users size={14} />}
                             onClick={() => openPaymentsModal(m._id)}
                             title="Track Squad Payments"
                           >
@@ -463,7 +532,7 @@ export default function MatchesPage() {
                             variant="secondary"
                             size="sm"
                             isIconOnly
-                            icon={<Pencil size={13} color="var(--accent-blue)" />}
+                            icon={<Pencil size={14} color="var(--accent-blue)" />}
                             onClick={() => handleEditOpen(m)}
                             title="Edit Match"
                           />
@@ -471,7 +540,7 @@ export default function MatchesPage() {
                             variant="danger"
                             size="sm"
                             isIconOnly
-                            icon={<Trash2 size={13} />}
+                            icon={<Trash2 size={14} />}
                             onClick={() =>
                               handleDeleteMatch(
                                 m._id,
@@ -900,100 +969,287 @@ export default function MatchesPage() {
         {/* Modal: Match Squad Fees Collection Drawer */}
         <Modal
           isOpen={isPaymentsOpen}
-          onClose={() => setIsPaymentsOpen(false)}
-          title={selectedMatch ? `Squad Fees - ${selectedMatch.venue}` : 'Squad Fees'}
+          onClose={() => {
+            setIsPaymentsOpen(false);
+            setShowAddPlayerPayment(false);
+          }}
+          title={selectedMatch ? `Squad Fees - ${selectedMatch.opponentTeam || selectedMatch.venue || 'Match'}` : 'Squad Fees'}
           footer={
-            <Button variant="secondary" onClick={() => setIsPaymentsOpen(false)}>
+            <Button
+              variant="secondary"
+              onClick={() => {
+                setIsPaymentsOpen(false);
+                setShowAddPlayerPayment(false);
+              }}
+            >
               Close
             </Button>
           }
         >
-          {selectedMatch && (
-            <div>
-              <div
-                style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  padding: '12px 16px',
-                  background: '#f8fafc',
-                  borderRadius: '8px',
-                  border: '1px solid var(--border-color)',
-                  marginBottom: '16px',
-                }}
-              >
-                <div>
-                  <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
-                    Total Match Cost
-                  </div>
-                  <div style={{ fontSize: '16px', fontWeight: 800, color: 'var(--accent-rose)' }}>
-                    Rs. {fNum(selectedMatch.totalMatchExpense)}
-                  </div>
-                </div>
-                <div>
-                  <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
-                    Total Collected
-                  </div>
-                  <div style={{ fontSize: '16px', fontWeight: 800, color: 'var(--accent-green)' }}>
-                    Rs. {fNum(selectedMatch.totalCollected)}
-                  </div>
-                </div>
-              </div>
+          {selectedMatch && (() => {
+            const totalCost = selectedMatch.totalMatchExpense || 0;
+            const totalCollected = matchPayments.reduce((acc, p) => acc + (p.feePaid || 0), 0);
+            const totalAssigned = matchPayments.reduce((acc, p) => acc + (p.feeAssigned || 0), 0);
+            const remaining = totalCost > totalCollected ? totalCost - totalCollected : 0;
 
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Player</TableHead>
-                    <TableHead>Assigned</TableHead>
-                    <TableHead>Paid</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead align="right">Action</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {matchPayments.length === 0 ? (
-                    <TableEmpty colSpan={5} message="No squad payments recorded for this match." />
-                  ) : (
-                    matchPayments.map((p) => (
-                      <TableRow key={p._id}>
-                        <TableCell>
-                          <div style={{ fontWeight: 600 }}>{p.playerId?.name}</div>
-                        </TableCell>
-                        <TableCell>Rs. {fNum(p.feeAssigned)}</TableCell>
-                        <TableCell style={{ color: 'var(--accent-green)', fontWeight: 700 }}>
-                          Rs. {fNum(p.feePaid)}
-                        </TableCell>
-                        <TableCell>
-                          <Badge
-                            variant={
-                              p.paymentStatus === 'paid'
-                                ? 'success'
-                                : p.paymentStatus === 'partial'
-                                ? 'warning'
-                                : 'danger'
-                            }
-                          >
-                            {p.paymentStatus}
-                          </Badge>
-                        </TableCell>
-                        <TableCell align="right">
-                          {p.paymentStatus !== 'paid' && (
-                            <Button
-                              variant="success"
-                              size="sm"
-                              icon={<CheckCircle2 size={12} />}
-                              onClick={() => handleQuickPay(p._id, p.feeAssigned)}
+            return (
+              <div>
+                {/* Match Summary Header */}
+                <div
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    padding: '12px 16px',
+                    background: '#f8fafc',
+                    borderRadius: '8px',
+                    border: '1px solid var(--border-color)',
+                    marginBottom: '16px',
+                    gap: '12px',
+                    flexWrap: 'wrap',
+                  }}
+                >
+                  <div>
+                    <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
+                      Total Match Cost
+                    </div>
+                    <div style={{ fontSize: '16px', fontWeight: 800, color: 'var(--accent-rose)' }}>
+                      Rs. {fNum(totalCost)}
+                    </div>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
+                      Total Assigned
+                    </div>
+                    <div style={{ fontSize: '16px', fontWeight: 800, color: 'var(--accent-blue)' }}>
+                      Rs. {fNum(totalAssigned)}
+                    </div>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
+                      Total Collected
+                    </div>
+                    <div style={{ fontSize: '16px', fontWeight: 800, color: 'var(--accent-green)' }}>
+                      Rs. {fNum(totalCollected)}
+                    </div>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
+                      Remaining Pending
+                    </div>
+                    <div
+                      style={{
+                        fontSize: '16px',
+                        fontWeight: 800,
+                        color: remaining > 0 ? 'var(--accent-rose)' : 'var(--text-muted)',
+                      }}
+                    >
+                      Rs. {fNum(remaining)}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Match Details & Add Player Action Toolbar */}
+                <div
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    marginBottom: '14px',
+                    flexWrap: 'wrap',
+                    gap: '10px',
+                  }}
+                >
+                  <div style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>
+                    <span>
+                      Venue: <strong>{selectedMatch.venue || 'N/A'}</strong>
+                    </span>
+                    {selectedMatch.tournamentStage && (
+                      <span style={{ marginLeft: '10px' }}>
+                        Stage:{' '}
+                        <strong style={{ textTransform: 'capitalize' }}>
+                          {selectedMatch.tournamentStage.replace(/_/g, ' ')}
+                        </strong>
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="action-group">
+                    <Button
+                      variant={showAddPlayerPayment ? 'secondary' : 'primary'}
+                      size="sm"
+                      icon={<Plus size={12} />}
+                      onClick={() => setShowAddPlayerPayment(!showAddPlayerPayment)}
+                    >
+                      {showAddPlayerPayment ? 'Cancel' : '+ Add Player Fee'}
+                    </Button>
+                    <Link href={`/matches/${selectedMatch._id}`} passHref legacyBehavior>
+                      <Button variant="secondary" size="sm" icon={<ExternalLink size={12} />}>
+                        Full Details
+                      </Button>
+                    </Link>
+                  </div>
+                </div>
+
+                {/* Inline Add Player Fee Form */}
+                {showAddPlayerPayment && (
+                  <form
+                    onSubmit={handleAddPlayerPayment}
+                    style={{
+                      padding: '14px',
+                      background: '#f0f9ff',
+                      border: '1px solid #bae6fd',
+                      borderRadius: '8px',
+                      marginBottom: '16px',
+                    }}
+                  >
+                    <div
+                      style={{
+                        fontWeight: 700,
+                        fontSize: '13px',
+                        color: 'var(--accent-blue)',
+                        marginBottom: '10px',
+                      }}
+                    >
+                      Add Player to Squad &amp; Assign Fee
+                    </div>
+                    <div className="grid-3" style={{ marginBottom: '10px' }}>
+                      <Select
+                        label="Select Player *"
+                        value={newPayment.playerId}
+                        onChange={(e) =>
+                          setNewPayment({ ...newPayment, playerId: e.target.value })
+                        }
+                        required
+                        options={[
+                          { value: '', label: '— Choose Player —' },
+                          ...players.map((p) => ({
+                            value: p._id,
+                            label: `${p.name} ${p.jerseyNumber ? `(#${p.jerseyNumber})` : ''}`,
+                          })),
+                        ]}
+                      />
+                      <Input
+                        label="Fee Assigned (Rs.) *"
+                        type="number"
+                        value={newPayment.feeAssigned}
+                        onChange={(e) =>
+                          setNewPayment({
+                            ...newPayment,
+                            feeAssigned: Number(e.target.value),
+                          })
+                        }
+                        required
+                      />
+                      <Input
+                        label="Fee Paid (Rs.) *"
+                        type="number"
+                        value={newPayment.feePaid}
+                        onChange={(e) =>
+                          setNewPayment({
+                            ...newPayment,
+                            feePaid: Number(e.target.value),
+                          })
+                        }
+                        required
+                      />
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => setShowAddPlayerPayment(false)}
+                      >
+                        Cancel
+                      </Button>
+                      <Button
+                        variant="success"
+                        size="sm"
+                        type="submit"
+                        icon={<CheckCircle2 size={12} />}
+                      >
+                        Save Player Fee
+                      </Button>
+                    </div>
+                  </form>
+                )}
+
+                {/* Squad Payments Table */}
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Player</TableHead>
+                      <TableHead>Assigned</TableHead>
+                      <TableHead>Paid</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead align="right">Action</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {matchPayments.length === 0 ? (
+                      <TableEmpty
+                        colSpan={5}
+                        message="No squad payments recorded for this match yet. Click '+ Add Player Fee' above to record players."
+                      />
+                    ) : (
+                      matchPayments.map((p) => (
+                        <TableRow key={p._id}>
+                          <TableCell>
+                            <div style={{ fontWeight: 600 }}>{p.playerId?.name || 'Player'}</div>
+                            {p.playerId?.jerseyNumber && (
+                              <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+                                #{p.playerId.jerseyNumber}
+                              </div>
+                            )}
+                          </TableCell>
+                          <TableCell>Rs. {fNum(p.feeAssigned)}</TableCell>
+                          <TableCell style={{ color: 'var(--accent-green)', fontWeight: 700 }}>
+                            Rs. {fNum(p.feePaid)}
+                          </TableCell>
+                          <TableCell>
+                            <Badge
+                              variant={
+                                p.paymentStatus === 'paid'
+                                  ? 'success'
+                                  : p.paymentStatus === 'partial'
+                                  ? 'warning'
+                                  : 'danger'
+                              }
                             >
-                              Mark Paid
-                            </Button>
-                          )}
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
-            </div>
-          )}
+                              {p.paymentStatus}
+                            </Badge>
+                          </TableCell>
+                          <TableCell align="right">
+                            <div className="action-group" style={{ justifyContent: 'flex-end' }}>
+                              {p.paymentStatus !== 'paid' && (
+                                <Button
+                                  variant="success"
+                                  size="sm"
+                                  icon={<CheckCircle2 size={14} />}
+                                  onClick={() => handleQuickPay(p._id, p.feeAssigned)}
+                                  title="Mark as Paid"
+                                >
+                                  Mark Paid
+                                </Button>
+                              )}
+                              <Button
+                                variant="danger"
+                                size="sm"
+                                isIconOnly
+                                icon={<Trash2 size={14} />}
+                                onClick={() => handleDeletePayment(p._id)}
+                                title="Remove player from match"
+                              />
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            );
+          })()}
         </Modal>
       </div>
     </>

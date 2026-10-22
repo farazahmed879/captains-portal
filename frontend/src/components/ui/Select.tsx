@@ -17,7 +17,7 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
     const selectId = id || (label ? label.toLowerCase().replace(/\s+/g, '-') : undefined);
 
     return (
-      <div className="form-group" style={{ marginBottom: '14px' }}>
+      <div className="form-group" style={{ marginBottom: label ? '14px' : '0' }}>
         {label && (
           <label
             htmlFor={selectId}

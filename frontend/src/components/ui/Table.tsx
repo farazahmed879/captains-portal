@@ -31,9 +31,27 @@ export const TableBody: React.FC<React.HTMLAttributes<HTMLTableSectionElement>> 
 
 export const TableRow: React.FC<React.HTMLAttributes<HTMLTableRowElement>> = ({
   children,
+  className = '',
+  onClick,
   ...props
 }) => {
-  return <tr {...props}>{children}</tr>;
+  const handleClick = onClick
+    ? (e: React.MouseEvent<HTMLTableRowElement>) => {
+        const target = e.target as HTMLElement;
+        if (target.closest('button, a, input, select, textarea, [data-prevent-row-click], .action-group')) {
+          return;
+        }
+        onClick(e);
+      }
+    : undefined;
+
+  const combinedClass = `${onClick ? 'clickable-row' : ''} ${className}`.trim();
+
+  return (
+    <tr className={combinedClass || undefined} onClick={handleClick} {...props}>
+      {children}
+    </tr>
+  );
 };
 
 export const TableHead: React.FC<React.ThHTMLAttributes<HTMLTableCellElement>> = ({

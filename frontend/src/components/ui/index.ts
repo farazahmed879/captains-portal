@@ -6,6 +6,7 @@ export * from './Textarea';
 export * from './DatePicker';
 export * from './Card';
 export * from './Table';
+export * from './DataTable';
 export * from './Modal';
 export * from './Pagination';
 export * from './ViewSwitcher';

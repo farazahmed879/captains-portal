@@ -312,7 +312,7 @@ export default function FinancesPage() {
                           variant="secondary"
                           size="sm"
                           isIconOnly
-                          icon={<Pencil size={13} color="var(--accent-blue)" />}
+                          icon={<Pencil size={14} color="var(--accent-blue)" />}
                           onClick={() => handleEditOpen(exp)}
                           title="Edit Expense"
                         />
@@ -320,7 +320,7 @@ export default function FinancesPage() {
                           variant="danger"
                           size="sm"
                           isIconOnly
-                          icon={<Trash2 size={13} />}
+                          icon={<Trash2 size={14} />}
                           onClick={() => handleDelete(exp._id, exp.title)}
                           title="Delete Expense"
                         />
@@ -354,7 +354,7 @@ export default function FinancesPage() {
                       variant="secondary"
                       size="sm"
                       isIconOnly
-                      icon={<Pencil size={12} color="var(--accent-blue)" />}
+                      icon={<Pencil size={14} color="var(--accent-blue)" />}
                       onClick={() => handleEditOpen(exp)}
                       title="Edit"
                     />
@@ -362,7 +362,7 @@ export default function FinancesPage() {
                       variant="danger"
                       size="sm"
                       isIconOnly
-                      icon={<Trash2 size={12} />}
+                      icon={<Trash2 size={14} />}
                       onClick={() => handleDelete(exp._id, exp.title)}
                       title="Delete"
                     />

@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { Header } from '../../components/Header';
 import { StatCard } from '../../components/StatCard';
 import { fetchApi } from '../../lib/api';
@@ -20,6 +21,7 @@ import {
   TableHead,
   TableCell,
   TableEmpty,
+  DataTable,
   ViewSwitcher,
 } from '../../components/ui';
 import {
@@ -37,8 +39,10 @@ import {
   Eye,
   Search,
 } from '../../components/icons';
+import { SponsorTransactionModal, SponsorTxType } from '../../components/SponsorTransactionModal';
 
 export default function SponsorsPage() {
+  const router = useRouter();
   const [sponsors, setSponsors] = useState<any[]>([]);
   const [teams, setTeams] = useState<any[]>([]);
   const [selectedTeamId, setSelectedTeamId] = useState<string>('');
@@ -50,10 +54,12 @@ export default function SponsorsPage() {
   // Modals
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
   const [isEditOpen, setIsEditOpen] = useState<boolean>(false);
-  const [isReturnModalOpen, setIsReturnModalOpen] = useState<boolean>(false);
-  const [selectedSponsor, setSelectedSponsor] = useState<any>(null);
-
-  const [returnAmount, setReturnAmount] = useState<string>('');
+  const [txModal, setTxModal] = useState<{ open: boolean; type: SponsorTxType; sponsor: any }>({
+    open: false,
+    type: 'investment',
+    sponsor: null,
+  });
+  const openTxModal = (sponsor: any, type: SponsorTxType) => setTxModal({ open: true, type, sponsor });
 
   const [formData, setFormData] = useState({
     teamId: '',
@@ -71,7 +77,6 @@ export default function SponsorsPage() {
     id: '',
     sponsorName: '',
     companyName: '',
-    amountInvested: 0,
     contractType: 'jersey_front',
     deliverablesAgreed: '',
     status: 'active',
@@ -146,7 +151,6 @@ export default function SponsorsPage() {
       id: spons._id,
       sponsorName: spons.sponsorName || '',
       companyName: spons.companyName || '',
-      amountInvested: spons.amountInvested || 0,
       contractType: spons.contractType || 'jersey_front',
       deliverablesAgreed: spons.deliverablesAgreed || '',
       status: spons.status || 'active',
@@ -181,38 +185,22 @@ export default function SponsorsPage() {
     }
   };
 
-  const handleRecordReturn = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!selectedSponsor) return;
-    try {
-      const newReturnTotal = (selectedSponsor.returnsPaid || 0) + Number(returnAmount);
-      const res = await fetchApi<{ success: boolean; sponsor: any }>(`/sponsors/${selectedSponsor._id}`, {
-        method: 'PUT',
-        body: JSON.stringify({
-          returnsPaid: newReturnTotal,
-          returnDate: new Date(),
-        }),
-      });
-      if (res.success) {
-        setIsReturnModalOpen(false);
-        setReturnAmount('');
-        loadData();
-      }
-    } catch (err) {
-      alert('Failed to record sponsor return payout');
-    }
-  };
 
   const fNum = (val: number | undefined) => (val || 0).toLocaleString('en-US');
 
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('table');
   const [searchQuery, setSearchQuery] = useState<string>('');
+  const [contractFilter, setContractFilter] = useState<string>('');
 
   const filteredSponsors = sponsors.filter(
-    (s) =>
-      (s.sponsorName || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (s.companyName || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (s.contractType || '').toLowerCase().includes(searchQuery.toLowerCase())
+    (s) => {
+      const qMatch =
+        (s.sponsorName || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (s.companyName || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (s.contractType || '').toLowerCase().includes(searchQuery.toLowerCase());
+      const cMatch = !contractFilter || s.contractType === contractFilter;
+      return qMatch && cMatch;
+    }
   );
 
   const getStatusBadgeVariant = (status: string) => {
@@ -263,16 +251,34 @@ export default function SponsorsPage() {
 
         {/* Action & Filter Toolbar */}
         <div className="filter-bar">
-          <div style={{ width: '280px' }}>
-            <Input
-              placeholder="Search sponsor or brand..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              icon={<Search size={14} />}
-            />
+          <div className="filter-bar-left">
+            <div style={{ width: '260px' }}>
+              <Input
+                placeholder="Search sponsor or brand..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                icon={<Search size={14} />}
+              />
+            </div>
+
+            <div style={{ width: '190px' }}>
+              <Select
+                value={contractFilter}
+                onChange={(e) => setContractFilter(e.target.value)}
+                options={[
+                  { value: '', label: 'All Contracts' },
+                  { value: 'jersey_front', label: 'Jersey Front' },
+                  { value: 'jersey_back', label: 'Jersey Back' },
+                  { value: 'sleeve', label: 'Sleeve' },
+                  { value: 'tournament_banner', label: 'Tournament Banner' },
+                  { value: 'equipment_kit', label: 'Equipment & Kit' },
+                  { value: 'general_grant', label: 'General Grant' },
+                ]}
+              />
+            </div>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <div className="filter-bar-right">
             <ViewSwitcher viewMode={viewMode} onChange={setViewMode} />
 
             <Button
@@ -288,116 +294,119 @@ export default function SponsorsPage() {
 
         {/* VIEW 1: TABLE (LIST) VIEW */}
         {viewMode === 'table' && (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Sponsor / Brand</TableHead>
-                <TableHead>Contract Type</TableHead>
-                <TableHead>Invested Inflow</TableHead>
-                <TableHead>Returns Paid</TableHead>
-                <TableHead>Net Retained</TableHead>
-                <TableHead>Deliverables</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead align="right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredSponsors.length === 0 ? (
-                <TableEmpty colSpan={8} message="No sponsors found." />
-              ) : (
-                filteredSponsors.map((spons) => {
+          <DataTable
+            data={filteredSponsors}
+            keyExtractor={(spons) => spons._id}
+            emptyMessage="No sponsors found."
+            onRowClick={(spons) => router.push(`/sponsors/${spons._id}`)}
+            columns={[
+              {
+                header: 'Sponsor / Brand',
+                render: (spons) => (
+                  <div>
+                    <Link
+                      href={`/sponsors/${spons._id}`}
+                      style={{
+                        fontWeight: 700,
+                        color: 'var(--text-primary)',
+                        textDecoration: 'none',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '5px',
+                      }}
+                    >
+                      <span>{spons.companyName || spons.sponsorName}</span>
+                      <ExternalLink size={11} color="var(--accent-blue)" />
+                    </Link>
+                    <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+                      Contact: {spons.sponsorName}
+                    </div>
+                  </div>
+                ),
+              },
+              {
+                header: 'Contract Type',
+                render: (spons) => (
+                  <Badge variant="purple" style={{ textTransform: 'capitalize' }}>
+                    {spons.contractType?.replace(/_/g, ' ') || 'General Grant'}
+                  </Badge>
+                ),
+              },
+              {
+                header: 'Invested Inflow',
+                style: { fontWeight: 700, color: 'var(--accent-blue)' },
+                render: (spons) => `Rs. ${fNum(spons.amountInvested)}`,
+              },
+              {
+                header: 'Returns Paid',
+                style: { fontWeight: 600, color: 'var(--accent-rose)' },
+                render: (spons) => `Rs. ${fNum(spons.returnsPaid)}`,
+              },
+              {
+                header: 'Net Retained',
+                style: { fontWeight: 700, color: 'var(--accent-green)' },
+                render: (spons) => {
                   const net = (spons.amountInvested || 0) - (spons.returnsPaid || 0);
-                  return (
-                    <TableRow key={spons._id}>
-                      <TableCell>
-                        <Link
-                          href={`/sponsors/${spons._id}`}
-                          style={{
-                            fontWeight: 700,
-                            color: 'var(--text-primary)',
-                            textDecoration: 'none',
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '5px',
-                          }}
-                        >
-                          <span>{spons.companyName || spons.sponsorName}</span>
-                          <ExternalLink size={11} color="var(--accent-blue)" />
-                        </Link>
-                        <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-                          Contact: {spons.sponsorName}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="purple" style={{ textTransform: 'capitalize' }}>
-                          {spons.contractType?.replace(/_/g, ' ') || 'General Grant'}
-                        </Badge>
-                      </TableCell>
-                      <TableCell style={{ fontWeight: 700, color: 'var(--accent-blue)' }}>
-                        Rs. {fNum(spons.amountInvested)}
-                      </TableCell>
-                      <TableCell style={{ fontWeight: 600, color: 'var(--accent-rose)' }}>
-                        Rs. {fNum(spons.returnsPaid)}
-                      </TableCell>
-                      <TableCell style={{ fontWeight: 700, color: 'var(--accent-green)' }}>
-                        Rs. {fNum(net)}
-                      </TableCell>
-                      <TableCell style={{ fontSize: '12px', color: 'var(--text-secondary)', maxWidth: '200px' }}>
-                        {spons.deliverablesAgreed || 'General sponsorship'}
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={getStatusBadgeVariant(spons.status)}>
-                          {spons.status?.toUpperCase() || 'ACTIVE'}
-                        </Badge>
-                      </TableCell>
-                      <TableCell align="right">
-                        <div className="action-group" style={{ justifyContent: 'flex-end' }}>
-                          <Link href={`/sponsors/${spons._id}`} passHref legacyBehavior>
-                            <Button
-                              variant="secondary"
-                              size="sm"
-                              icon={<Eye size={12} color="var(--accent-blue)" />}
-                              title="View Sponsor Profile"
-                            >
-                              Profile
-                            </Button>
-                          </Link>
-                          <Button
-                            variant="secondary"
-                            size="sm"
-                            icon={<RotateCcw size={12} />}
-                            onClick={() => {
-                              setSelectedSponsor(spons);
-                              setIsReturnModalOpen(true);
-                            }}
-                            title="Record Return Payout"
-                          >
-                            Payout
-                          </Button>
-                          <Button
-                            variant="secondary"
-                            size="sm"
-                            isIconOnly
-                            icon={<Pencil size={13} color="var(--accent-blue)" />}
-                            onClick={() => handleEditOpen(spons)}
-                            title="Edit Sponsor"
-                          />
-                          <Button
-                            variant="danger"
-                            size="sm"
-                            isIconOnly
-                            icon={<Trash2 size={13} />}
-                            onClick={() => handleDelete(spons._id, spons.companyName || spons.sponsorName)}
-                            title="Delete Sponsor"
-                          />
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })
-              )}
-            </TableBody>
-          </Table>
+                  return `Rs. ${fNum(net)}`;
+                },
+              },
+              {
+                header: 'Deliverables',
+                style: { fontSize: '12px', color: 'var(--text-secondary)', maxWidth: '200px' },
+                render: (spons) => spons.deliverablesAgreed || 'General sponsorship',
+              },
+              {
+                header: 'Status',
+                render: (spons) => (
+                  <Badge variant={getStatusBadgeVariant(spons.status)}>
+                    {spons.status?.toUpperCase() || 'ACTIVE'}
+                  </Badge>
+                ),
+              },
+              {
+                header: 'Actions',
+                align: 'right',
+                render: (spons) => (
+                  <div className="action-group" style={{ justifyContent: 'flex-end' }}>
+                    <Button
+                      variant="success"
+                      size="sm"
+                      icon={<Plus size={14} />}
+                      onClick={() => openTxModal(spons, 'investment')}
+                      title="Sponsor added more money"
+                    >
+                      Add Funds
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      icon={<RotateCcw size={14} />}
+                      onClick={() => openTxModal(spons, 'payout')}
+                      title="Record Return Payout"
+                    >
+                      Payout
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      isIconOnly
+                      icon={<Pencil size={14} color="var(--accent-blue)" />}
+                      onClick={() => handleEditOpen(spons)}
+                      title="Edit Sponsor"
+                    />
+                    <Button
+                      variant="danger"
+                      size="sm"
+                      isIconOnly
+                      icon={<Trash2 size={14} />}
+                      onClick={() => handleDelete(spons._id, spons.companyName || spons.sponsorName)}
+                      title="Delete Sponsor"
+                    />
+                  </div>
+                ),
+              },
+            ]}
+          />
         )}
 
         {/* VIEW 2: GRID (CARDS) VIEW */}
@@ -447,7 +456,7 @@ export default function SponsorsPage() {
                       variant="secondary"
                       size="sm"
                       isIconOnly
-                      icon={<Pencil size={13} color="var(--accent-blue)" />}
+                      icon={<Pencil size={14} color="var(--accent-blue)" />}
                       onClick={() => handleEditOpen(spons)}
                       title="Edit Sponsor"
                     />
@@ -455,7 +464,7 @@ export default function SponsorsPage() {
                       variant="danger"
                       size="sm"
                       isIconOnly
-                      icon={<Trash2 size={13} />}
+                      icon={<Trash2 size={14} />}
                       onClick={() => handleDelete(spons._id, spons.companyName || spons.sponsorName)}
                       title="Delete Sponsor"
                     />
@@ -512,13 +521,18 @@ export default function SponsorsPage() {
                       </Button>
                     </Link>
                     <Button
+                      variant="success"
+                      size="sm"
+                      icon={<Plus size={12} />}
+                      onClick={() => openTxModal(spons, 'investment')}
+                    >
+                      Add Funds
+                    </Button>
+                    <Button
                       variant="secondary"
                       size="sm"
                       icon={<RotateCcw size={12} />}
-                      onClick={() => {
-                        setSelectedSponsor(spons);
-                        setIsReturnModalOpen(true);
-                      }}
+                      onClick={() => openTxModal(spons, 'payout')}
                     >
                       Payout
                     </Button>
@@ -639,29 +653,29 @@ export default function SponsorsPage() {
               />
             </div>
 
-            <div className="grid-2">
-              <Input
-                label="Amount Invested (Rs.) *"
-                type="number"
-                value={editFormData.amountInvested}
-                onChange={(e) =>
-                  setEditFormData({ ...editFormData, amountInvested: Number(e.target.value) })
-                }
-                required
-              />
+            <Select
+              label="Contract Type"
+              value={editFormData.contractType}
+              onChange={(e) => setEditFormData({ ...editFormData, contractType: e.target.value })}
+              options={[
+                { value: 'jersey_front', label: 'Jersey Front Chest Logo' },
+                { value: 'jersey_back', label: 'Jersey Back Logo' },
+                { value: 'sleeve', label: 'Sleeve Logo' },
+                { value: 'tournament_banner', label: 'Tournament Banners' },
+                { value: 'equipment_kit', label: 'Equipment & Kit Bag' },
+                { value: 'general_grant', label: 'General Annual Grant' },
+              ]}
+            />
 
-              <Select
-                label="Contract Type"
-                value={editFormData.contractType}
-                onChange={(e) => setEditFormData({ ...editFormData, contractType: e.target.value })}
-                options={[
-                  { value: 'jersey_front', label: 'Jersey Front Chest Logo' },
-                  { value: 'jersey_back', label: 'Jersey Back Logo' },
-                  { value: 'sleeve', label: 'Sleeve Logo' },
-                  { value: 'tournament_banner', label: 'Tournament Banners' },
-                  { value: 'general_grant', label: 'General Annual Grant' },
-                ]}
-              />
+            <div
+              style={{
+                marginBottom: '14px',
+                fontSize: '12px',
+                color: 'var(--text-muted)',
+              }}
+            >
+              💡 To change the invested amount use <strong>Add Funds</strong> / <strong>Payout</strong> – every
+              entry is kept in the sponsor ledger.
             </div>
 
             <Textarea
@@ -673,33 +687,14 @@ export default function SponsorsPage() {
           </form>
         </Modal>
 
-        {/* Modal: Record Return Payout to Sponsor */}
-        <Modal
-          isOpen={isReturnModalOpen}
-          onClose={() => setIsReturnModalOpen(false)}
-          title={`Record Return Payout - ${selectedSponsor?.companyName || selectedSponsor?.sponsorName}`}
-          footer={
-            <>
-              <Button variant="secondary" onClick={() => setIsReturnModalOpen(false)}>
-                Cancel
-              </Button>
-              <Button variant="primary" onClick={handleRecordReturn}>
-                Confirm Payout
-              </Button>
-            </>
-          }
-        >
-          <form onSubmit={handleRecordReturn}>
-            <Input
-              label="Return Payout Amount (Rs.) *"
-              type="number"
-              placeholder="10000"
-              value={returnAmount}
-              onChange={(e) => setReturnAmount(e.target.value)}
-              required
-            />
-          </form>
-        </Modal>
+        {/* Ledger Modal: Add Funds / Payout */}
+        <SponsorTransactionModal
+          isOpen={txModal.open}
+          onClose={() => setTxModal((m) => ({ ...m, open: false }))}
+          sponsor={txModal.sponsor}
+          defaultType={txModal.type}
+          onSaved={() => loadData()}
+        />
       </div>
     </>
   );

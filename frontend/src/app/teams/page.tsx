@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { Header } from '../../components/Header';
 import {
   Button,
@@ -27,6 +28,7 @@ import { fetchApi } from '../../lib/api';
 import { Plus, MapPin, Pencil, Trash2, ExternalLink, Eye, Shield, Users, Swords, Trophy } from '../../components/icons';
 
 export default function TeamsPage() {
+  const router = useRouter();
   const [teams, setTeams] = useState<any[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
@@ -179,7 +181,7 @@ export default function TeamsPage() {
                   <TableEmpty colSpan={7} message="No teams found matching search." icon={<Shield size={28} />} />
                 ) : (
                   filteredTeams.map((team) => (
-                    <TableRow key={team._id}>
+                    <TableRow key={team._id} onClick={() => router.push(`/teams/${team._id}`)}>
                       <TableCell>
                         <Badge
                           variant="purple"
@@ -226,24 +228,21 @@ export default function TeamsPage() {
                       </TableCell>
                       <TableCell>
                         <div className="action-group" style={{ justifyContent: 'flex-end' }}>
-                          <Link href={`/teams/${team._id}`}>
-                            <Button variant="secondary" size="sm" icon={<Eye size={12} color="var(--accent-blue)" />}>
-                              <span>Profile</span>
-                            </Button>
-                          </Link>
                           <Button
                             variant="secondary"
+                            size="sm"
                             isIconOnly
                             onClick={() => handleEditOpen(team)}
                             title="Edit Team"
-                            icon={<Pencil size={13} color="var(--accent-blue)" />}
+                            icon={<Pencil size={14} color="var(--accent-blue)" />}
                           />
                           <Button
                             variant="danger"
+                            size="sm"
                             isIconOnly
                             onClick={() => handleDelete(team._id, team.name)}
                             title="Delete Team"
-                            icon={<Trash2 size={13} />}
+                            icon={<Trash2 size={14} />}
                           />
                         </div>
                       </TableCell>
@@ -288,17 +287,19 @@ export default function TeamsPage() {
                   <div className="action-group">
                     <Button
                       variant="secondary"
+                      size="sm"
                       isIconOnly
                       onClick={() => handleEditOpen(team)}
                       title="Edit Team"
-                      icon={<Pencil size={13} color="var(--accent-blue)" />}
+                      icon={<Pencil size={14} color="var(--accent-blue)" />}
                     />
                     <Button
                       variant="danger"
+                      size="sm"
                       isIconOnly
                       onClick={() => handleDelete(team._id, team.name)}
                       title="Delete Team"
-                      icon={<Trash2 size={13} />}
+                      icon={<Trash2 size={14} />}
                     />
                   </div>
                 </CardHeader>

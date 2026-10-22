@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { Header } from '../../components/Header';
 import { fetchApi } from '../../lib/api';
 import {
@@ -33,9 +34,13 @@ import {
   Pencil,
   Trash2,
   ExternalLink,
+  DollarSign,
+  AlertCircle,
+  Calendar,
 } from '../../components/icons';
 
 export default function PlayersPage() {
+  const router = useRouter();
   const [players, setPlayers] = useState<any[]>([]);
   const [teams, setTeams] = useState<any[]>([]);
   const [selectedTeamId, setSelectedTeamId] = useState<string>('');
@@ -48,6 +53,19 @@ export default function PlayersPage() {
   const [isEditOpen, setIsEditOpen] = useState<boolean>(false);
   const [selectedPlayerProfile, setSelectedPlayerProfile] = useState<any>(null);
   const [isProfileOpen, setIsProfileOpen] = useState<boolean>(false);
+
+  // Match Fee Modal State
+  const [isFeeModalOpen, setIsFeeModalOpen] = useState<boolean>(false);
+  const [selectedPlayerForFee, setSelectedPlayerForFee] = useState<any>(null);
+  const [feeModalLoading, setFeeModalLoading] = useState<boolean>(false);
+  const [playerMatches, setPlayerMatches] = useState<any[]>([]);
+  const [allMatches, setAllMatches] = useState<any[]>([]);
+  const [newMatchPayment, setNewMatchPayment] = useState({
+    matchId: '',
+    feeAssigned: 1000,
+    feePaid: 1000,
+    paymentMethod: 'cash',
+  });
 
   // Create Form
   const [formData, setFormData] = useState({
@@ -173,6 +191,112 @@ export default function PlayersPage() {
     }
   };
 
+  const openFeeModal = async (player: any) => {
+    setSelectedPlayerForFee(player);
+    setIsFeeModalOpen(true);
+    setFeeModalLoading(true);
+    try {
+      const [profileRes, matchesRes] = await Promise.all([
+        fetchApi<{ success: boolean; player: any; ledger: any }>(`/players/${player._id}`),
+        fetchApi<{ success: boolean; matches: any[] }>('/matches'),
+      ]);
+      if (profileRes.success) {
+        setPlayerMatches(profileRes.ledger?.matchHistory || []);
+        setSelectedPlayerForFee((prev: any) => ({
+          ...prev,
+          ...profileRes.player,
+          pendingDue: profileRes.ledger?.pendingDue ?? prev?.pendingDue,
+          totalFeePaid: profileRes.ledger?.totalFeePaid ?? prev?.totalFeePaid,
+        }));
+      }
+      if (matchesRes.success) {
+        setAllMatches(matchesRes.matches || []);
+        if (matchesRes.matches && matchesRes.matches.length > 0) {
+          setNewMatchPayment((prev) => ({
+            ...prev,
+            matchId: prev.matchId || matchesRes.matches[0]._id,
+            feeAssigned: matchesRes.matches[0].perPlayerFee || 1000,
+            feePaid: matchesRes.matches[0].perPlayerFee || 1000,
+          }));
+        }
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setFeeModalLoading(false);
+    }
+  };
+
+  const handleQuickPayMatch = async (paymentId: string, fullFee: number) => {
+    try {
+      const res = await fetchApi<{ success: boolean }>(`/payments/${paymentId}`, {
+        method: 'PUT',
+        body: JSON.stringify({
+          feePaid: fullFee,
+          paymentMethod: 'cash',
+          paymentDate: new Date().toISOString(),
+        }),
+      });
+      if (res.success) {
+        if (selectedPlayerForFee) {
+          openFeeModal(selectedPlayerForFee);
+        }
+        loadData();
+      }
+    } catch (err) {
+      alert('Failed to update payment');
+    }
+  };
+
+  const handleClearAllPendingDues = async () => {
+    const pendingList = playerMatches.filter((p) => p.paymentStatus !== 'paid');
+    if (pendingList.length === 0) return;
+    if (!confirm(`Clear all pending match fees for ${selectedPlayerForFee?.name}?`)) return;
+    try {
+      const updates = pendingList.map((p) => ({
+        id: p._id,
+        feePaid: p.feeAssigned,
+        paymentMethod: 'cash',
+        paymentDate: new Date().toISOString(),
+      }));
+      const res = await fetchApi<{ success: boolean }>('/payments/bulk', {
+        method: 'PUT',
+        body: JSON.stringify({ updates }),
+      });
+      if (res.success) {
+        if (selectedPlayerForFee) {
+          openFeeModal(selectedPlayerForFee);
+        }
+        loadData();
+      }
+    } catch (err) {
+      alert('Failed to clear pending dues');
+    }
+  };
+
+  const handleCreateMatchFee = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedPlayerForFee || !newMatchPayment.matchId) return;
+    try {
+      const res = await fetchApi<{ success: boolean }>('/payments', {
+        method: 'POST',
+        body: JSON.stringify({
+          matchId: newMatchPayment.matchId,
+          playerId: selectedPlayerForFee._id,
+          feeAssigned: Number(newMatchPayment.feeAssigned) || 0,
+          feePaid: Number(newMatchPayment.feePaid) || 0,
+          paymentMethod: newMatchPayment.paymentMethod,
+        }),
+      });
+      if (res.success) {
+        openFeeModal(selectedPlayerForFee);
+        loadData();
+      }
+    } catch (err) {
+      alert('Failed to assign/collect match fee');
+    }
+  };
+
   const fNum = (val: number | undefined) => (val || 0).toLocaleString('en-US');
 
   const [viewMode, setViewMode] = useState<'table' | 'grid'>('table');
@@ -189,8 +313,8 @@ export default function PlayersPage() {
       <div className="content-body">
         {/* Controls */}
         <div className="filter-bar">
-          <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
-            <div style={{ width: '250px' }}>
+          <div className="filter-bar-left">
+            <div style={{ width: '260px' }}>
               <Input
                 placeholder="Search player name..."
                 value={search}
@@ -199,7 +323,7 @@ export default function PlayersPage() {
               />
             </div>
 
-            <div style={{ width: '160px' }}>
+            <div style={{ width: '170px' }}>
               <Select
                 value={roleFilter}
                 onChange={(e) => setRoleFilter(e.target.value)}
@@ -214,7 +338,7 @@ export default function PlayersPage() {
             </div>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <div className="filter-bar-right">
             <ViewSwitcher viewMode={viewMode} onChange={setViewMode} />
 
             <Button
@@ -246,7 +370,7 @@ export default function PlayersPage() {
                 <TableEmpty colSpan={6} message="No players found." />
               ) : (
                 players.map((pl) => (
-                  <TableRow key={pl._id}>
+                  <TableRow key={pl._id} onClick={() => router.push(`/players/${pl._id}`)}>
                     <TableCell>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                         <div
@@ -317,21 +441,20 @@ export default function PlayersPage() {
 
                     <TableCell align="right">
                       <div className="action-group" style={{ justifyContent: 'flex-end' }}>
-                        <Link href={`/players/${pl._id}`} passHref legacyBehavior>
-                          <Button
-                            variant="secondary"
-                            size="sm"
-                            icon={<Eye size={12} color="var(--accent-blue)" />}
-                            title="View Full Profile Page"
-                          >
-                            Profile
-                          </Button>
-                        </Link>
+                        <Button
+                          variant="success"
+                          size="sm"
+                          icon={<DollarSign size={14} />}
+                          onClick={() => openFeeModal(pl)}
+                          title="Collect / Pay Match Fee"
+                        >
+                          Pay Fee
+                        </Button>
                         <Button
                           variant="secondary"
                           size="sm"
                           isIconOnly
-                          icon={<Pencil size={13} color="var(--accent-blue)" />}
+                          icon={<Pencil size={14} color="var(--accent-blue)" />}
                           onClick={() => handleEditOpen(pl)}
                           title="Edit Player"
                         />
@@ -339,7 +462,7 @@ export default function PlayersPage() {
                           variant="danger"
                           size="sm"
                           isIconOnly
-                          icon={<Trash2 size={13} />}
+                          icon={<Trash2 size={14} />}
                           onClick={() => handleDelete(pl._id, pl.name)}
                           title="Deactivate Player"
                         />
@@ -451,20 +574,20 @@ export default function PlayersPage() {
                   </div>
 
                   <div className="action-group">
-                    <Link href={`/players/${pl._id}`} passHref legacyBehavior>
-                      <Button
-                        variant="secondary"
-                        size="sm"
-                        icon={<Eye size={12} color="var(--accent-blue)" />}
-                      >
-                        Profile
-                      </Button>
-                    </Link>
+                    <Button
+                      variant="success"
+                      size="sm"
+                      icon={<DollarSign size={14} />}
+                      onClick={() => openFeeModal(pl)}
+                      title="Collect / Pay Match Fee"
+                    >
+                      Pay Fee
+                    </Button>
                     <Button
                       variant="secondary"
                       size="sm"
                       isIconOnly
-                      icon={<Pencil size={12} color="var(--accent-blue)" />}
+                      icon={<Pencil size={14} color="var(--accent-blue)" />}
                       onClick={() => handleEditOpen(pl)}
                       title="Edit"
                     />
@@ -472,7 +595,7 @@ export default function PlayersPage() {
                       variant="danger"
                       size="sm"
                       isIconOnly
-                      icon={<Trash2 size={12} />}
+                      icon={<Trash2 size={14} />}
                       onClick={() => handleDelete(pl._id, pl.name)}
                       title="Deactivate"
                     />
@@ -607,6 +730,293 @@ export default function PlayersPage() {
               onChange={(e) => setEditFormData({ ...editFormData, notes: e.target.value })}
             />
           </form>
+        </Modal>
+
+        {/* Modal: Collect Match Fee */}
+        <Modal
+          isOpen={isFeeModalOpen}
+          onClose={() => setIsFeeModalOpen(false)}
+          title={`Collect Match Fee — ${selectedPlayerForFee?.name || 'Player'}`}
+          maxWidth="750px"
+        >
+          {feeModalLoading ? (
+            <div style={{ padding: '40px', textAlign: 'center', color: 'var(--text-muted)' }}>
+              Loading player fee ledger...
+            </div>
+          ) : (
+            <div>
+              {/* Player Financial Summary Bar */}
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+                  gap: '12px',
+                  padding: '14px',
+                  background: '#f8fafc',
+                  borderRadius: '10px',
+                  border: '1px solid var(--border-color)',
+                  marginBottom: '20px',
+                }}
+              >
+                <div>
+                  <div style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700 }}>
+                    Total Collected
+                  </div>
+                  <div style={{ fontSize: '18px', fontWeight: 800, color: 'var(--accent-green)' }}>
+                    Rs. {fNum(selectedPlayerForFee?.totalFeePaid || 0)}
+                  </div>
+                </div>
+                <div>
+                  <div style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700 }}>
+                    Outstanding Due
+                  </div>
+                  <div
+                    style={{
+                      fontSize: '18px',
+                      fontWeight: 800,
+                      color: (selectedPlayerForFee?.pendingDue || 0) > 0 ? 'var(--accent-rose)' : 'var(--accent-green)',
+                    }}
+                  >
+                    {(selectedPlayerForFee?.pendingDue || 0) > 0
+                      ? `Rs. ${fNum(selectedPlayerForFee?.pendingDue)} Due`
+                      : '100% Cleared'}
+                  </div>
+                </div>
+                <div>
+                  <div style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700 }}>
+                    Matches Tracked
+                  </div>
+                  <div style={{ fontSize: '18px', fontWeight: 800, color: 'var(--accent-blue)' }}>
+                    {playerMatches.length} Matches
+                  </div>
+                </div>
+              </div>
+
+              {/* SECTION 1: PENDING MATCH DUES */}
+              {(() => {
+                const pendingMatches = playerMatches.filter((p) => p.paymentStatus !== 'paid');
+                const totalPending = pendingMatches.reduce(
+                  (sum, p) => sum + ((p.feeAssigned || 0) - (p.feePaid || 0)),
+                  0
+                );
+
+                return (
+                  <div style={{ marginBottom: '24px' }}>
+                    <div
+                      style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        marginBottom: '12px',
+                        flexWrap: 'wrap',
+                        gap: '8px',
+                      }}
+                    >
+                      <h4
+                        style={{
+                          fontSize: '14px',
+                          fontWeight: 700,
+                          color: 'var(--text-primary)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                          margin: 0,
+                        }}
+                      >
+                        <AlertCircle size={15} color={pendingMatches.length > 0 ? 'var(--accent-rose)' : 'var(--accent-green)'} />
+                        Pending Match Fees ({pendingMatches.length})
+                      </h4>
+
+                      {pendingMatches.length > 0 && (
+                        <Button
+                          variant="success"
+                          size="sm"
+                          icon={<CheckCircle2 size={14} />}
+                          onClick={handleClearAllPendingDues}
+                        >
+                          ⚡ Clear All Pending Dues (Rs. {fNum(totalPending)})
+                        </Button>
+                      )}
+                    </div>
+
+                    {pendingMatches.length === 0 ? (
+                      <div
+                        style={{
+                          padding: '16px',
+                          background: '#ecfdf5',
+                          border: '1px solid #a7f3d0',
+                          borderRadius: '8px',
+                          fontSize: '13px',
+                          color: '#065f46',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px',
+                        }}
+                      >
+                        <CheckCircle2 size={16} color="#059669" />
+                        All previous match fees are 100% cleared! No outstanding dues.
+                      </div>
+                    ) : (
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Match / Venue</TableHead>
+                            <TableHead>Assigned</TableHead>
+                            <TableHead>Paid</TableHead>
+                            <TableHead>Balance Due</TableHead>
+                            <TableHead align="right">Action</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {pendingMatches.map((rec) => {
+                            const due = (rec.feeAssigned || 0) - (rec.feePaid || 0);
+                            const match = rec.matchId;
+                            return (
+                              <TableRow key={rec._id}>
+                                <TableCell>
+                                  <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>
+                                    vs {match?.opponentTeam || 'Opponent'}
+                                  </div>
+                                  <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+                                    {match?.venue || 'Venue'} • {match?.matchDate ? new Date(match.matchDate).toLocaleDateString() : ''}
+                                  </div>
+                                </TableCell>
+                                <TableCell>Rs. {fNum(rec.feeAssigned)}</TableCell>
+                                <TableCell style={{ color: 'var(--accent-rose)', fontWeight: 600 }}>
+                                  Rs. {fNum(rec.feePaid)}
+                                </TableCell>
+                                <TableCell style={{ color: 'var(--accent-rose)', fontWeight: 700 }}>
+                                  Rs. {fNum(due)}
+                                </TableCell>
+                                <TableCell align="right">
+                                  <Button
+                                    variant="success"
+                                    size="sm"
+                                    icon={<CheckCircle2 size={13} />}
+                                    onClick={() => handleQuickPayMatch(rec._id, rec.feeAssigned)}
+                                    title="1-Click Mark Cleared"
+                                  >
+                                    Mark Paid
+                                  </Button>
+                                </TableCell>
+                              </TableRow>
+                            );
+                          })}
+                        </TableBody>
+                      </Table>
+                    )}
+                  </div>
+                );
+              })()}
+
+              {/* SECTION 2: ASSIGN / RECORD NEW MATCH FEE */}
+              <div
+                style={{
+                  padding: '16px',
+                  background: '#f0f9ff',
+                  border: '1px solid #bae6fd',
+                  borderRadius: '10px',
+                }}
+              >
+                <div
+                  style={{
+                    fontWeight: 700,
+                    fontSize: '13.5px',
+                    color: 'var(--accent-blue)',
+                    marginBottom: '12px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                  }}
+                >
+                  <Plus size={15} />
+                  <span>Assign / Collect Fee for Another Match</span>
+                </div>
+                <form onSubmit={handleCreateMatchFee}>
+                  <div className="grid-2" style={{ marginBottom: '10px' }}>
+                    <Select
+                      label="Select Match *"
+                      value={newMatchPayment.matchId}
+                      onChange={(e) => {
+                        const mId = e.target.value;
+                        const selectedM = allMatches.find((m) => m._id === mId);
+                        setNewMatchPayment({
+                          ...newMatchPayment,
+                          matchId: mId,
+                          feeAssigned: selectedM?.perPlayerFee || 1000,
+                          feePaid: selectedM?.perPlayerFee || 1000,
+                        });
+                      }}
+                      required
+                      options={[
+                        { value: '', label: '— Choose Match —' },
+                        ...allMatches.map((m) => ({
+                          value: m._id,
+                          label: `vs ${m.opponentTeam} (${new Date(m.matchDate).toLocaleDateString()}) - ${m.venue || ''}`,
+                        })),
+                      ]}
+                    />
+                    <Select
+                      label="Payment Method"
+                      value={newMatchPayment.paymentMethod}
+                      onChange={(e) =>
+                        setNewMatchPayment({ ...newMatchPayment, paymentMethod: e.target.value })
+                      }
+                      options={[
+                        { value: 'cash', label: 'Cash' },
+                        { value: 'easypaisa', label: 'EasyPaisa' },
+                        { value: 'jazzcash', label: 'JazzCash' },
+                        { value: 'bank_transfer', label: 'Bank Transfer' },
+                      ]}
+                    />
+                  </div>
+                  <div className="grid-2" style={{ marginBottom: '14px' }}>
+                    <Input
+                      label="Fee Assigned (Rs.) *"
+                      type="number"
+                      value={newMatchPayment.feeAssigned}
+                      onChange={(e) =>
+                        setNewMatchPayment({
+                          ...newMatchPayment,
+                          feeAssigned: Number(e.target.value),
+                        })
+                      }
+                      required
+                    />
+                    <Input
+                      label="Fee Paid (Rs.) *"
+                      type="number"
+                      value={newMatchPayment.feePaid}
+                      onChange={(e) =>
+                        setNewMatchPayment({
+                          ...newMatchPayment,
+                          feePaid: Number(e.target.value),
+                        })
+                      }
+                      required
+                    />
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => setIsFeeModalOpen(false)}
+                    >
+                      Close
+                    </Button>
+                    <Button
+                      variant="success"
+                      size="sm"
+                      type="submit"
+                      icon={<DollarSign size={14} />}
+                    >
+                      Save Match Fee
+                    </Button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          )}
         </Modal>
       </div>
     </>

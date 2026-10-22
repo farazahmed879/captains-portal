@@ -1,5 +1,19 @@
 import { Schema, model, Document, Types } from 'mongoose';
 
+export type SponsorTxType = 'investment' | 'payout';
+
+export interface ISponsorTransaction {
+  _id: Types.ObjectId;
+  type: SponsorTxType;
+  amount: number;
+  date: Date;
+  method?: 'cash' | 'bank_transfer' | 'easypaisa' | 'jazzcash' | 'cheque' | 'other';
+  reference?: string;
+  tournamentId?: Types.ObjectId;
+  notes?: string;
+  createdAt?: Date;
+}
+
 export interface ISponsor extends Document {
   tenantId: Types.ObjectId;
   teamId: Types.ObjectId;
@@ -22,9 +36,29 @@ export interface ISponsor extends Document {
   deliverablesAgreed?: string;
   status: 'pledged' | 'active' | 'completed';
   notes?: string;
+  /** Ledger of every inflow (investment) and outflow (payout). Totals above are derived from it. */
+  transactions: Types.DocumentArray<ISponsorTransaction & Document>;
+  recalculateTotals(): void;
   createdAt: Date;
   updatedAt: Date;
 }
+
+const SponsorTransactionSchema = new Schema<ISponsorTransaction>(
+  {
+    type: { type: String, enum: ['investment', 'payout'], required: true },
+    amount: { type: Number, required: true, min: 0 },
+    date: { type: Date, required: true, default: Date.now },
+    method: {
+      type: String,
+      enum: ['cash', 'bank_transfer', 'easypaisa', 'jazzcash', 'cheque', 'other'],
+      default: 'cash',
+    },
+    reference: { type: String, trim: true },
+    tournamentId: { type: Schema.Types.ObjectId, ref: 'Tournament' },
+    notes: { type: String, trim: true },
+  },
+  { timestamps: { createdAt: true, updatedAt: false } }
+);
 
 const SponsorSchema = new Schema<ISponsor>(
   {
@@ -58,9 +92,28 @@ const SponsorSchema = new Schema<ISponsor>(
       default: 'active',
     },
     notes: { type: String },
+    transactions: { type: [SponsorTransactionSchema], default: [] },
   },
   { timestamps: true }
 );
+
+/** Recompute cached totals + first-investment / last-payout dates from the ledger. */
+SponsorSchema.methods.recalculateTotals = function (this: ISponsor) {
+  const txs = this.transactions || [];
+  const investments = txs.filter((t) => t.type === 'investment');
+  const payouts = txs.filter((t) => t.type === 'payout');
+
+  this.amountInvested = investments.reduce((acc, t) => acc + (t.amount || 0), 0);
+  this.returnsPaid = payouts.reduce((acc, t) => acc + (t.amount || 0), 0);
+
+  if (investments.length > 0) {
+    this.investmentDate = new Date(Math.min(...investments.map((t) => new Date(t.date).getTime())));
+  }
+  this.returnDate =
+    payouts.length > 0
+      ? new Date(Math.max(...payouts.map((t) => new Date(t.date).getTime())))
+      : undefined;
+};
 
 SponsorSchema.index({ tenantId: 1, teamId: 1, investmentDate: -1 });
 
