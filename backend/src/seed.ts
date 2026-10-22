@@ -58,7 +58,7 @@ const seedAllTournamentsFromExcel = async () => {
       name: 'Faraz (Captain)',
       email: 'admin@captainsportal.com',
       password: 'admin123',
-      phone: '0300-1234567',
+      phone: '0342-2181946',
       role: 'super_admin',
     });
 

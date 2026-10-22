@@ -22,6 +22,7 @@ import {
   TableCell,
   TableEmpty,
   DataTable,
+  Pagination,
   ViewSwitcher,
 } from '../../components/ui';
 import {
@@ -191,6 +192,8 @@ export default function SponsorsPage() {
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('table');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [contractFilter, setContractFilter] = useState<string>('');
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const pageSize = 8;
 
   const filteredSponsors = sponsors.filter(
     (s) => {
@@ -201,6 +204,12 @@ export default function SponsorsPage() {
       const cMatch = !contractFilter || s.contractType === contractFilter;
       return qMatch && cMatch;
     }
+  );
+
+  const totalPages = Math.ceil(filteredSponsors.length / pageSize) || 1;
+  const paginatedSponsors = filteredSponsors.slice(
+    (currentPage - 1) * pageSize,
+    currentPage * pageSize
   );
 
   const getStatusBadgeVariant = (status: string) => {
@@ -220,7 +229,10 @@ export default function SponsorsPage() {
         title="Sponsors & Brand Grants"
         subtitle="Manage Brand Sponsorships, Deliverables & Full Edit/Delete Capabilities"
         selectedTeamId={selectedTeamId}
-        onTeamChange={setSelectedTeamId}
+        onTeamChange={(id) => {
+          setSelectedTeamId(id);
+          setCurrentPage(1);
+        }}
       />
 
       <div className="content-body">
@@ -256,7 +268,10 @@ export default function SponsorsPage() {
               <Input
                 placeholder="Search sponsor or brand..."
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                  setCurrentPage(1);
+                }}
                 icon={<Search size={14} />}
               />
             </div>
@@ -264,7 +279,10 @@ export default function SponsorsPage() {
             <div style={{ width: '190px' }}>
               <Select
                 value={contractFilter}
-                onChange={(e) => setContractFilter(e.target.value)}
+                onChange={(e) => {
+                  setContractFilter(e.target.value);
+                  setCurrentPage(1);
+                }}
                 options={[
                   { value: '', label: 'All Contracts' },
                   { value: 'jersey_front', label: 'Jersey Front' },
@@ -294,8 +312,9 @@ export default function SponsorsPage() {
 
         {/* VIEW 1: TABLE (LIST) VIEW */}
         {viewMode === 'table' && (
-          <DataTable
-            data={filteredSponsors}
+          <div>
+            <DataTable
+              data={paginatedSponsors}
             keyExtractor={(spons) => spons._id}
             emptyMessage="No sponsors found."
             onRowClick={(spons) => router.push(`/sponsors/${spons._id}`)}
@@ -407,12 +426,23 @@ export default function SponsorsPage() {
               },
             ]}
           />
-        )}
 
-        {/* VIEW 2: GRID (CARDS) VIEW */}
-        {viewMode === 'grid' && (
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            totalItems={filteredSponsors.length}
+            pageSize={pageSize}
+            onPageChange={setCurrentPage}
+            itemName="Sponsors"
+          />
+        </div>
+      )}
+
+      {/* VIEW 2: GRID (CARDS) VIEW */}
+      {viewMode === 'grid' && (
+        <div>
           <div className="grid-2">
-            {filteredSponsors.map((spons) => (
+            {paginatedSponsors.map((spons) => (
               <Card key={spons._id} variant="purple">
                 <div
                   style={{
@@ -541,7 +571,17 @@ export default function SponsorsPage() {
               </Card>
             ))}
           </div>
-        )}
+
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            totalItems={filteredSponsors.length}
+            pageSize={pageSize}
+            onPageChange={setCurrentPage}
+            itemName="Sponsors"
+          />
+        </div>
+      )}
 
         {/* Modal: Add Sponsor */}
         <Modal

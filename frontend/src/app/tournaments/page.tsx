@@ -20,6 +20,7 @@ import {
   TableHead,
   TableCell,
   TableEmpty,
+  Pagination,
   ViewSwitcher,
 } from '../../components/ui';
 import {
@@ -180,6 +181,8 @@ export default function TournamentsPage() {
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('table');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const pageSize = 8;
 
   const filteredTournaments = tournaments.filter((t) => {
     const matchesSearch =
@@ -188,6 +191,12 @@ export default function TournamentsPage() {
     const matchesStatus = statusFilter === 'all' || t.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
+
+  const totalPages = Math.ceil(filteredTournaments.length / pageSize) || 1;
+  const paginatedTournaments = filteredTournaments.slice(
+    (currentPage - 1) * pageSize,
+    currentPage * pageSize
+  );
 
   const getStatusBadgeVariant = (status: string) => {
     switch (status?.toLowerCase()) {
@@ -208,7 +217,10 @@ export default function TournamentsPage() {
         title="Tournaments & Leagues Financials"
         subtitle="Manage Tournament Entries, Prize Returns, Dedicated Sponsors & Edit/Delete Records"
         selectedTeamId={selectedTeamId}
-        onTeamChange={setSelectedTeamId}
+        onTeamChange={(id) => {
+          setSelectedTeamId(id);
+          setCurrentPage(1);
+        }}
       />
 
       <div className="content-body">
@@ -219,7 +231,10 @@ export default function TournamentsPage() {
               <Input
                 placeholder="Search tournaments or venues..."
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                  setCurrentPage(1);
+                }}
                 icon={<SearchIcon size={14} />}
               />
             </div>
@@ -227,7 +242,10 @@ export default function TournamentsPage() {
             <div style={{ width: '190px' }}>
               <Select
                 value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
+                onChange={(e) => {
+                  setStatusFilter(e.target.value);
+                  setCurrentPage(1);
+                }}
                 options={[
                   { value: 'all', label: 'All Statuses' },
                   { value: 'ongoing', label: 'Ongoing Tournaments' },
@@ -254,7 +272,8 @@ export default function TournamentsPage() {
 
         {/* VIEW 1: TABLE (LIST) VIEW */}
         {viewMode === 'table' && (
-          <Table>
+          <div>
+            <Table>
             <TableHeader>
               <TableRow>
                 <TableHead>Tournament</TableHead>
@@ -272,7 +291,7 @@ export default function TournamentsPage() {
               {filteredTournaments.length === 0 ? (
                 <TableEmpty colSpan={9} message="No tournaments found matching criteria." />
               ) : (
-                filteredTournaments.map((trn) => {
+                paginatedTournaments.map((trn) => {
                   const netPnl = trn.financials?.netPnl ?? 0;
                   const isProfitable = netPnl >= 0;
                   return (
@@ -350,12 +369,23 @@ export default function TournamentsPage() {
               )}
             </TableBody>
           </Table>
-        )}
 
-        {/* VIEW 2: GRID (CARDS) VIEW */}
-        {viewMode === 'grid' && (
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            totalItems={filteredTournaments.length}
+            pageSize={pageSize}
+            onPageChange={setCurrentPage}
+            itemName="Tournaments"
+          />
+        </div>
+      )}
+
+      {/* VIEW 2: GRID (CARDS) VIEW */}
+      {viewMode === 'grid' && (
+        <div>
           <div className="grid-2">
-            {filteredTournaments.map((trn) => {
+            {paginatedTournaments.map((trn) => {
               const isProfitable = (trn.financials?.netPnl || 0) >= 0;
               return (
                 <Card key={trn._id} variant={isProfitable ? 'emerald' : 'amber'} style={{ position: 'relative' }}>
@@ -537,7 +567,17 @@ export default function TournamentsPage() {
               );
             })}
           </div>
-        )}
+
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            totalItems={filteredTournaments.length}
+            pageSize={pageSize}
+            onPageChange={setCurrentPage}
+            itemName="Tournaments"
+          />
+        </div>
+      )}
 
         {/* Modal: Add Tournament */}
         <Modal

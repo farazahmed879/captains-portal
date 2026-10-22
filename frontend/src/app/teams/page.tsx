@@ -23,6 +23,7 @@ import {
   CardTitle,
   CardContent,
   CardFooter,
+  Pagination,
 } from '../../components/ui';
 import { fetchApi } from '../../lib/api';
 import { Plus, MapPin, Pencil, Trash2, ExternalLink, Eye, Shield, Users, Swords, Trophy } from '../../components/icons';
@@ -35,6 +36,8 @@ export default function TeamsPage() {
   const [isEditOpen, setIsEditOpen] = useState<boolean>(false);
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('table');
   const [searchQuery, setSearchQuery] = useState<string>('');
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const pageSize = 8;
 
   const [formData, setFormData] = useState({
     name: '',
@@ -128,6 +131,12 @@ export default function TeamsPage() {
     (t.city || '').toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  const totalPages = Math.ceil(filteredTeams.length / pageSize) || 1;
+  const paginatedTeams = filteredTeams.slice(
+    (currentPage - 1) * pageSize,
+    currentPage * pageSize
+  );
+
   return (
     <>
       <Header
@@ -143,7 +152,10 @@ export default function TeamsPage() {
               type="text"
               placeholder="Search team name, code, or city..."
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                setCurrentPage(1);
+              }}
               style={{ paddingLeft: '12px', fontSize: '13px', margin: 0 }}
             />
           </div>
@@ -163,7 +175,8 @@ export default function TeamsPage() {
 
         {/* VIEW 1: TABLE (LIST) VIEW */}
         {viewMode === 'table' && (
-          <Card style={{ padding: 0, overflow: 'hidden' }}>
+          <div>
+            <Card style={{ padding: 0, overflow: 'hidden' }}>
             <Table>
               <TableHeader>
                 <TableRow>
@@ -180,7 +193,7 @@ export default function TeamsPage() {
                 {filteredTeams.length === 0 ? (
                   <TableEmpty colSpan={7} message="No teams found matching search." icon={<Shield size={28} />} />
                 ) : (
-                  filteredTeams.map((team) => (
+                  paginatedTeams.map((team) => (
                     <TableRow key={team._id} onClick={() => router.push(`/teams/${team._id}`)}>
                       <TableCell>
                         <Badge
@@ -252,12 +265,23 @@ export default function TeamsPage() {
               </TableBody>
             </Table>
           </Card>
-        )}
 
-        {/* VIEW 2: GRID (CARDS) VIEW */}
-        {viewMode === 'grid' && (
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            totalItems={filteredTeams.length}
+            pageSize={pageSize}
+            onPageChange={setCurrentPage}
+            itemName="Teams"
+          />
+        </div>
+      )}
+
+      {/* VIEW 2: GRID (CARDS) VIEW */}
+      {viewMode === 'grid' && (
+        <div>
           <div className="grid-2">
-            {filteredTeams.map((team) => (
+            {paginatedTeams.map((team) => (
               <Card key={team._id} style={{ borderTop: `4px solid ${team.primaryColor || '#0284c7'}` }}>
                 <CardHeader>
                   <div>
@@ -348,7 +372,17 @@ export default function TeamsPage() {
               </Card>
             ))}
           </div>
-        )}
+
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            totalItems={filteredTeams.length}
+            pageSize={pageSize}
+            onPageChange={setCurrentPage}
+            itemName="Teams"
+          />
+        </div>
+      )}
 
         {/* Modal: Create Team */}
         <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title="Add New Team">

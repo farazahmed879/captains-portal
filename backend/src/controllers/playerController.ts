@@ -60,7 +60,14 @@ export const getPlayerProfile = async (req: AuthRequest, res: Response): Promise
     }
 
     const payments = await MatchPayment.find({ playerId: player._id })
-      .populate('matchId', 'opponentTeam matchDate matchType result venue overs')
+      .populate({
+        path: 'matchId',
+        select: 'opponentTeam matchDate matchType result venue overs tournamentId teamId tournamentStage',
+        populate: [
+          { path: 'tournamentId', select: 'name shortName year' },
+          { path: 'teamId', select: 'name shortName primaryColor' },
+        ],
+      })
       .sort({ createdAt: -1 });
 
     const totalFeeAssigned = payments.reduce((acc, p) => acc + (p.feeAssigned || 0), 0);

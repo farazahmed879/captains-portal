@@ -334,7 +334,10 @@ export default function MatchesPage() {
         title="Matches, Ground Costs & Collections"
         subtitle="Complete Match Records Across All Tournaments with Editable & Delete Options"
         selectedTeamId={selectedTeamId}
-        onTeamChange={setSelectedTeamId}
+        onTeamChange={(id) => {
+          setSelectedTeamId(id);
+          setCurrentPage(1);
+        }}
       />
 
       <div className="content-body">
@@ -563,6 +566,7 @@ export default function MatchesPage() {
               totalItems={filteredMatches.length}
               pageSize={pageSize}
               onPageChange={setCurrentPage}
+              itemName="Matches"
             />
           </div>
         ) : (
@@ -724,6 +728,7 @@ export default function MatchesPage() {
               totalItems={filteredMatches.length}
               pageSize={pageSize}
               onPageChange={setCurrentPage}
+              itemName="Matches"
             />
           </div>
         )}

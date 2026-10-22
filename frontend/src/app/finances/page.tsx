@@ -20,6 +20,7 @@ import {
   TableHead,
   TableCell,
   TableEmpty,
+  Pagination,
   ViewSwitcher,
 } from '../../components/ui';
 import {
@@ -173,6 +174,8 @@ export default function FinancesPage() {
 
   const [viewMode, setViewMode] = useState<'table' | 'grid'>('table');
   const [searchQuery, setSearchQuery] = useState<string>('');
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const pageSize = 12;
 
   const filteredExpenses = expenses.filter(
     (exp) =>
@@ -181,13 +184,22 @@ export default function FinancesPage() {
       (exp.paidBy || '').toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  const totalPages = Math.ceil(filteredExpenses.length / pageSize) || 1;
+  const paginatedExpenses = filteredExpenses.slice(
+    (currentPage - 1) * pageSize,
+    currentPage * pageSize
+  );
+
   return (
     <>
       <Header
         title="Team Expenditures & Financial Ledger"
         subtitle="Manage Kits Manufacturing, Caps, Floppies, Marketing & Edit/Delete Expenses"
         selectedTeamId={selectedTeamId}
-        onTeamChange={setSelectedTeamId}
+        onTeamChange={(id) => {
+          setSelectedTeamId(id);
+          setCurrentPage(1);
+        }}
       />
 
       <div className="content-body">
@@ -223,7 +235,10 @@ export default function FinancesPage() {
               <Input
                 placeholder="Search expense title..."
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                  setCurrentPage(1);
+                }}
                 icon={<Search size={14} />}
               />
             </div>
@@ -231,7 +246,10 @@ export default function FinancesPage() {
             <div style={{ width: '180px' }}>
               <Select
                 value={categoryFilter}
-                onChange={(e) => setCategoryFilter(e.target.value)}
+                onChange={(e) => {
+                  setCategoryFilter(e.target.value);
+                  setCurrentPage(1);
+                }}
                 options={[
                   { value: '', label: 'All Categories' },
                   { value: 'kit_jerseys', label: 'Jerseys & Kits' },
@@ -259,7 +277,8 @@ export default function FinancesPage() {
 
         {/* VIEW 1: TABLE VIEW */}
         {viewMode === 'table' && (
-          <Table>
+          <div>
+            <Table>
             <TableHeader>
               <TableRow>
                 <TableHead>Date</TableHead>
@@ -274,7 +293,7 @@ export default function FinancesPage() {
               {filteredExpenses.length === 0 ? (
                 <TableEmpty colSpan={6} message="No expenses found." />
               ) : (
-                filteredExpenses.map((exp) => (
+                paginatedExpenses.map((exp) => (
                   <TableRow key={exp._id}>
                     <TableCell style={{ whiteSpace: 'nowrap' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
@@ -331,12 +350,23 @@ export default function FinancesPage() {
               )}
             </TableBody>
           </Table>
-        )}
 
-        {/* VIEW 2: GRID (CARDS) VIEW */}
-        {viewMode === 'grid' && (
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            totalItems={filteredExpenses.length}
+            pageSize={pageSize}
+            onPageChange={setCurrentPage}
+            itemName="Expenses"
+          />
+        </div>
+      )}
+
+      {/* VIEW 2: GRID (CARDS) VIEW */}
+      {viewMode === 'grid' && (
+        <div>
           <div className="grid-3">
-            {filteredExpenses.map((exp) => (
+            {paginatedExpenses.map((exp) => (
               <Card key={exp._id} variant="rose">
                 <div
                   style={{
@@ -415,7 +445,17 @@ export default function FinancesPage() {
               </Card>
             ))}
           </div>
-        )}
+
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            totalItems={filteredExpenses.length}
+            pageSize={pageSize}
+            onPageChange={setCurrentPage}
+            itemName="Expenses"
+          />
+        </div>
+      )}
 
         {/* Modal: Add Expense */}
         <Modal

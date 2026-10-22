@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Header } from '../../components/Header';
@@ -19,6 +19,7 @@ import {
   TableHead,
   TableCell,
   TableEmpty,
+  Pagination,
   ViewSwitcher,
 } from '../../components/ui';
 import {
@@ -300,6 +301,45 @@ export default function PlayersPage() {
   const fNum = (val: number | undefined) => (val || 0).toLocaleString('en-US');
 
   const [viewMode, setViewMode] = useState<'table' | 'grid'>('table');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'cleared'>('all');
+  const [sortBy, setSortBy] = useState<'name' | 'due' | 'matches'>('name');
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const pageSize = 12;
+
+  // Computed metrics
+  const pendingCount = useMemo(
+    () => players.filter((p) => (p.pendingDue || 0) > 0).length,
+    [players]
+  );
+  const clearedCount = useMemo(
+    () => players.filter((p) => (p.pendingDue || 0) <= 0).length,
+    [players]
+  );
+  const totalPendingDue = useMemo(
+    () => players.reduce((sum, p) => sum + (p.pendingDue || 0), 0),
+    [players]
+  );
+
+  // Filtered and sorted players
+  const displayedPlayers = useMemo(() => {
+    return players
+      .filter((pl) => {
+        const due = pl.pendingDue || 0;
+        if (statusFilter === 'pending' && due <= 0) return false;
+        if (statusFilter === 'cleared' && due > 0) return false;
+        return true;
+      })
+      .sort((a, b) => {
+        if (sortBy === 'due') return (b.pendingDue || 0) - (a.pendingDue || 0);
+        if (sortBy === 'matches') return (b.matchesPlayed || 0) - (a.matchesPlayed || 0);
+        return (a.name || '').localeCompare(b.name || '');
+      });
+  }, [players, statusFilter, sortBy]);
+
+  const totalPages = Math.ceil(displayedPlayers.length / pageSize) || 1;
+  const paginatedPlayers = useMemo(() => {
+    return displayedPlayers.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+  }, [displayedPlayers, currentPage, pageSize]);
 
   return (
     <>
@@ -307,26 +347,71 @@ export default function PlayersPage() {
         title="Player Rosters & Payment Ledgers"
         subtitle="Manage Player Profiles, Fees Assigned vs Paid, and Edit/Delete Player Details"
         selectedTeamId={selectedTeamId}
-        onTeamChange={setSelectedTeamId}
+        onTeamChange={(id) => {
+          setSelectedTeamId(id);
+          setCurrentPage(1);
+        }}
       />
 
-      <div className="content-body">
-        {/* Controls */}
-        <div className="filter-bar">
-          <div className="filter-bar-left">
-            <div style={{ width: '260px' }}>
+      <div className="content-body" style={{ padding: '14px 24px 28px 24px' }}>
+        {/* Concise Filter Bar with Status Tabs & Controls */}
+        <div className="filter-bar" style={{ padding: '8px 14px', gap: '10px' }}>
+          <div className="filter-bar-left" style={{ gap: '10px', flexWrap: 'wrap' }}>
+            {/* Quick Status Tabs */}
+            <div className="ledger-tab-group">
+              <button
+                type="button"
+                className={`ledger-tab ${statusFilter === 'all' ? 'active' : ''}`}
+                onClick={() => {
+                  setStatusFilter('all');
+                  setCurrentPage(1);
+                }}
+              >
+                All Players <span className="tab-count">{players.length}</span>
+              </button>
+              <button
+                type="button"
+                className={`ledger-tab tab-pending ${statusFilter === 'pending' ? 'active' : ''}`}
+                onClick={() => {
+                  setStatusFilter('pending');
+                  setCurrentPage(1);
+                }}
+              >
+                Pending Due <span className="tab-count">{pendingCount}</span>
+              </button>
+              <button
+                type="button"
+                className={`ledger-tab tab-cleared ${statusFilter === 'cleared' ? 'active' : ''}`}
+                onClick={() => {
+                  setStatusFilter('cleared');
+                  setCurrentPage(1);
+                }}
+              >
+                Cleared <span className="tab-count">{clearedCount}</span>
+              </button>
+            </div>
+
+            {/* Search Player */}
+            <div style={{ width: '220px' }}>
               <Input
                 placeholder="Search player name..."
                 value={search}
-                onChange={(e) => setSearch(e.target.value)}
+                onChange={(e) => {
+                  setSearch(e.target.value);
+                  setCurrentPage(1);
+                }}
                 icon={<Search size={14} />}
               />
             </div>
 
-            <div style={{ width: '170px' }}>
+            {/* Role Filter */}
+            <div style={{ width: '150px' }}>
               <Select
                 value={roleFilter}
-                onChange={(e) => setRoleFilter(e.target.value)}
+                onChange={(e) => {
+                  setRoleFilter(e.target.value);
+                  setCurrentPage(1);
+                }}
                 options={[
                   { value: '', label: 'All Roles' },
                   { value: 'batsman', label: 'Batsman' },
@@ -336,6 +421,20 @@ export default function PlayersPage() {
                 ]}
               />
             </div>
+
+            {/* Sort Dropdown */}
+            <select
+              className="ledger-select"
+              value={sortBy}
+              onChange={(e) => {
+                setSortBy(e.target.value as any);
+                setCurrentPage(1);
+              }}
+            >
+              <option value="name">Sort: Name (A-Z)</option>
+              <option value="due">Sort: Due (High → Low)</option>
+              <option value="matches">Sort: Matches Played</option>
+            </select>
           </div>
 
           <div className="filter-bar-right">
@@ -352,31 +451,32 @@ export default function PlayersPage() {
           </div>
         </div>
 
-        {/* VIEW 1: TABLE VIEW */}
+        {/* VIEW 1: HIGH-DENSITY TABLE VIEW */}
         {viewMode === 'table' && (
-          <Table>
+          <div>
+            <Table>
             <TableHeader>
               <TableRow>
                 <TableHead>Player & Jersey</TableHead>
                 <TableHead>Role & Details</TableHead>
-                <TableHead>Matches Played</TableHead>
-                <TableHead>Total Fee Paid</TableHead>
+                <TableHead>Matches</TableHead>
+                <TableHead>Fee Paid</TableHead>
                 <TableHead>Remaining Due</TableHead>
                 <TableHead align="right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {players.length === 0 ? (
-                <TableEmpty colSpan={6} message="No players found." />
+              {displayedPlayers.length === 0 ? (
+                <TableEmpty colSpan={6} message="No players match the selected filters." />
               ) : (
-                players.map((pl) => (
+                paginatedPlayers.map((pl) => (
                   <TableRow key={pl._id} onClick={() => router.push(`/players/${pl._id}`)}>
                     <TableCell>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '9px' }}>
                         <div
                           style={{
-                            width: '36px',
-                            height: '36px',
+                            width: '32px',
+                            height: '32px',
                             borderRadius: '8px',
                             background: '#e0f2fe',
                             border: '1px solid #bae6fd',
@@ -385,7 +485,7 @@ export default function PlayersPage() {
                             justifyContent: 'center',
                             fontWeight: 800,
                             color: '#0369a1',
-                            fontSize: '13px',
+                            fontSize: '12px',
                           }}
                         >
                           {pl.jerseyNumber !== undefined && pl.jerseyNumber !== null && pl.jerseyNumber !== ''
@@ -407,23 +507,23 @@ export default function PlayersPage() {
                             <span>{pl.name}</span>
                             <ExternalLink size={10} color="var(--accent-blue)" />
                           </Link>
-                          <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-                            {pl.notes || 'Gulzar CC Squad'}
+                          <div style={{ fontSize: '10.5px', color: 'var(--text-muted)' }}>
+                            {pl.phone ? pl.phone : pl.notes || 'Gulzar CC Squad'}
                           </div>
                         </div>
                       </div>
                     </TableCell>
 
                     <TableCell>
-                      <Badge variant="primary" style={{ textTransform: 'capitalize' }}>
-                        {pl.role.replace('_', ' ')}
+                      <Badge variant="primary" style={{ textTransform: 'capitalize', fontSize: '10.5px' }}>
+                        {pl.role?.replace('_', ' ')}
                       </Badge>
-                      <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '3px' }}>
+                      <div style={{ fontSize: '10.5px', color: 'var(--text-muted)', marginTop: '2px' }}>
                         {pl.battingStyle?.replace('_', ' ')}
                       </div>
                     </TableCell>
 
-                    <TableCell style={{ fontWeight: 700 }}>{pl.matchesPlayed || 0} Matches</TableCell>
+                    <TableCell style={{ fontWeight: 700 }}>{pl.matchesPlayed || 0}</TableCell>
 
                     <TableCell style={{ color: 'var(--accent-green)', fontWeight: 700 }}>
                       Rs. {fNum(pl.totalFeePaid)}
@@ -431,20 +531,22 @@ export default function PlayersPage() {
 
                     <TableCell>
                       {(pl.pendingDue || 0) > 0 ? (
-                        <Badge variant="danger">Rs. {fNum(pl.pendingDue)} Due</Badge>
+                        <span className="cell-due-val" style={{ fontSize: '11.5px', padding: '1px 6px' }}>
+                          Rs. {fNum(pl.pendingDue)} Due
+                        </span>
                       ) : (
-                        <Badge variant="success" icon={<CheckCircle2 size={11} />}>
+                        <Badge variant="success" icon={<CheckCircle2 size={10} />} style={{ fontSize: '10.5px' }}>
                           Cleared
                         </Badge>
                       )}
                     </TableCell>
 
                     <TableCell align="right">
-                      <div className="action-group" style={{ justifyContent: 'flex-end' }}>
+                      <div className="action-group" style={{ justifyContent: 'flex-end', gap: '4px' }}>
                         <Button
                           variant="success"
                           size="sm"
-                          icon={<DollarSign size={14} />}
+                          icon={<DollarSign size={13} />}
                           onClick={() => openFeeModal(pl)}
                           title="Collect / Pay Match Fee"
                         >
@@ -454,7 +556,7 @@ export default function PlayersPage() {
                           variant="secondary"
                           size="sm"
                           isIconOnly
-                          icon={<Pencil size={14} color="var(--accent-blue)" />}
+                          icon={<Pencil size={13} color="var(--accent-blue)" />}
                           onClick={() => handleEditOpen(pl)}
                           title="Edit Player"
                         />
@@ -462,7 +564,7 @@ export default function PlayersPage() {
                           variant="danger"
                           size="sm"
                           isIconOnly
-                          icon={<Trash2 size={14} />}
+                          icon={<Trash2 size={13} />}
                           onClick={() => handleDelete(pl._id, pl.name)}
                           title="Deactivate Player"
                         />
@@ -473,138 +575,141 @@ export default function PlayersPage() {
               )}
             </TableBody>
           </Table>
-        )}
 
-        {/* VIEW 2: GRID (CARDS) VIEW */}
-        {viewMode === 'grid' && (
-          <div className="grid-3">
-            {players.map((pl) => (
-              <Card key={pl._id} variant={(pl.pendingDue || 0) > 0 ? 'rose' : 'emerald'} style={{ position: 'relative' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '14px' }}>
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            totalItems={displayedPlayers.length}
+            pageSize={pageSize}
+            onPageChange={setCurrentPage}
+            itemName="Players"
+          />
+        </div>
+      )}
+
+      {/* VIEW 2: CONCISE COMPACT GRID (High visibility, minimal scrolling) */}
+      {viewMode === 'grid' && (
+        <div>
+          <div className="players-compact-grid">
+            {displayedPlayers.length === 0 ? (
+              <div style={{ gridColumn: '1 / -1', padding: '40px', textAlign: 'center', color: 'var(--text-muted)' }}>
+                No players match the selected filters.
+              </div>
+            ) : (
+              paginatedPlayers.map((pl) => {
+                const due = pl.pendingDue || 0;
+                const hasDue = due > 0;
+
+                return (
                   <div
-                    style={{
-                      width: '46px',
-                      height: '46px',
-                      borderRadius: '12px',
-                      background: 'linear-gradient(135deg, #0284c7, #2563eb)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      color: '#ffffff',
-                      fontWeight: 800,
-                      fontSize: '15px',
-                      boxShadow: '0 4px 10px rgba(2, 132, 199, 0.25)',
-                    }}
+                    key={pl._id}
+                    className={`player-compact-card ${hasDue ? 'card-has-due' : 'card-cleared'}`}
                   >
-                    {pl.jerseyNumber ? `#${pl.jerseyNumber}` : pl.name.substring(0, 2).toUpperCase()}
-                  </div>
+                    {/* Header: Avatar, Name, Role badge */}
+                    <div className="player-card-header">
+                      <div className="player-card-avatar">
+                        {pl.jerseyNumber !== undefined && pl.jerseyNumber !== null && pl.jerseyNumber !== ''
+                          ? `#${pl.jerseyNumber}`
+                          : pl.name.substring(0, 2).toUpperCase()}
+                      </div>
 
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <Link
-                      href={`/players/${pl._id}`}
-                      style={{
-                        fontSize: '16px',
-                        fontWeight: 800,
-                        color: 'var(--text-primary)',
-                        textDecoration: 'none',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '5px',
-                      }}
-                    >
-                      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {pl.name}
-                      </span>
-                      <ExternalLink size={11} color="var(--accent-blue)" />
-                    </Link>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '3px' }}>
-                      <Badge variant="purple" style={{ fontSize: '10px', textTransform: 'capitalize' }}>
-                        {pl.role?.replace('_', ' ') || 'Player'}
-                      </Badge>
+                      <div className="player-card-titles">
+                        <Link href={`/players/${pl._id}`} className="player-card-name-link">
+                          <span>{pl.name}</span>
+                          <ExternalLink size={10} color="var(--accent-blue)" />
+                        </Link>
+                        <div className="player-card-sub">
+                          <Badge variant="purple" style={{ fontSize: '9.5px', textTransform: 'capitalize', padding: '1px 5px' }}>
+                            {pl.role?.replace('_', ' ') || 'Player'}
+                          </Badge>
+                          {pl.phone && (
+                            <span style={{ fontSize: '10.5px', color: 'var(--text-muted)' }}>
+                              {pl.phone}
+                            </span>
+                          )}
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                </div>
 
-                <div
-                  style={{
-                    display: 'grid',
-                    gridTemplateColumns: 'repeat(2, 1fr)',
-                    gap: '8px',
-                    padding: '10px 12px',
-                    background: '#f8fafc',
-                    borderRadius: '8px',
-                    border: '1px solid var(--border-color)',
-                    marginBottom: '14px',
-                    fontSize: '12px',
-                  }}
-                >
-                  <div>
-                    <div style={{ color: 'var(--text-muted)', fontSize: '10px', textTransform: 'uppercase' }}>
-                      Matches
+                    {/* Stats strip: Matches, Paid, Due */}
+                    <div className="player-card-stats-row">
+                      <div className="player-stat-col">
+                        <span className="player-stat-label">Matches</span>
+                        <span className="player-stat-val">{pl.matchesPlayed || 0}</span>
+                      </div>
+                      <div className="player-stat-col">
+                        <span className="player-stat-label">Paid</span>
+                        <span className="player-stat-val player-stat-paid">Rs. {fNum(pl.totalFeePaid)}</span>
+                      </div>
+                      <div className="player-stat-col">
+                        <span className="player-stat-label">Due</span>
+                        <span className={`player-stat-val ${hasDue ? 'player-stat-due' : ''}`}>
+                          {hasDue ? `Rs. ${fNum(due)}` : 'Rs. 0'}
+                        </span>
+                      </div>
                     </div>
-                    <div style={{ fontWeight: 800, color: 'var(--text-primary)', fontSize: '14px' }}>
-                      {pl.matchesPlayed || 0}
-                    </div>
-                  </div>
-                  <div>
-                    <div style={{ color: 'var(--text-muted)', fontSize: '10px', textTransform: 'uppercase' }}>
-                      Fee Paid
-                    </div>
-                    <div style={{ fontWeight: 800, color: 'var(--accent-green)', fontSize: '14px' }}>
-                      Rs. {fNum(pl.totalFeePaid)}
-                    </div>
-                  </div>
-                </div>
 
-                <div
-                  style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    paddingTop: '8px',
-                    borderTop: '1px solid var(--border-color)',
-                  }}
-                >
-                  <div>
-                    {(pl.pendingDue || 0) > 0 ? (
-                      <Badge variant="danger">Rs. {fNum(pl.pendingDue)} Due</Badge>
-                    ) : (
-                      <Badge variant="success">Cleared</Badge>
-                    )}
-                  </div>
+                    {/* Footer: Due status badge + Quick actions */}
+                    <div className="player-card-footer">
+                      <div>
+                        {hasDue ? (
+                          <Badge variant="danger" style={{ fontSize: '10px', padding: '2px 6px' }}>
+                            Rs. {fNum(due)} Due
+                          </Badge>
+                        ) : (
+                          <Badge variant="success" icon={<CheckCircle2 size={10} />} style={{ fontSize: '10px', padding: '2px 6px' }}>
+                            Cleared
+                          </Badge>
+                        )}
+                      </div>
 
-                  <div className="action-group">
-                    <Button
-                      variant="success"
-                      size="sm"
-                      icon={<DollarSign size={14} />}
-                      onClick={() => openFeeModal(pl)}
-                      title="Collect / Pay Match Fee"
-                    >
-                      Pay Fee
-                    </Button>
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      isIconOnly
-                      icon={<Pencil size={14} color="var(--accent-blue)" />}
-                      onClick={() => handleEditOpen(pl)}
-                      title="Edit"
-                    />
-                    <Button
-                      variant="danger"
-                      size="sm"
-                      isIconOnly
-                      icon={<Trash2 size={14} />}
-                      onClick={() => handleDelete(pl._id, pl.name)}
-                      title="Deactivate"
-                    />
+                      <div className="action-group" style={{ gap: '4px' }}>
+                        <Button
+                          variant="success"
+                          size="sm"
+                          icon={<DollarSign size={12} />}
+                          onClick={() => openFeeModal(pl)}
+                          title="Collect / Pay Match Fee"
+                          style={{ padding: '4px 8px', fontSize: '11px' }}
+                        >
+                          Pay
+                        </Button>
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          isIconOnly
+                          icon={<Pencil size={12} color="var(--accent-blue)" />}
+                          onClick={() => handleEditOpen(pl)}
+                          title="Edit"
+                          style={{ padding: '4px 6px' }}
+                        />
+                        <Button
+                          variant="danger"
+                          size="sm"
+                          isIconOnly
+                          icon={<Trash2 size={12} />}
+                          onClick={() => handleDelete(pl._id, pl.name)}
+                          title="Deactivate"
+                          style={{ padding: '4px 6px' }}
+                        />
+                      </div>
+                    </div>
                   </div>
-                </div>
-              </Card>
-            ))}
+                );
+              })
+            )}
           </div>
-        )}
+
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            totalItems={displayedPlayers.length}
+            pageSize={pageSize}
+            onPageChange={setCurrentPage}
+            itemName="Players"
+          />
+        </div>
+      )}
 
         {/* Modal: Add Player */}
         <Modal
