@@ -2,53 +2,57 @@
 
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useForm } from 'react-hook-form';
 import { useAuth } from '../../lib/auth';
 import { Phone, Lock, Eye, EyeOff, ShieldCheck, ArrowRight, Sparkles, CheckCircle2 } from 'lucide-react';
+
+interface LoginFormValues {
+  phone: string;
+  password?: string;
+}
 
 export default function LoginPage() {
   const router = useRouter();
   const { login } = useAuth();
 
-  const [phone, setPhone] = useState('');
-  const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [serverError, setServerError] = useState<string | null>(null);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!phone.trim()) {
-      setError('Please enter your phone number.');
-      return;
-    }
+  const {
+    register,
+    handleSubmit,
+    setValue,
+    formState: { errors, isSubmitting },
+  } = useForm<LoginFormValues>({
+    defaultValues: {
+      phone: '',
+      password: '',
+    },
+  });
 
-    setLoading(true);
-    setError(null);
+  const onSubmit = async (values: LoginFormValues) => {
+    setServerError(null);
 
-    const result = await login(phone.trim(), password);
-    setLoading(false);
+    const result = await login(values.phone.trim(), values.password || '');
 
     if (result.success) {
       router.push('/');
     } else {
-      setError(result.message || 'Invalid credentials. Please verify your phone number.');
+      setServerError(result.message || 'Invalid credentials. Please verify your phone number.');
     }
   };
 
-  const handleQuickLogin = (demoPhone: string, demoPass: string) => {
-    setPhone(demoPhone);
-    setPassword(demoPass);
-    setError(null);
-    setLoading(true);
+  const handleQuickLogin = async (demoPhone: string, demoPass: string) => {
+    setValue('phone', demoPhone);
+    setValue('password', demoPass);
+    setServerError(null);
 
-    login(demoPhone, demoPass).then((res) => {
-      setLoading(false);
-      if (res.success) {
-        router.push('/');
-      } else {
-        setError(res.message || 'Quick login failed.');
-      }
-    });
+    const res = await login(demoPhone, demoPass);
+    if (res.success) {
+      router.push('/');
+    } else {
+      setServerError(res.message || 'Quick login failed.');
+    }
   };
 
   return (
@@ -76,13 +80,13 @@ export default function LoginPage() {
             </p>
           </div>
 
-          {error && (
+          {serverError && (
             <div className="login-error-alert" role="alert">
-              <span>{error}</span>
+              <span>{serverError}</span>
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="login-form">
+          <form onSubmit={handleSubmit(onSubmit)} className="login-form">
             <div className="form-group">
               <label className="form-label" htmlFor="login-phone">
                 Phone Number
@@ -94,16 +98,23 @@ export default function LoginPage() {
                   type="text"
                   className="login-input"
                   placeholder="e.g. 0300-1234567 or 03001234567"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
                   autoComplete="tel"
                   autoFocus
-                  required
+                  {...register('phone', {
+                    required: 'Please enter your phone number',
+                    minLength: { value: 7, message: 'Please enter a valid phone number' },
+                  })}
                 />
               </div>
-              <span className="login-input-hint">
-                Pakistan format (03xx) or international (+92) supported
-              </span>
+              {errors.phone ? (
+                <span className="login-input-hint" style={{ color: 'var(--accent-rose, #ef4444)' }}>
+                  {errors.phone.message}
+                </span>
+              ) : (
+                <span className="login-input-hint">
+                  Pakistan format (03xx) or international (+92) supported
+                </span>
+              )}
             </div>
 
             <div className="form-group">
@@ -120,9 +131,8 @@ export default function LoginPage() {
                   type={showPassword ? 'text' : 'password'}
                   className="login-input"
                   placeholder="Enter password (admin123 for captain)"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
                   autoComplete="current-password"
+                  {...register('password')}
                 />
                 <button
                   type="button"
@@ -140,9 +150,9 @@ export default function LoginPage() {
               type="submit"
               id="login-submit-btn"
               className="btn btn-primary login-submit-btn"
-              disabled={loading}
+              disabled={isSubmitting}
             >
-              {loading ? (
+              {isSubmitting ? (
                 <span className="login-spinner" />
               ) : (
                 <>

@@ -3,9 +3,12 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { queryKeys } from '../../../lib/queryKeys';
 import { Header } from '../../../components/Header';
 import { StatCard } from '../../../components/StatCard';
 import { fetchApi } from '../../../lib/api';
+import { confirmDelete, showToast } from '../../../lib/alerts';
 import {
   Button,
   Badge,
@@ -15,14 +18,11 @@ import {
   DatePicker,
   Modal,
   Card,
-  Table,
-  TableHeader,
-  TableBody,
-  TableRow,
-  TableHead,
-  TableCell,
-  TableEmpty,
+  DataTable,
 } from '../../../components/ui';
+import { EditMatchModal } from '../../../components/EditMatchModal';
+import { EditPaymentModal } from '../../../components/EditPaymentModal';
+import { AssignSquadFeeForm } from '../../../components/AssignSquadFeeForm';
 import {
   Calendar,
   MapPin,
@@ -44,118 +44,47 @@ export default function MatchDetailPage() {
   const params = useParams();
   const router = useRouter();
   const id = params?.id as string;
+  const queryClient = useQueryClient();
 
-  const [matchData, setMatchData] = useState<any>(null);
-  const [payments, setPayments] = useState<any[]>([]);
-  const [players, setPlayers] = useState<any[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
   const [showAddPlayerPayment, setShowAddPlayerPayment] = useState<boolean>(false);
-  const [newPayment, setNewPayment] = useState({
-    playerId: '',
-    feeAssigned: 1000,
-    feePaid: 1000,
-    paymentMethod: 'cash',
-  });
-
-  // Edit Match Modal state
   const [isEditOpen, setIsEditOpen] = useState<boolean>(false);
-  const [editFormData, setEditFormData] = useState({
-    opponentTeam: '',
-    matchDate: '',
-    venue: '',
-    overs: 20,
-    tournamentStage: '',
-    result: 'pending',
-    ourScore: '',
-    opponentScore: '',
-    groundCost: 0,
-    umpireCost: 0,
-    ballCost: 0,
-    refreshmentCost: 0,
-    otherCosts: 0,
-    perPlayerFee: 0,
-    notes: '',
-  });
-
-  // Edit Payment Modal state
   const [editingPayment, setEditingPayment] = useState<any>(null);
-  const [paymentFormData, setPaymentFormData] = useState({
-    feePaid: 0,
-    paymentMethod: 'cash',
-    notes: '',
+
+  // React Queries
+  const matchQuery = useQuery({
+    queryKey: queryKeys.match(id),
+    queryFn: () => fetchApi<{ success: boolean; match: any; payments: any[] }>(`/matches/${id}`),
+    enabled: !!id,
   });
 
-  const loadMatch = () => {
-    if (!id) return;
-    setLoading(true);
-    fetchApi<{ success: boolean; match: any; payments: any[] }>(`/matches/${id}`)
-      .then((res) => {
-        if (res.success) {
-          setMatchData(res.match);
-          setPayments(res.payments || []);
-          const m = res.match;
-          setEditFormData({
-            opponentTeam: m.opponentTeam || '',
-            matchDate: m.matchDate ? new Date(m.matchDate).toISOString().split('T')[0] : '',
-            venue: m.venue || '',
-            overs: m.overs || 20,
-            tournamentStage: m.tournamentStage || '',
-            result: m.result || 'pending',
-            ourScore: m.ourScore || '',
-            opponentScore: m.opponentScore || '',
-            groundCost: m.groundCost || 0,
-            umpireCost: m.umpireCost || 0,
-            ballCost: m.ballCost || 0,
-            refreshmentCost: m.refreshmentCost || 0,
-            otherCosts: m.otherCosts || 0,
-            perPlayerFee: m.perPlayerFee || 0,
-            notes: m.notes || '',
-          });
-          if (m.perPlayerFee) {
-            setNewPayment((prev) => ({
-              ...prev,
-              feeAssigned: m.perPlayerFee,
-              feePaid: m.perPlayerFee,
-            }));
-          }
-        }
-      })
-      .catch((err) => console.error(err))
-      .finally(() => setLoading(false));
-  };
+  const playersQuery = useQuery({
+    queryKey: queryKeys.players(),
+    queryFn: () => fetchApi<{ success: boolean; players: any[] }>('/players'),
+  });
 
-  useEffect(() => {
-    loadMatch();
-    fetchApi<{ success: boolean; players: any[] }>('/players').then((res) => {
-      if (res.success) setPlayers(res.players || []);
-    });
-  }, [id]);
+  const matchData = matchQuery.data?.match;
+  const payments = matchQuery.data?.payments || [];
+  const players = playersQuery.data?.players || [];
+  const loading = matchQuery.isLoading;
 
-  const handleUpdateMatch = async (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-      const res = await fetchApi<{ success: boolean }>(`/matches/${id}`, {
-        method: 'PUT',
-        body: JSON.stringify(editFormData),
-      });
-      if (res.success) {
-        setIsEditOpen(false);
-        loadMatch();
-      }
-    } catch (err) {
-      alert('Failed to update match');
-    }
+  const invalidateData = () => {
+    queryClient.invalidateQueries({ queryKey: queryKeys.match(id) });
+    queryClient.invalidateQueries({ queryKey: ['matches'] });
+    queryClient.invalidateQueries({ queryKey: ['players'] });
+    queryClient.invalidateQueries({ queryKey: ['dashboard'] });
   };
 
   const handleDeleteMatch = async () => {
-    if (!confirm(`Are you sure you want to delete match vs "${matchData?.opponentTeam}"?`)) return;
+    const confirmed = await confirmDelete(`match vs "${matchData?.opponentTeam}"`);
+    if (!confirmed) return;
     try {
       const res = await fetchApi<{ success: boolean }>(`/matches/${id}`, { method: 'DELETE' });
       if (res.success) {
+        showToast.success(`Match vs "${matchData?.opponentTeam}" deleted.`);
         router.push('/matches');
       }
     } catch (err) {
-      alert('Failed to delete match');
+      showToast.error('Failed to delete match.');
     }
   };
 
@@ -170,70 +99,27 @@ export default function MatchDetailPage() {
         }),
       });
       if (res.success) {
-        loadMatch();
+        showToast.success('Player payment marked as paid!');
+        invalidateData();
       }
     } catch (err) {
-      alert('Failed to update payment');
-    }
-  };
-
-  const handleUpdatePayment = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!editingPayment) return;
-    try {
-      const res = await fetchApi<{ success: boolean }>(`/payments/${editingPayment._id}`, {
-        method: 'PUT',
-        body: JSON.stringify(paymentFormData),
-      });
-      if (res.success) {
-        setEditingPayment(null);
-        loadMatch();
-      }
-    } catch (err) {
-      alert('Failed to update payment record');
-    }
-  };
-
-  const handleAddPlayerPayment = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!id || !newPayment.playerId) return;
-    try {
-      const res = await fetchApi<{ success: boolean; payment: any }>('/payments', {
-        method: 'POST',
-        body: JSON.stringify({
-          matchId: id,
-          playerId: newPayment.playerId,
-          feeAssigned: Number(newPayment.feeAssigned) || 0,
-          feePaid: Number(newPayment.feePaid) || 0,
-          paymentMethod: newPayment.paymentMethod,
-        }),
-      });
-      if (res.success) {
-        setNewPayment({
-          playerId: '',
-          feeAssigned: matchData?.perPlayerFee || 1000,
-          feePaid: matchData?.perPlayerFee || 1000,
-          paymentMethod: 'cash',
-        });
-        setShowAddPlayerPayment(false);
-        loadMatch();
-      }
-    } catch (err) {
-      alert('Failed to add player fee');
+      showToast.error('Failed to update payment.');
     }
   };
 
   const handleDeletePayment = async (paymentId: string) => {
-    if (!confirm('Remove this player payment record from match?')) return;
+    const confirmed = await confirmDelete('player payment record from match');
+    if (!confirmed) return;
     try {
       const res = await fetchApi<{ success: boolean }>(`/payments/${paymentId}`, {
         method: 'DELETE',
       });
       if (res.success) {
-        loadMatch();
+        showToast.success('Player payment removed from match.');
+        invalidateData();
       }
     } catch (err) {
-      alert('Failed to remove player payment');
+      showToast.error('Failed to remove player payment.');
     }
   };
 
@@ -342,7 +228,7 @@ export default function MatchDetailPage() {
                     style={{ textDecoration: 'none' }}
                   >
                     <Badge variant="purple" icon={<ExternalLink size={10} />}>
-                      🏆 {matchData.tournamentId.name}
+                      {matchData.tournamentId.name}
                     </Badge>
                   </Link>
                 )}
@@ -490,7 +376,7 @@ export default function MatchDetailPage() {
                 color: 'var(--text-secondary)',
               }}
             >
-              📝 {matchData.notes}
+              {matchData.notes}
             </div>
           )}
         </Card>
@@ -628,7 +514,7 @@ export default function MatchDetailPage() {
                 color: 'var(--text-muted)',
               }}
             >
-              💡 Per-player collection target is set at <strong>Rs. {fNum(matchData.perPlayerFee)}</strong>.
+              Per-player collection target is set at <strong>Rs. {fNum(matchData.perPlayerFee)}</strong>.
             </div>
           </Card>
 
@@ -677,415 +563,161 @@ export default function MatchDetailPage() {
 
             {/* Inline Add Player Fee Form */}
             {showAddPlayerPayment && (
-              <form
-                onSubmit={handleAddPlayerPayment}
-                style={{
-                  padding: '16px',
-                  background: '#f0f9ff',
-                  border: '1px solid #bae6fd',
-                  borderRadius: '10px',
-                  marginBottom: '18px',
+              <AssignSquadFeeForm
+                matchId={id}
+                defaultFee={matchData?.perPlayerFee || 1000}
+                players={players}
+                onSuccess={() => {
+                  setShowAddPlayerPayment(false);
+                  invalidateData();
                 }}
-              >
-                <div
-                  style={{
-                    fontWeight: 700,
-                    fontSize: '13.5px',
-                    color: 'var(--accent-blue)',
-                    marginBottom: '12px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                  }}
-                >
-                  <Plus size={15} />
-                  <span>Assign Match Fee to Player</span>
-                </div>
-                <div className="grid-3" style={{ marginBottom: '12px' }}>
-                  <Select
-                    label="Select Player *"
-                    value={newPayment.playerId}
-                    onChange={(e) =>
-                      setNewPayment({ ...newPayment, playerId: e.target.value })
-                    }
-                    required
-                    options={[
-                      { value: '', label: '— Choose Player —' },
-                      ...players.map((p) => ({
-                        value: p._id,
-                        label: `${p.name} ${p.jerseyNumber ? `(#${p.jerseyNumber})` : ''}`,
-                      })),
-                    ]}
-                  />
-                  <Input
-                    label="Fee Assigned (Rs.) *"
-                    type="number"
-                    value={newPayment.feeAssigned}
-                    onChange={(e) =>
-                      setNewPayment({
-                        ...newPayment,
-                        feeAssigned: Number(e.target.value),
-                      })
-                    }
-                    required
-                  />
-                  <Input
-                    label="Fee Paid (Rs.) *"
-                    type="number"
-                    value={newPayment.feePaid}
-                    onChange={(e) =>
-                      setNewPayment({
-                        ...newPayment,
-                        feePaid: Number(e.target.value),
-                      })
-                    }
-                    required
-                  />
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    onClick={() => setShowAddPlayerPayment(false)}
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    variant="success"
-                    size="sm"
-                    type="submit"
-                    icon={<CheckCircle2 size={14} />}
-                  >
-                    Save Player Fee
-                  </Button>
-                </div>
-              </form>
+                onCancel={() => setShowAddPlayerPayment(false)}
+              />
             )}
 
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Player</TableHead>
-                  <TableHead>Fee Assigned</TableHead>
-                  <TableHead>Fee Paid</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Method</TableHead>
-                  <TableHead align="right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {payments.length === 0 ? (
-                  <TableEmpty colSpan={6} message="No squad players registered for this match yet." />
-                ) : (
-                  payments.map((p) => {
+            <DataTable<any>
+              data={payments}
+              keyExtractor={(p) => p._id}
+              emptyMessage="No squad players registered for this match yet."
+              columns={[
+                {
+                  header: 'Player',
+                  render: (p) => {
                     const player = p.playerId;
+                    return (
+                      <div>
+                        <Link
+                          href={`/players/${player?._id || ''}`}
+                          style={{
+                            textDecoration: 'none',
+                            color: 'var(--text-primary)',
+                            fontWeight: 600,
+                          }}
+                        >
+                          {player?.name || 'Unknown Player'}
+                        </Link>
+                        {player?.role && (
+                          <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+                            {player.role.replace('_', ' ')}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  },
+                },
+                {
+                  header: 'Fee Assigned',
+                  render: (p) => <>Rs. {fNum(p.feeAssigned)}</>,
+                },
+                {
+                  header: 'Fee Paid',
+                  render: (p) => {
                     const isPaid = p.paymentStatus === 'paid';
                     return (
-                      <TableRow key={p._id}>
-                        <TableCell>
-                          <Link
-                            href={`/players/${player?._id || ''}`}
-                            style={{
-                              textDecoration: 'none',
-                              color: 'var(--text-primary)',
-                              fontWeight: 600,
-                            }}
-                          >
-                            {player?.name || 'Unknown Player'}
-                          </Link>
-                          {player?.role && (
-                            <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-                              {player.role.replace('_', ' ')}
-                            </div>
-                          )}
-                        </TableCell>
-                        <TableCell>Rs. {fNum(p.feeAssigned)}</TableCell>
-                        <TableCell
-                          style={{
-                            fontWeight: 600,
-                            color: isPaid ? 'var(--accent-green)' : 'var(--accent-rose)',
-                          }}
-                        >
-                          Rs. {fNum(p.feePaid)}
-                        </TableCell>
-                        <TableCell>
-                          <Badge
-                            variant={
-                              isPaid
-                                ? 'success'
-                                : p.paymentStatus === 'partial'
-                                ? 'warning'
-                                : 'danger'
-                            }
-                          >
-                            {p.paymentStatus.toUpperCase()}
-                          </Badge>
-                        </TableCell>
-                        <TableCell
-                          style={{
-                            textTransform: 'capitalize',
-                            fontSize: '12px',
-                            color: 'var(--text-secondary)',
-                          }}
-                        >
-                          {p.paymentMethod?.replace('_', ' ') || 'Cash'}
-                        </TableCell>
-                        <TableCell align="right">
-                          <div className="action-group" style={{ justifyContent: 'flex-end' }}>
-                            {!isPaid && (
-                              <Button
-                                variant="success"
-                                size="sm"
-                                icon={<CheckCircle2 size={14} />}
-                                onClick={() => handleQuickMarkPaid(p)}
-                                title="1-Click Mark Fully Paid"
-                              >
-                                Paid
-                              </Button>
-                            )}
-                            <Button
-                              variant="secondary"
-                              size="sm"
-                              isIconOnly
-                              icon={<Pencil size={14} color="var(--accent-blue)" />}
-                              onClick={() => {
-                                setEditingPayment(p);
-                                setPaymentFormData({
-                                  feePaid: p.feePaid || 0,
-                                  paymentMethod: p.paymentMethod || 'cash',
-                                  notes: p.notes || '',
-                                });
-                              }}
-                              title="Edit Payment"
-                            />
-                            <Button
-                              variant="danger"
-                              size="sm"
-                              isIconOnly
-                              icon={<Trash2 size={14} />}
-                              onClick={() => handleDeletePayment(p._id)}
-                              title="Remove Player from Match"
-                            />
-                          </div>
-                        </TableCell>
-                      </TableRow>
+                      <span
+                        style={{
+                          fontWeight: 600,
+                          color: isPaid ? 'var(--accent-green)' : 'var(--accent-rose)',
+                        }}
+                      >
+                        Rs. {fNum(p.feePaid)}
+                      </span>
                     );
-                  })
-                )}
-              </TableBody>
-            </Table>
+                  },
+                },
+                {
+                  header: 'Status',
+                  render: (p) => {
+                    const isPaid = p.paymentStatus === 'paid';
+                    return (
+                      <Badge
+                        variant={
+                          isPaid
+                            ? 'success'
+                            : p.paymentStatus === 'partial'
+                            ? 'warning'
+                            : 'danger'
+                        }
+                      >
+                        {p.paymentStatus.toUpperCase()}
+                      </Badge>
+                    );
+                  },
+                },
+                {
+                  header: 'Method',
+                  render: (p) => (
+                    <span
+                      style={{
+                        textTransform: 'capitalize',
+                        fontSize: '12px',
+                        color: 'var(--text-secondary)',
+                      }}
+                    >
+                      {p.paymentMethod?.replace('_', ' ') || 'Cash'}
+                    </span>
+                  ),
+                },
+                {
+                  header: 'Actions',
+                  align: 'right',
+                  render: (p) => {
+                    const isPaid = p.paymentStatus === 'paid';
+                    return (
+                      <div className="action-group" style={{ justifyContent: 'flex-end' }}>
+                        {!isPaid && (
+                          <Button
+                            variant="success"
+                            size="sm"
+                            icon={<CheckCircle2 size={14} />}
+                            onClick={() => handleQuickMarkPaid(p)}
+                            title="1-Click Mark Fully Paid"
+                          >
+                            Paid
+                          </Button>
+                        )}
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          isIconOnly
+                          icon={<Pencil size={14} color="var(--accent-blue)" />}
+                          onClick={() => {
+                            setEditingPayment(p);
+                          }}
+                          title="Edit Payment"
+                        />
+                        <Button
+                          variant="danger"
+                          size="sm"
+                          isIconOnly
+                          icon={<Trash2 size={14} />}
+                          onClick={() => handleDeletePayment(p._id)}
+                          title="Remove Player from Match"
+                        />
+                      </div>
+                    );
+                  },
+                },
+              ]}
+            />
           </Card>
         </div>
       </div>
 
       {/* Edit Match Modal */}
-      <Modal
+      <EditMatchModal
         isOpen={isEditOpen}
         onClose={() => setIsEditOpen(false)}
-        title={`Edit Match vs ${matchData.opponentTeam}`}
-        footer={
-          <>
-            <Button variant="secondary" onClick={() => setIsEditOpen(false)}>
-              Cancel
-            </Button>
-            <Button variant="primary" onClick={handleUpdateMatch}>
-              Save Match Changes
-            </Button>
-          </>
-        }
-      >
-        <form onSubmit={handleUpdateMatch}>
-          <div className="grid-2">
-            <Input
-              label="Opponent Team *"
-              value={editFormData.opponentTeam}
-              onChange={(e) => setEditFormData({ ...editFormData, opponentTeam: e.target.value })}
-              required
-            />
-            <DatePicker
-              label="Match Date *"
-              value={editFormData.matchDate}
-              onChange={(e) => setEditFormData({ ...editFormData, matchDate: e.target.value })}
-              required
-            />
-          </div>
-
-          <div className="grid-2">
-            <Input
-              label="Venue"
-              value={editFormData.venue}
-              onChange={(e) => setEditFormData({ ...editFormData, venue: e.target.value })}
-            />
-            <Input
-              label="Overs"
-              type="number"
-              value={editFormData.overs}
-              onChange={(e) =>
-                setEditFormData({ ...editFormData, overs: Number(e.target.value) })
-              }
-            />
-          </div>
-
-          <div className="grid-3">
-            <Select
-              label="Result"
-              value={editFormData.result}
-              onChange={(e) => setEditFormData({ ...editFormData, result: e.target.value })}
-              options={[
-                { value: 'pending', label: 'Pending' },
-                { value: 'won', label: 'Won' },
-                { value: 'lost', label: 'Lost' },
-                { value: 'tied', label: 'Tied' },
-                { value: 'abandoned', label: 'Abandoned' },
-              ]}
-            />
-            <Input
-              label="Our Score"
-              placeholder="e.g. 175/4 (20)"
-              value={editFormData.ourScore}
-              onChange={(e) => setEditFormData({ ...editFormData, ourScore: e.target.value })}
-            />
-            <Input
-              label="Opponent Score"
-              placeholder="e.g. 142/9 (20)"
-              value={editFormData.opponentScore}
-              onChange={(e) =>
-                setEditFormData({ ...editFormData, opponentScore: e.target.value })
-              }
-            />
-          </div>
-
-          <div
-            style={{
-              fontSize: '13px',
-              fontWeight: 600,
-              color: 'var(--accent-blue)',
-              margin: '14px 0 8px',
-            }}
-          >
-            Itemized Match Ground Expenses
-          </div>
-
-          <div className="grid-3">
-            <Input
-              label="Pitch Rent (Rs.)"
-              type="number"
-              value={editFormData.groundCost}
-              onChange={(e) =>
-                setEditFormData({ ...editFormData, groundCost: Number(e.target.value) })
-              }
-            />
-            <Input
-              label="Umpires (Rs.)"
-              type="number"
-              value={editFormData.umpireCost}
-              onChange={(e) =>
-                setEditFormData({ ...editFormData, umpireCost: Number(e.target.value) })
-              }
-            />
-            <Input
-              label="Balls (Rs.)"
-              type="number"
-              value={editFormData.ballCost}
-              onChange={(e) =>
-                setEditFormData({ ...editFormData, ballCost: Number(e.target.value) })
-              }
-            />
-          </div>
-
-          <div className="grid-3">
-            <Input
-              label="Refreshment (Rs.)"
-              type="number"
-              value={editFormData.refreshmentCost}
-              onChange={(e) =>
-                setEditFormData({ ...editFormData, refreshmentCost: Number(e.target.value) })
-              }
-            />
-            <Input
-              label="Other Costs (Rs.)"
-              type="number"
-              value={editFormData.otherCosts}
-              onChange={(e) =>
-                setEditFormData({ ...editFormData, otherCosts: Number(e.target.value) })
-              }
-            />
-            <Input
-              label="Per-Player Fee (Rs.)"
-              type="number"
-              value={editFormData.perPlayerFee}
-              onChange={(e) =>
-                setEditFormData({ ...editFormData, perPlayerFee: Number(e.target.value) })
-              }
-            />
-          </div>
-
-          <Textarea
-            label="Notes / Captain Remarks"
-            rows={2}
-            value={editFormData.notes}
-            onChange={(e) => setEditFormData({ ...editFormData, notes: e.target.value })}
-          />
-        </form>
-      </Modal>
+        match={matchData}
+        onSuccess={invalidateData}
+      />
 
       {/* Edit Payment Modal */}
-      <Modal
-        isOpen={!!editingPayment}
+      <EditPaymentModal
+        payment={editingPayment}
         onClose={() => setEditingPayment(null)}
-        title={`Update Payment: ${editingPayment?.playerId?.name || 'Player'}`}
-        footer={
-          <>
-            <Button variant="secondary" onClick={() => setEditingPayment(null)}>
-              Cancel
-            </Button>
-            <Button variant="primary" onClick={handleUpdatePayment}>
-              Save Payment
-            </Button>
-          </>
-        }
-      >
-        <form onSubmit={handleUpdatePayment}>
-          <Input
-            label="Fee Assigned"
-            type="text"
-            value={`Rs. ${fNum(editingPayment?.feeAssigned)}`}
-            disabled
-          />
-
-          <Input
-            label="Amount Paid (Rs.) *"
-            type="number"
-            value={paymentFormData.feePaid}
-            onChange={(e) =>
-              setPaymentFormData({ ...paymentFormData, feePaid: Number(e.target.value) })
-            }
-            required
-          />
-
-          <Select
-            label="Payment Method"
-            value={paymentFormData.paymentMethod}
-            onChange={(e) =>
-              setPaymentFormData({ ...paymentFormData, paymentMethod: e.target.value })
-            }
-            options={[
-              { value: 'cash', label: 'Cash' },
-              { value: 'online', label: 'Online Transfer / Bank' },
-              { value: 'sponsor_covered', label: 'Covered by Sponsor' },
-            ]}
-          />
-
-          <Input
-            label="Notes / Receipt Note"
-            type="text"
-            value={paymentFormData.notes}
-            onChange={(e) =>
-              setPaymentFormData({ ...paymentFormData, notes: e.target.value })
-            }
-          />
-        </form>
-      </Modal>
+        onSuccess={invalidateData}
+      />
     </>
   );
 }

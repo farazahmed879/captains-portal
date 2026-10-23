@@ -2,6 +2,7 @@ import './globals.css';
 import type { Metadata } from 'next';
 import { Dock } from '../components/Dock';
 import { AuthProvider } from '../lib/auth';
+import { QueryProvider } from '../lib/QueryProvider';
 
 export const metadata: Metadata = {
   title: "Captains Portal | Sports Team, Matches & Finance Hub",
@@ -16,14 +17,16 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body>
-        <AuthProvider>
-          <div className="app-container">
-            <div className="main-content">
-              {children}
+        <QueryProvider>
+          <AuthProvider>
+            <div className="app-container">
+              <div className="main-content">
+                {children}
+              </div>
+              <Dock />
             </div>
-            <Dock />
-          </div>
-        </AuthProvider>
+          </AuthProvider>
+        </QueryProvider>
       </body>
     </html>
   );

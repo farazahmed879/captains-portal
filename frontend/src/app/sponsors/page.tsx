@@ -1,11 +1,16 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { queryKeys } from '../../lib/queryKeys';
+import { Sponsor } from '../../types';
+import { getSponsorColumns } from '../../columns';
 import { Header } from '../../components/Header';
 import { StatCard } from '../../components/StatCard';
 import { fetchApi } from '../../lib/api';
+import { confirmDelete, showToast } from '../../lib/alerts';
 import {
   Button,
   Badge,
@@ -41,20 +46,18 @@ import {
   Search,
 } from '../../components/icons';
 import { SponsorTransactionModal, SponsorTxType } from '../../components/SponsorTransactionModal';
+import { CreateSponsorModal } from '../../components/CreateSponsorModal';
+import { EditSponsorModal } from '../../components/EditSponsorModal';
 
 export default function SponsorsPage() {
   const router = useRouter();
-  const [sponsors, setSponsors] = useState<any[]>([]);
-  const [teams, setTeams] = useState<any[]>([]);
+  const queryClient = useQueryClient();
   const [selectedTeamId, setSelectedTeamId] = useState<string>('');
-  const [totalInvested, setTotalInvested] = useState<number>(0);
-  const [totalReturnsPaid, setTotalReturnsPaid] = useState<number>(0);
-  const [netRetained, setNetRetained] = useState<number>(0);
-  const [loading, setLoading] = useState<boolean>(true);
 
   // Modals
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
   const [isEditOpen, setIsEditOpen] = useState<boolean>(false);
+  const [editingSponsor, setEditingSponsor] = useState<any>(null);
   const [txModal, setTxModal] = useState<{ open: boolean; type: SponsorTxType; sponsor: any }>({
     open: false,
     type: 'investment',
@@ -62,127 +65,54 @@ export default function SponsorsPage() {
   });
   const openTxModal = (sponsor: any, type: SponsorTxType) => setTxModal({ open: true, type, sponsor });
 
-  const [formData, setFormData] = useState({
-    teamId: '',
-    sponsorName: '',
-    companyName: '',
-    amountInvested: '',
-    investmentDate: new Date().toISOString().split('T')[0],
-    contractType: 'jersey_front',
-    deliverablesAgreed: '',
-    status: 'active',
-    notes: '',
-  });
-
-  const [editFormData, setEditFormData] = useState({
-    id: '',
-    sponsorName: '',
-    companyName: '',
-    contractType: 'jersey_front',
-    deliverablesAgreed: '',
-    status: 'active',
-    notes: '',
-  });
-
-  const loadData = () => {
-    setLoading(true);
-    const query = selectedTeamId ? `?teamId=${selectedTeamId}` : '';
-
-    Promise.all([
-      fetchApi<{
+  // React Queries
+  const sponsorsQuery = useQuery({
+    queryKey: ['sponsors', { teamId: selectedTeamId }],
+    queryFn: () => {
+      const query = selectedTeamId ? `?teamId=${selectedTeamId}` : '';
+      return fetchApi<{
         success: boolean;
         totalInvested: number;
         totalReturnsPaid: number;
         netRetained: number;
         sponsors: any[];
-      }>(`/sponsors${query}`),
-      fetchApi<{ success: boolean; teams: any[] }>('/teams'),
-    ])
-      .then(([sponsRes, teamRes]) => {
-        if (sponsRes.success) {
-          setSponsors(sponsRes.sponsors);
-          setTotalInvested(sponsRes.totalInvested);
-          setTotalReturnsPaid(sponsRes.totalReturnsPaid);
-          setNetRetained(sponsRes.netRetained);
-        }
-        if (teamRes.success) {
-          setTeams(teamRes.teams);
-          if (teamRes.teams.length > 0 && !formData.teamId) {
-            setFormData((prev) => ({ ...prev, teamId: teamRes.teams[0]._id }));
-          }
-        }
-      })
-      .catch((err) => console.error(err))
-      .finally(() => setLoading(false));
-  };
+      }>(`/sponsors${query}`);
+    },
+  });
 
-  useEffect(() => {
-    loadData();
-  }, [selectedTeamId]);
+  const teamsQuery = useQuery({
+    queryKey: queryKeys.teams(),
+    queryFn: () => fetchApi<{ success: boolean; teams: any[] }>('/teams'),
+  });
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-      const res = await fetchApi<{ success: boolean; sponsor: any }>('/sponsors', {
-        method: 'POST',
-        body: JSON.stringify(formData),
-      });
-      if (res.success) {
-        setIsModalOpen(false);
-        setFormData({
-          teamId: teams[0]?._id || '',
-          sponsorName: '',
-          companyName: '',
-          amountInvested: '',
-          investmentDate: new Date().toISOString().split('T')[0],
-          contractType: 'jersey_front',
-          deliverablesAgreed: '',
-          status: 'active',
-          notes: '',
-        });
-        loadData();
-      }
-    } catch (err) {
-      alert('Failed to register sponsor');
-    }
+  const sponsors = sponsorsQuery.data?.sponsors || [];
+  const totalInvested = sponsorsQuery.data?.totalInvested || 0;
+  const totalReturnsPaid = sponsorsQuery.data?.totalReturnsPaid || 0;
+  const netRetained = sponsorsQuery.data?.netRetained || 0;
+  const teams = teamsQuery.data?.teams || [];
+  const loading = sponsorsQuery.isLoading || teamsQuery.isLoading;
+
+  const invalidateData = () => {
+    queryClient.invalidateQueries({ queryKey: ['sponsors'] });
+    queryClient.invalidateQueries({ queryKey: ['dashboard'] });
   };
 
   const handleEditOpen = (spons: any) => {
-    setEditFormData({
-      id: spons._id,
-      sponsorName: spons.sponsorName || '',
-      companyName: spons.companyName || '',
-      contractType: spons.contractType || 'jersey_front',
-      deliverablesAgreed: spons.deliverablesAgreed || '',
-      status: spons.status || 'active',
-      notes: spons.notes || '',
-    });
+    setEditingSponsor(spons);
     setIsEditOpen(true);
   };
 
-  const handleUpdate = async (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-      const res = await fetchApi<{ success: boolean }>(`/sponsors/${editFormData.id}`, {
-        method: 'PUT',
-        body: JSON.stringify(editFormData),
-      });
-      if (res.success) {
-        setIsEditOpen(false);
-        loadData();
-      }
-    } catch (err) {
-      alert('Failed to update sponsor');
-    }
-  };
-
   const handleDelete = async (id: string, name: string) => {
-    if (!confirm(`Are you sure you want to delete sponsor "${name}"?`)) return;
+    const confirmed = await confirmDelete(`sponsor "${name}"`);
+    if (!confirmed) return;
     try {
       const res = await fetchApi<{ success: boolean }>(`/sponsors/${id}`, { method: 'DELETE' });
-      if (res.success) loadData();
+      if (res.success) {
+        showToast.success(`Sponsor "${name}" deleted.`);
+        invalidateData();
+      }
     } catch (err) {
-      alert('Failed to delete sponsor');
+      showToast.error('Failed to delete sponsor.');
     }
   };
 
@@ -212,7 +142,7 @@ export default function SponsorsPage() {
     currentPage * pageSize
   );
 
-  const getStatusBadgeVariant = (status: string) => {
+  const getStatusBadgeVariant = (status?: string) => {
     switch (status?.toLowerCase()) {
       case 'active':
         return 'success' as const;
@@ -222,6 +152,19 @@ export default function SponsorsPage() {
         return 'warning' as const;
     }
   };
+
+  const sponsorColumns = useMemo(
+    () =>
+      getSponsorColumns({
+        onAddFunds: (spons) => openTxModal(spons, 'investment'),
+        onPayout: (spons) => openTxModal(spons, 'payout'),
+        onEdit: handleEditOpen,
+        onDelete: handleDelete,
+        getStatusBadgeVariant,
+        fNum,
+      }),
+    [fNum]
+  );
 
   return (
     <>
@@ -313,119 +256,13 @@ export default function SponsorsPage() {
         {/* VIEW 1: TABLE (LIST) VIEW */}
         {viewMode === 'table' && (
           <div>
-            <DataTable
+            <DataTable<Sponsor>
               data={paginatedSponsors}
-            keyExtractor={(spons) => spons._id}
-            emptyMessage="No sponsors found."
-            onRowClick={(spons) => router.push(`/sponsors/${spons._id}`)}
-            columns={[
-              {
-                header: 'Sponsor / Brand',
-                render: (spons) => (
-                  <div>
-                    <Link
-                      href={`/sponsors/${spons._id}`}
-                      style={{
-                        fontWeight: 700,
-                        color: 'var(--text-primary)',
-                        textDecoration: 'none',
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '5px',
-                      }}
-                    >
-                      <span>{spons.companyName || spons.sponsorName}</span>
-                      <ExternalLink size={11} color="var(--accent-blue)" />
-                    </Link>
-                    <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-                      Contact: {spons.sponsorName}
-                    </div>
-                  </div>
-                ),
-              },
-              {
-                header: 'Contract Type',
-                render: (spons) => (
-                  <Badge variant="purple" style={{ textTransform: 'capitalize' }}>
-                    {spons.contractType?.replace(/_/g, ' ') || 'General Grant'}
-                  </Badge>
-                ),
-              },
-              {
-                header: 'Invested Inflow',
-                style: { fontWeight: 700, color: 'var(--accent-blue)' },
-                render: (spons) => `Rs. ${fNum(spons.amountInvested)}`,
-              },
-              {
-                header: 'Returns Paid',
-                style: { fontWeight: 600, color: 'var(--accent-rose)' },
-                render: (spons) => `Rs. ${fNum(spons.returnsPaid)}`,
-              },
-              {
-                header: 'Net Retained',
-                style: { fontWeight: 700, color: 'var(--accent-green)' },
-                render: (spons) => {
-                  const net = (spons.amountInvested || 0) - (spons.returnsPaid || 0);
-                  return `Rs. ${fNum(net)}`;
-                },
-              },
-              {
-                header: 'Deliverables',
-                style: { fontSize: '12px', color: 'var(--text-secondary)', maxWidth: '200px' },
-                render: (spons) => spons.deliverablesAgreed || 'General sponsorship',
-              },
-              {
-                header: 'Status',
-                render: (spons) => (
-                  <Badge variant={getStatusBadgeVariant(spons.status)}>
-                    {spons.status?.toUpperCase() || 'ACTIVE'}
-                  </Badge>
-                ),
-              },
-              {
-                header: 'Actions',
-                align: 'right',
-                render: (spons) => (
-                  <div className="action-group" style={{ justifyContent: 'flex-end' }}>
-                    <Button
-                      variant="success"
-                      size="sm"
-                      icon={<Plus size={14} />}
-                      onClick={() => openTxModal(spons, 'investment')}
-                      title="Sponsor added more money"
-                    >
-                      Add Funds
-                    </Button>
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      icon={<RotateCcw size={14} />}
-                      onClick={() => openTxModal(spons, 'payout')}
-                      title="Record Return Payout"
-                    >
-                      Payout
-                    </Button>
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      isIconOnly
-                      icon={<Pencil size={14} color="var(--accent-blue)" />}
-                      onClick={() => handleEditOpen(spons)}
-                      title="Edit Sponsor"
-                    />
-                    <Button
-                      variant="danger"
-                      size="sm"
-                      isIconOnly
-                      icon={<Trash2 size={14} />}
-                      onClick={() => handleDelete(spons._id, spons.companyName || spons.sponsorName)}
-                      title="Delete Sponsor"
-                    />
-                  </div>
-                ),
-              },
-            ]}
-          />
+              keyExtractor={(spons) => spons._id}
+              emptyMessage="No sponsors found."
+              onRowClick={(spons) => router.push(`/sponsors/${spons._id}`)}
+              columns={sponsorColumns}
+            />
 
           <Pagination
             currentPage={currentPage}
@@ -584,148 +421,23 @@ export default function SponsorsPage() {
       )}
 
         {/* Modal: Add Sponsor */}
-        <Modal
+        <CreateSponsorModal
           isOpen={isModalOpen}
           onClose={() => setIsModalOpen(false)}
-          title="Register Brand Sponsor"
-          footer={
-            <>
-              <Button variant="secondary" onClick={() => setIsModalOpen(false)}>
-                Cancel
-              </Button>
-              <Button variant="primary" onClick={handleSubmit}>
-                Save Sponsor
-              </Button>
-            </>
-          }
-        >
-          <form onSubmit={handleSubmit}>
-            <div className="grid-2">
-              <Select
-                label="Sponsoring Team *"
-                value={formData.teamId}
-                onChange={(e) => setFormData({ ...formData, teamId: e.target.value })}
-                required
-                options={teams.map((t) => ({ value: t._id, label: t.name }))}
-              />
-
-              <Select
-                label="Contract Type *"
-                value={formData.contractType}
-                onChange={(e) => setFormData({ ...formData, contractType: e.target.value })}
-                options={[
-                  { value: 'jersey_front', label: 'Jersey Front Chest Logo' },
-                  { value: 'jersey_back', label: 'Jersey Back Logo' },
-                  { value: 'sleeve', label: 'Sleeve Logo' },
-                  { value: 'tournament_banner', label: 'Tournament Banners' },
-                  { value: 'equipment_kit', label: 'Equipment & Kit Bag' },
-                  { value: 'general_grant', label: 'General Annual Grant' },
-                ]}
-              />
-            </div>
-
-            <div className="grid-2">
-              <Input
-                label="Brand / Company Name *"
-                placeholder="e.g. SipNest"
-                value={formData.companyName}
-                onChange={(e) => setFormData({ ...formData, companyName: e.target.value })}
-                required
-              />
-
-              <Input
-                label="Contact Person"
-                placeholder="e.g. Director"
-                value={formData.sponsorName}
-                onChange={(e) => setFormData({ ...formData, sponsorName: e.target.value })}
-                required
-              />
-            </div>
-
-            <Input
-              label="Amount Invested (Rs.) *"
-              type="number"
-              placeholder="50000"
-              value={formData.amountInvested}
-              onChange={(e) => setFormData({ ...formData, amountInvested: e.target.value })}
-              required
-            />
-
-            <Textarea
-              label="Deliverables Agreed"
-              rows={2}
-              placeholder="e.g. Front chest branding on playing shirts"
-              value={formData.deliverablesAgreed}
-              onChange={(e) => setFormData({ ...formData, deliverablesAgreed: e.target.value })}
-            />
-          </form>
-        </Modal>
+          teams={teams}
+          onSuccess={invalidateData}
+        />
 
         {/* Modal: Edit Sponsor */}
-        <Modal
+        <EditSponsorModal
           isOpen={isEditOpen}
-          onClose={() => setIsEditOpen(false)}
-          title="Edit Sponsor Record"
-          footer={
-            <>
-              <Button variant="secondary" onClick={() => setIsEditOpen(false)}>
-                Cancel
-              </Button>
-              <Button variant="primary" onClick={handleUpdate}>
-                Save Changes
-              </Button>
-            </>
-          }
-        >
-          <form onSubmit={handleUpdate}>
-            <div className="grid-2">
-              <Input
-                label="Company / Brand Name *"
-                value={editFormData.companyName}
-                onChange={(e) => setEditFormData({ ...editFormData, companyName: e.target.value })}
-                required
-              />
-
-              <Input
-                label="Contact Person"
-                value={editFormData.sponsorName}
-                onChange={(e) => setEditFormData({ ...editFormData, sponsorName: e.target.value })}
-              />
-            </div>
-
-            <Select
-              label="Contract Type"
-              value={editFormData.contractType}
-              onChange={(e) => setEditFormData({ ...editFormData, contractType: e.target.value })}
-              options={[
-                { value: 'jersey_front', label: 'Jersey Front Chest Logo' },
-                { value: 'jersey_back', label: 'Jersey Back Logo' },
-                { value: 'sleeve', label: 'Sleeve Logo' },
-                { value: 'tournament_banner', label: 'Tournament Banners' },
-                { value: 'equipment_kit', label: 'Equipment & Kit Bag' },
-                { value: 'general_grant', label: 'General Annual Grant' },
-              ]}
-            />
-
-            <div
-              style={{
-                marginBottom: '14px',
-                fontSize: '12px',
-                color: 'var(--text-muted)',
-              }}
-            >
-              💡 To change the invested amount use <strong>Add Funds</strong> / <strong>Payout</strong> – every
-              entry is kept in the sponsor ledger.
-            </div>
-
-            <Textarea
-              label="Deliverables Agreed"
-              rows={2}
-              value={editFormData.deliverablesAgreed}
-              onChange={(e) => setEditFormData({ ...editFormData, deliverablesAgreed: e.target.value })}
-            />
-          </form>
-        </Modal>
+          onClose={() => {
+            setIsEditOpen(false);
+            setEditingSponsor(null);
+          }}
+          sponsor={editingSponsor}
+          onSuccess={invalidateData}
+        />
 
         {/* Ledger Modal: Add Funds / Payout */}
         <SponsorTransactionModal
@@ -733,7 +445,7 @@ export default function SponsorsPage() {
           onClose={() => setTxModal((m) => ({ ...m, open: false }))}
           sponsor={txModal.sponsor}
           defaultType={txModal.type}
-          onSaved={() => loadData()}
+          onSaved={() => invalidateData()}
         />
       </div>
     </>

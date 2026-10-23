@@ -1,10 +1,17 @@
-'use client';
+"use client";
 
-import React, { useCallback, useEffect, useRef, useState } from 'react';
-import Link from 'next/link';
-import { usePathname } from 'next/navigation';
-import { Settings2, PanelBottom, PanelLeft, PanelRight, LogOut, User as UserIcon } from 'lucide-react';
-import { useAuth } from '../lib/auth';
+import React, { useCallback, useEffect, useRef, useState } from "react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import {
+  Settings2,
+  PanelBottom,
+  PanelLeft,
+  PanelRight,
+  LogOut,
+  User as UserIcon,
+} from "lucide-react";
+import { useAuth } from "../lib/auth";
 import {
   DashboardIcon,
   ShieldAlertIcon,
@@ -13,30 +20,65 @@ import {
   SwordsIcon,
   ReceiptIcon,
   SponsorIcon,
-} from './icons';
+} from "./icons";
 
-export type DockPosition = 'bottom' | 'left' | 'right';
+export type DockPosition = "bottom" | "left" | "right";
 
 const BASE_SIZE = 46;
 const MAX_SCALE = 1.62;
 const RANGE = 135;
-const STORAGE_KEY = 'cp-dock-prefs';
+const STORAGE_KEY = "cp-dock-prefs";
 const TOTAL_ITEMS = 9;
 
 const navItems = [
-  { name: 'Dashboard', href: '/', icon: DashboardIcon, gradient: 'linear-gradient(145deg, #38bdf8, #2563eb)' },
-  { name: 'My Teams', href: '/teams', icon: ShieldAlertIcon, gradient: 'linear-gradient(145deg, #818cf8, #7c3aed)' },
-  { name: 'Players & Ledger', href: '/players', icon: PlayersIcon, gradient: 'linear-gradient(145deg, #34d399, #059669)' },
-  { name: 'Tournaments', href: '/tournaments', icon: TrophyIcon, gradient: 'linear-gradient(145deg, #fbbf24, #ea580c)' },
-  { name: 'Matches & Fees', href: '/matches', icon: SwordsIcon, gradient: 'linear-gradient(145deg, #fb7185, #e11d48)' },
-  { name: 'Expenses', href: '/finances', icon: ReceiptIcon, gradient: 'linear-gradient(145deg, #2dd4bf, #0f766e)' },
-  { name: 'Sponsors & ROI', href: '/sponsors', icon: SponsorIcon, gradient: 'linear-gradient(145deg, #c084fc, #db2777)' },
+  {
+    name: "Dashboard",
+    href: "/",
+    icon: DashboardIcon,
+    gradient: "linear-gradient(145deg, #38bdf8, #2563eb)",
+  },
+  {
+    name: "My Teams",
+    href: "/teams",
+    icon: ShieldAlertIcon,
+    gradient: "linear-gradient(145deg, #818cf8, #7c3aed)",
+  },
+  {
+    name: "Players",
+    href: "/players",
+    icon: PlayersIcon,
+    gradient: "linear-gradient(145deg, #34d399, #059669)",
+  },
+  {
+    name: "Tournaments",
+    href: "/tournaments",
+    icon: TrophyIcon,
+    gradient: "linear-gradient(145deg, #fbbf24, #ea580c)",
+  },
+  {
+    name: "Matches",
+    href: "/matches",
+    icon: SwordsIcon,
+    gradient: "linear-gradient(145deg, #fb7185, #e11d48)",
+  },
+  {
+    name: "Expenses",
+    href: "/finances",
+    icon: ReceiptIcon,
+    gradient: "linear-gradient(145deg, #2dd4bf, #0f766e)",
+  },
+  {
+    name: "Sponsors & ROI",
+    href: "/sponsors",
+    icon: SponsorIcon,
+    gradient: "linear-gradient(145deg, #c084fc, #db2777)",
+  },
 ];
 
 export const Dock: React.FC = () => {
   const pathname = usePathname();
   const { user, logout, isAuthenticated } = useAuth();
-  const [position, setPosition] = useState<DockPosition>('bottom');
+  const [position, setPosition] = useState<DockPosition>("bottom");
   const [autoHide, setAutoHide] = useState(false);
   const [revealed, setRevealed] = useState(true);
   const [isMobile, setIsMobile] = useState(false);
@@ -54,17 +96,20 @@ export const Dock: React.FC = () => {
   const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const menuRef = useRef<HTMLDivElement | null>(null);
 
-  const effectivePos: DockPosition = isMobile ? 'bottom' : position;
-  const vertical = effectivePos !== 'bottom';
+  const effectivePos: DockPosition = isMobile ? "bottom" : position;
+  const vertical = effectivePos !== "bottom";
 
   // Load preferences from localStorage
   useEffect(() => {
     try {
-      const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
-      if (saved.position && ['bottom', 'left', 'right'].includes(saved.position)) {
+      const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
+      if (
+        saved.position &&
+        ["bottom", "left", "right"].includes(saved.position)
+      ) {
         setPosition(saved.position);
       }
-      if (typeof saved.autoHide === 'boolean') {
+      if (typeof saved.autoHide === "boolean") {
         setAutoHide(saved.autoHide);
         setRevealed(!saved.autoHide);
       }
@@ -76,10 +121,10 @@ export const Dock: React.FC = () => {
       itemCentersRef.current = [];
     };
     onResize();
-    window.addEventListener('resize', onResize);
+    window.addEventListener("resize", onResize);
     const t = setTimeout(() => setMounted(true), 40);
     return () => {
-      window.removeEventListener('resize', onResize);
+      window.removeEventListener("resize", onResize);
       clearTimeout(t);
     };
   }, []);
@@ -99,8 +144,8 @@ export const Dock: React.FC = () => {
         setMenuOpen(false);
       }
     };
-    document.addEventListener('mousedown', onDown);
-    return () => document.removeEventListener('mousedown', onDown);
+    document.addEventListener("mousedown", onDown);
+    return () => document.removeEventListener("mousedown", onDown);
   }, [menuOpen]);
 
   // Cache item center positions once on enter/first move (0 forced reflows during mouse movement)
@@ -110,7 +155,9 @@ export const Dock: React.FC = () => {
       const el = itemElsRef.current[i];
       if (el) {
         const rect = el.getBoundingClientRect();
-        centers[i] = vertical ? rect.top + rect.height / 2 : rect.left + rect.width / 2;
+        centers[i] = vertical
+          ? rect.top + rect.height / 2
+          : rect.left + rect.width / 2;
       } else {
         centers[i] = 0;
       }
@@ -140,7 +187,7 @@ export const Dock: React.FC = () => {
         const el = itemElsRef.current[i];
         if (el) {
           const s = current[i];
-          el.style.setProperty('--dock-scale', s.toFixed(3));
+          el.style.setProperty("--dock-scale", s.toFixed(3));
 
           // Slot expansion along the dock axis (neighbors push apart smoothly)
           // The perpendicular axis stays locked to prevent dock container wobbling!
@@ -197,7 +244,8 @@ export const Dock: React.FC = () => {
       const d = Math.abs(coord - c);
       if (d < RANGE) {
         // Authentic macOS cosine magnification curve
-        targetScalesRef.current[i] = 1 + (MAX_SCALE - 1) * Math.cos((d / RANGE) * (Math.PI / 2));
+        targetScalesRef.current[i] =
+          1 + (MAX_SCALE - 1) * Math.cos((d / RANGE) * (Math.PI / 2));
       } else {
         targetScalesRef.current[i] = 1;
       }
@@ -226,7 +274,7 @@ export const Dock: React.FC = () => {
       for (let i = 0; i < TOTAL_ITEMS; i++) {
         const el = itemElsRef.current[i];
         if (el) {
-          el.style.setProperty('--dock-scale', '1');
+          el.style.setProperty("--dock-scale", "1");
           el.style.width = `${BASE_SIZE}px`;
           el.style.height = `${BASE_SIZE}px`;
         }
@@ -243,7 +291,7 @@ export const Dock: React.FC = () => {
     setTimeout(() => setBouncing((b) => (b === key ? null : b)), 650);
   };
 
-  if (pathname === '/login') {
+  if (pathname === "/login") {
     return null;
   }
 
@@ -260,10 +308,10 @@ export const Dock: React.FC = () => {
       )}
 
       <div
-        className={`dock-wrap pos-${effectivePos} ${hidden ? 'is-hidden' : ''} ${mounted ? 'is-mounted' : ''} ${isSwitching ? 'is-switching' : ''}`}
+        className={`dock-wrap pos-${effectivePos} ${hidden ? "is-hidden" : ""} ${mounted ? "is-mounted" : ""} ${isSwitching ? "is-switching" : ""}`}
       >
         <nav
-          className={`dock ${vertical ? 'vertical' : ''}`}
+          className={`dock ${vertical ? "vertical" : ""}`}
           aria-label="Main navigation"
           onMouseEnter={handleMouseEnter}
           onMouseMove={handleMouseMove}
@@ -272,7 +320,9 @@ export const Dock: React.FC = () => {
           {/* Index 0: Brand & DB Status */}
           <div
             className="dock-item"
-            ref={(el) => { itemElsRef.current[0] = el; }}
+            ref={(el) => {
+              itemElsRef.current[0] = el;
+            }}
           >
             <Link
               href="/"
@@ -285,7 +335,9 @@ export const Dock: React.FC = () => {
             </Link>
             <span className="dock-tooltip">
               <strong>Captains Portal</strong>
-              <span className="dock-tooltip-sub">{user?.name || 'Super Admin'} · Connected</span>
+              <span className="dock-tooltip-sub">
+                {user?.name || "Super Admin"} · Connected
+              </span>
             </span>
           </div>
 
@@ -295,21 +347,26 @@ export const Dock: React.FC = () => {
           {navItems.map((item, idx) => {
             const Icon = item.icon;
             const itemIndex = idx + 1;
-            const isActive = item.href === '/' ? pathname === '/' : pathname?.startsWith(item.href);
+            const isActive =
+              item.href === "/"
+                ? pathname === "/"
+                : pathname?.startsWith(item.href);
 
             return (
               <div
                 key={item.href}
-                className={`dock-item ${isActive ? 'active' : ''} ${bouncing === item.href ? 'bouncing' : ''}`}
-                ref={(el) => { itemElsRef.current[itemIndex] = el; }}
+                className={`dock-item ${isActive ? "active" : ""} ${bouncing === item.href ? "bouncing" : ""}`}
+                ref={(el) => {
+                  itemElsRef.current[itemIndex] = el;
+                }}
               >
                 <Link
                   href={item.href}
-                  id={`dock-link-${item.href === '/' ? 'dashboard' : item.href.slice(1)}`}
+                  id={`dock-link-${item.href === "/" ? "dashboard" : item.href.slice(1)}`}
                   className="dock-icon"
                   style={{ background: item.gradient }}
                   aria-label={item.name}
-                  aria-current={isActive ? 'page' : undefined}
+                  aria-current={isActive ? "page" : undefined}
                   onClick={() => !isActive && triggerBounce(item.href)}
                 >
                   <Icon size={22} />
@@ -334,29 +391,37 @@ export const Dock: React.FC = () => {
                 <button
                   type="button"
                   id="dock-settings"
-                  className={`dock-icon dock-settings ${menuOpen ? 'open' : ''}`}
+                  className={`dock-icon dock-settings ${menuOpen ? "open" : ""}`}
                   aria-label="Dock settings"
                   aria-expanded={menuOpen}
                   onClick={() => setMenuOpen((o) => !o)}
                 >
                   <Settings2 size={22} />
                 </button>
-                {!menuOpen && <span className="dock-tooltip">Dock Settings</span>}
+                {!menuOpen && (
+                  <span className="dock-tooltip">Dock Settings</span>
+                )}
 
                 {menuOpen && (
-                  <div className="dock-menu" role="dialog" aria-label="Dock settings">
+                  <div
+                    className="dock-menu"
+                    role="dialog"
+                    aria-label="Dock settings"
+                  >
                     <div className="dock-menu-label">Dock Position</div>
                     <div className="dock-segment">
-                      {([
-                        { v: 'left', icon: PanelLeft, label: 'Left' },
-                        { v: 'bottom', icon: PanelBottom, label: 'Bottom' },
-                        { v: 'right', icon: PanelRight, label: 'Right' },
-                      ] as const).map((opt) => (
+                      {(
+                        [
+                          { v: "left", icon: PanelLeft, label: "Left" },
+                          { v: "bottom", icon: PanelBottom, label: "Bottom" },
+                          { v: "right", icon: PanelRight, label: "Right" },
+                        ] as const
+                      ).map((opt) => (
                         <button
                           key={opt.v}
                           type="button"
                           id={`dock-pos-${opt.v}`}
-                          className={`dock-segment-btn ${position === opt.v ? 'active' : ''}`}
+                          className={`dock-segment-btn ${position === opt.v ? "active" : ""}`}
                           onClick={() => changePosition(opt.v)}
                         >
                           <opt.icon size={16} />
@@ -367,8 +432,12 @@ export const Dock: React.FC = () => {
 
                     <label className="dock-toggle-row" htmlFor="dock-autohide">
                       <span>
-                        <span className="dock-toggle-title">Auto-hide Dock</span>
-                        <span className="dock-toggle-sub">Reveals when pointer touches screen edge</span>
+                        <span className="dock-toggle-title">
+                          Auto-hide Dock
+                        </span>
+                        <span className="dock-toggle-sub">
+                          Reveals when pointer touches screen edge
+                        </span>
                       </span>
                       <input
                         id="dock-autohide"
@@ -387,7 +456,9 @@ export const Dock: React.FC = () => {
                           </div>
                           <div className="dock-user-info">
                             <span className="dock-user-name">{user?.name}</span>
-                            <span className="dock-user-role">{user?.role?.replace('_', ' ')}</span>
+                            <span className="dock-user-role">
+                              {user?.role?.replace("_", " ")}
+                            </span>
                           </div>
                         </div>
                         <button

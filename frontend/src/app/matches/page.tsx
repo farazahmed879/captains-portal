@@ -1,10 +1,15 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { queryKeys } from '../../lib/queryKeys';
+import { Match, MatchPayment } from '../../types';
+import { getMatchColumns, getMatchSquadPaymentColumns } from '../../columns';
 import { Header } from '../../components/Header';
 import { fetchApi } from '../../lib/api';
+import { confirmDelete, showToast } from '../../lib/alerts';
 import {
   Button,
   Badge,
@@ -13,13 +18,7 @@ import {
   Textarea,
   DatePicker,
   Card,
-  Table,
-  TableHeader,
-  TableBody,
-  TableRow,
-  TableHead,
-  TableCell,
-  TableEmpty,
+  DataTable,
   Modal,
   Pagination,
   ViewSwitcher,
@@ -39,13 +38,13 @@ import {
   ExternalLink,
   Eye,
 } from '../../components/icons';
+import { CreateMatchModal } from '../../components/CreateMatchModal';
+import { EditMatchModal } from '../../components/EditMatchModal';
+import { AssignSquadFeeForm } from '../../components/AssignSquadFeeForm';
 
 export default function MatchesPage() {
   const router = useRouter();
-  const [matches, setMatches] = useState<any[]>([]);
-  const [teams, setTeams] = useState<any[]>([]);
-  const [tournaments, setTournaments] = useState<any[]>([]);
-  const [players, setPlayers] = useState<any[]>([]);
+  const queryClient = useQueryClient();
   const [selectedTeamId, setSelectedTeamId] = useState<string>('');
   const [selectedTournamentFilter, setSelectedTournamentFilter] = useState<string>('');
   const [resultFilter, setResultFilter] = useState<string>('');
@@ -53,165 +52,77 @@ export default function MatchesPage() {
   const [viewMode, setViewMode] = useState<'table' | 'grid'>('table');
   const [currentPage, setCurrentPage] = useState<number>(1);
   const pageSize = 15;
-  const [loading, setLoading] = useState<boolean>(true);
 
   // Modals
   const [isCreateOpen, setIsCreateOpen] = useState<boolean>(false);
   const [isEditOpen, setIsEditOpen] = useState<boolean>(false);
+  const [editingMatch, setEditingMatch] = useState<any>(null);
   const [isPaymentsOpen, setIsPaymentsOpen] = useState<boolean>(false);
   const [selectedMatch, setSelectedMatch] = useState<any>(null);
   const [matchPayments, setMatchPayments] = useState<any[]>([]);
   const [showAddPlayerPayment, setShowAddPlayerPayment] = useState<boolean>(false);
-  const [newPayment, setNewPayment] = useState({
-    playerId: '',
-    feeAssigned: 1000,
-    feePaid: 1000,
-    paymentMethod: 'cash',
+
+  // React Queries
+  const matchesQuery = useQuery({
+    queryKey: queryKeys.matches({ teamId: selectedTeamId, tournamentId: selectedTournamentFilter }),
+    queryFn: () => {
+      let query = `?teamId=${selectedTeamId}`;
+      if (selectedTournamentFilter) query += `&tournamentId=${selectedTournamentFilter}`;
+      return fetchApi<{ success: boolean; matches: any[] }>(`/matches${query}`);
+    },
   });
 
-  // Create Form Data
-  const [formData, setFormData] = useState({
-    teamId: '',
-    matchType: 'tournament',
-    tournamentId: '',
-    tournamentStage: 'group',
-    matchDate: new Date().toISOString().split('T')[0],
-    opponentTeam: '',
-    venue: '',
-    overs: 20,
-    groundCost: '',
-    umpireCost: '',
-    ballCost: '',
-    refreshmentCost: '',
-    otherCosts: '',
-    perPlayerFee: '',
-    squadPlayerIds: [] as string[],
-    result: 'upcoming',
-    teamScore: '',
-    opponentScore: '',
-    winningPrizeMoney: '',
-    momPlayerId: '',
-    momAwardDetails: '',
-    momPrizeMoney: '',
-    notes: '',
+  const teamsQuery = useQuery({
+    queryKey: queryKeys.teams(),
+    queryFn: () => fetchApi<{ success: boolean; teams: any[] }>('/teams'),
   });
 
-  // Edit Form Data
-  const [editFormData, setEditFormData] = useState({
-    id: '',
-    opponentTeam: '',
-    venue: '',
-    matchDate: '',
-    overs: 20,
-    tournamentStage: 'group',
-    groundCost: 0,
-    umpireCost: 0,
-    ballCost: 0,
-    refreshmentCost: 0,
-    otherCosts: 0,
-    result: 'upcoming',
-    winningPrizeMoney: 0,
-    notes: '',
+  const tournamentsQuery = useQuery({
+    queryKey: queryKeys.tournaments(),
+    queryFn: () => fetchApi<{ success: boolean; tournaments: any[] }>('/tournaments'),
   });
 
-  const loadData = () => {
-    setLoading(true);
-    let query = `?teamId=${selectedTeamId}`;
-    if (selectedTournamentFilter) query += `&tournamentId=${selectedTournamentFilter}`;
+  const playersQuery = useQuery({
+    queryKey: queryKeys.players(),
+    queryFn: () => fetchApi<{ success: boolean; players: any[] }>('/players'),
+  });
 
-    Promise.all([
-      fetchApi<{ success: boolean; matches: any[] }>(`/matches${query}`),
-      fetchApi<{ success: boolean; teams: any[] }>('/teams'),
-      fetchApi<{ success: boolean; tournaments: any[] }>('/tournaments'),
-      fetchApi<{ success: boolean; players: any[] }>('/players'),
-    ])
-      .then(([mRes, tRes, trnRes, pRes]) => {
-        if (mRes.success) setMatches(mRes.matches);
-        if (tRes.success) {
-          setTeams(tRes.teams);
-          if (tRes.teams.length > 0 && !formData.teamId) {
-            setFormData((prev) => ({ ...prev, teamId: tRes.teams[0]._id }));
-          }
-        }
-        if (trnRes.success) setTournaments(trnRes.tournaments);
-        if (pRes.success) setPlayers(pRes.players);
-      })
-      .catch((err) => console.error(err))
-      .finally(() => setLoading(false));
-  };
+  const matches = matchesQuery.data?.matches || [];
+  const teams = teamsQuery.data?.teams || [];
+  const tournaments = tournamentsQuery.data?.tournaments || [];
+  const players = playersQuery.data?.players || [];
+  const loading =
+    matchesQuery.isLoading ||
+    teamsQuery.isLoading ||
+    tournamentsQuery.isLoading ||
+    playersQuery.isLoading;
 
-  useEffect(() => {
-    loadData();
-    setCurrentPage(1);
-  }, [selectedTeamId, selectedTournamentFilter]);
-
-  const handleCreateMatch = async (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-      const res = await fetchApi<{ success: boolean; match: any }>('/matches', {
-        method: 'POST',
-        body: JSON.stringify(formData),
-      });
-      if (res.success) {
-        setIsCreateOpen(false);
-        loadData();
-      }
-    } catch (err) {
-      alert('Failed to schedule match');
-    }
+  const invalidateData = () => {
+    queryClient.invalidateQueries({ queryKey: ['matches'] });
+    queryClient.invalidateQueries({ queryKey: ['players'] });
+    queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+    queryClient.invalidateQueries({ queryKey: ['tournaments'] });
   };
 
   const handleEditOpen = (match: any) => {
-    setEditFormData({
-      id: match._id,
-      opponentTeam: match.opponentTeam,
-      venue: match.venue,
-      matchDate: match.matchDate ? new Date(match.matchDate).toISOString().split('T')[0] : '',
-      overs: match.overs || 20,
-      tournamentStage: match.tournamentStage || 'group',
-      groundCost: match.groundCost || 0,
-      umpireCost: match.umpireCost || 0,
-      ballCost: match.ballCost || 0,
-      refreshmentCost: match.refreshmentCost || 0,
-      otherCosts: match.otherCosts || 0,
-      result: match.result || 'upcoming',
-      winningPrizeMoney: match.winningPrizeMoney || 0,
-      notes: match.notes || '',
-    });
+    setEditingMatch(match);
     setIsEditOpen(true);
   };
 
-  const handleUpdateMatch = async (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-      const res = await fetchApi<{ success: boolean }>(`/matches/${editFormData.id}`, {
-        method: 'PUT',
-        body: JSON.stringify(editFormData),
-      });
-      if (res.success) {
-        setIsEditOpen(false);
-        loadData();
-      }
-    } catch (err) {
-      alert('Failed to update match');
-    }
-  };
-
   const handleDeleteMatch = async (id: string, matchTitle: string) => {
-    if (
-      !confirm(
-        `Are you sure you want to delete match "${matchTitle}"? Associated squad payment records will also be removed.`
-      )
-    ) {
-      return;
-    }
+    const confirmed = await confirmDelete(
+      `match "${matchTitle}"`,
+      'Associated squad payment records will also be permanently removed.'
+    );
+    if (!confirmed) return;
     try {
       const res = await fetchApi<{ success: boolean }>(`/matches/${id}`, { method: 'DELETE' });
       if (res.success) {
-        loadData();
+        showToast.success(`Match "${matchTitle}" deleted successfully.`);
+        invalidateData();
       }
     } catch (err) {
-      alert('Failed to delete match');
+      showToast.error('Failed to delete match.');
     }
   };
 
@@ -224,7 +135,7 @@ export default function MatchesPage() {
           setIsPaymentsOpen(true);
         }
       })
-      .catch((err) => alert('Failed to load match payments'));
+      .catch(() => showToast.error('Failed to load match payments.'));
   };
 
   const handleQuickPay = async (paymentId: string, fullFee: number) => {
@@ -240,63 +151,38 @@ export default function MatchesPage() {
       });
       if (res.success) {
         setMatchPayments((prev) => (prev.map((p) => (p._id === paymentId ? res.payment : p))));
-        loadData();
+        showToast.success('Player match fee marked as paid!');
+        invalidateData();
       }
     } catch (err) {
-      alert('Failed to update payment');
+      showToast.error('Failed to update payment.');
     }
   };
 
-  const handleAddPlayerPayment = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!selectedMatch || !newPayment.playerId) return;
-    try {
-      const res = await fetchApi<{ success: boolean; payment: any }>('/payments', {
-        method: 'POST',
-        body: JSON.stringify({
-          matchId: selectedMatch._id,
-          playerId: newPayment.playerId,
-          feeAssigned: Number(newPayment.feeAssigned) || 0,
-          feePaid: Number(newPayment.feePaid) || 0,
-          paymentMethod: newPayment.paymentMethod,
-        }),
-      });
+  const refreshMatchPayments = (matchId: string) => {
+    fetchApi<{ success: boolean; match: any; payments: any[] }>(`/matches/${matchId}`).then((res) => {
       if (res.success) {
-        setMatchPayments((prev) => {
-          const idx = prev.findIndex((p) => (p.playerId?._id || p.playerId) === newPayment.playerId);
-          if (idx !== -1) {
-            const copy = [...prev];
-            copy[idx] = res.payment;
-            return copy;
-          }
-          return [...prev, res.payment];
-        });
-        setNewPayment({
-          playerId: '',
-          feeAssigned: 1000,
-          feePaid: 1000,
-          paymentMethod: 'cash',
-        });
-        setShowAddPlayerPayment(false);
-        loadData();
+        setSelectedMatch(res.match);
+        setMatchPayments(res.payments);
       }
-    } catch (err) {
-      alert('Failed to add player fee');
-    }
+    });
+    invalidateData();
   };
 
   const handleDeletePayment = async (paymentId: string) => {
-    if (!confirm('Remove this player payment record?')) return;
+    const confirmed = await confirmDelete('player payment record', 'Remove this player from the match squad?');
+    if (!confirmed) return;
     try {
       const res = await fetchApi<{ success: boolean }>(`/payments/${paymentId}`, {
         method: 'DELETE',
       });
       if (res.success) {
         setMatchPayments((prev) => prev.filter((p) => p._id !== paymentId));
-        loadData();
+        showToast.success('Player payment record removed.');
+        invalidateData();
       }
     } catch (err) {
-      alert('Failed to remove player payment');
+      showToast.error('Failed to remove player payment.');
     }
   };
 
@@ -317,7 +203,7 @@ export default function MatchesPage() {
     currentPage * pageSize
   );
 
-  const getResultBadgeVariant = (result: string) => {
+  const getResultBadgeVariant = (result?: string) => {
     switch (result?.toLowerCase()) {
       case 'won':
         return 'success' as const;
@@ -327,6 +213,28 @@ export default function MatchesPage() {
         return 'warning' as const;
     }
   };
+
+  const matchColumns = useMemo(
+    () =>
+      getMatchColumns({
+        onPayments: openPaymentsModal,
+        onEdit: handleEditOpen,
+        onDelete: handleDeleteMatch,
+        getResultBadgeVariant,
+        fNum,
+      }),
+    [fNum]
+  );
+
+  const squadPaymentColumns = useMemo(
+    () =>
+      getMatchSquadPaymentColumns({
+        onQuickPay: handleQuickPay,
+        onDelete: handleDeletePayment,
+        fNum,
+      }),
+    [fNum]
+  );
 
   return (
     <>
@@ -404,161 +312,13 @@ export default function MatchesPage() {
         {/* Matches Display: Table View */}
         {viewMode === 'table' ? (
           <div>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Tournament & Stage</TableHead>
-                  <TableHead>Date & Venue</TableHead>
-                  <TableHead>Match Costs</TableHead>
-                  <TableHead>Squad Dues Status</TableHead>
-                  <TableHead>Result / MOM</TableHead>
-                  <TableHead align="right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {paginatedMatches.length === 0 ? (
-                  <TableEmpty colSpan={6} message="No matches found matching your filters." />
-                ) : (
-                  paginatedMatches.map((m) => (
-                    <TableRow key={m._id} onClick={() => router.push(`/matches/${m._id}`)}>
-                      <TableCell>
-                        <div style={{ fontWeight: 700, color: 'var(--text-primary)' }}>
-                          {m.tournamentId?.name ||
-                            (m.matchType === 'tournament' ? 'Tournament Match' : 'Friendly')}
-                        </div>
-                        <div style={{ display: 'flex', gap: '6px', marginTop: '3px' }}>
-                          <Badge variant="purple" style={{ fontSize: '10px' }}>
-                            {m.tournamentStage || 'Match'}
-                          </Badge>
-                          <Badge variant="primary" style={{ fontSize: '10px' }}>
-                            {m.overs} Overs
-                          </Badge>
-                        </div>
-                      </TableCell>
-
-                      <TableCell>
-                        <Link
-                          href={`/matches/${m._id}`}
-                          style={{
-                            fontWeight: 700,
-                            color: 'var(--accent-blue)',
-                            textDecoration: 'none',
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '4px',
-                          }}
-                        >
-                          <span>{m.venue}</span>
-                          <ExternalLink size={11} />
-                        </Link>
-                        <div
-                          style={{
-                            fontSize: '12px',
-                            color: 'var(--text-muted)',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '4px',
-                            marginTop: '2px',
-                          }}
-                        >
-                          <Calendar size={12} />
-                          <span>{new Date(m.matchDate).toLocaleDateString()}</span>
-                          <span>•</span>
-                          <span>{m.opponentTeam}</span>
-                        </div>
-                      </TableCell>
-
-                      <TableCell>
-                        <div style={{ fontWeight: 700, color: 'var(--accent-rose)' }}>
-                          Rs. {fNum(m.totalMatchExpense)}
-                        </div>
-                        <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-                          Ground: Rs. {fNum(m.groundCost)} | Ref: Rs. {fNum(m.refreshmentCost)}
-                        </div>
-                      </TableCell>
-
-                      <TableCell>
-                        <div style={{ fontWeight: 700, color: 'var(--accent-green)' }}>
-                          Rs. {fNum(m.totalCollected)}{' '}
-                          <span
-                            style={{
-                              fontSize: '11px',
-                              color: 'var(--text-muted)',
-                              fontWeight: 400,
-                            }}
-                          >
-                            / Rs. {fNum(m.totalAssigned)}
-                          </span>
-                        </div>
-                        <div
-                          style={{
-                            fontSize: '11px',
-                            color:
-                              m.pendingFee > 0 ? 'var(--accent-rose)' : 'var(--accent-green)',
-                          }}
-                        >
-                          {m.pendingFee > 0 ? `Rs. ${fNum(m.pendingFee)} Due` : '100% Cleared'}{' '}
-                          ({m.paidPlayersCount}/{m.squadPlayerIds?.length || 0} players)
-                        </div>
-                      </TableCell>
-
-                      <TableCell>
-                        <Badge variant={getResultBadgeVariant(m.result)}>
-                          {m.result?.toUpperCase()}
-                        </Badge>
-                        {m.winningPrizeMoney > 0 && (
-                          <div
-                            style={{
-                              fontSize: '11px',
-                              color: 'var(--accent-green)',
-                              fontWeight: 600,
-                              marginTop: '2px',
-                            }}
-                          >
-                            +Rs. {fNum(m.winningPrizeMoney)}
-                          </div>
-                        )}
-                      </TableCell>
-
-                      <TableCell align="right">
-                        <div className="action-group" style={{ justifyContent: 'flex-end' }}>
-                          <Button
-                            variant="secondary"
-                            size="sm"
-                            icon={<Users size={14} />}
-                            onClick={() => openPaymentsModal(m._id)}
-                            title="Track Squad Payments"
-                          >
-                            Fees
-                          </Button>
-                          <Button
-                            variant="secondary"
-                            size="sm"
-                            isIconOnly
-                            icon={<Pencil size={14} color="var(--accent-blue)" />}
-                            onClick={() => handleEditOpen(m)}
-                            title="Edit Match"
-                          />
-                          <Button
-                            variant="danger"
-                            size="sm"
-                            isIconOnly
-                            icon={<Trash2 size={14} />}
-                            onClick={() =>
-                              handleDeleteMatch(
-                                m._id,
-                                `${m.tournamentId?.name || ''} - ${m.venue}`
-                              )
-                            }
-                            title="Delete Match"
-                          />
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
+            <DataTable<Match>
+              data={paginatedMatches}
+              keyExtractor={(m) => m._id}
+              onRowClick={(m) => router.push(`/matches/${m._id}`)}
+              emptyMessage="No matches found matching your filters."
+              columns={matchColumns}
+            />
 
             <Pagination
               currentPage={currentPage}
@@ -734,242 +494,24 @@ export default function MatchesPage() {
         )}
 
         {/* Modal: Schedule / Add Match */}
-        <Modal
+        <CreateMatchModal
           isOpen={isCreateOpen}
           onClose={() => setIsCreateOpen(false)}
-          title="Schedule New Match"
-          footer={
-            <>
-              <Button variant="secondary" onClick={() => setIsCreateOpen(false)}>
-                Cancel
-              </Button>
-              <Button variant="primary" onClick={handleCreateMatch}>
-                Save Match
-              </Button>
-            </>
-          }
-        >
-          <form onSubmit={handleCreateMatch}>
-            <div className="grid-2">
-              <Select
-                label="Team *"
-                value={formData.teamId}
-                onChange={(e) => setFormData({ ...formData, teamId: e.target.value })}
-                required
-                options={teams.map((t) => ({ value: t._id, label: t.name }))}
-              />
-
-              <Select
-                label="Tournament / League"
-                value={formData.tournamentId}
-                onChange={(e) => setFormData({ ...formData, tournamentId: e.target.value })}
-                required
-                options={[
-                  { value: '', label: 'Select Tournament...' },
-                  ...tournaments.map((trn) => ({
-                    value: trn._id,
-                    label: `${trn.name} (${trn.format})`,
-                  })),
-                ]}
-              />
-            </div>
-
-            <div className="grid-2">
-              <Input
-                label="Venue / Ground *"
-                placeholder="e.g. Baqai Ground, Landhi"
-                value={formData.venue}
-                onChange={(e) => setFormData({ ...formData, venue: e.target.value })}
-                required
-              />
-
-              <Input
-                label="Opponent Team *"
-                placeholder="e.g. Malir Gymkhana"
-                value={formData.opponentTeam}
-                onChange={(e) => setFormData({ ...formData, opponentTeam: e.target.value })}
-                required
-              />
-            </div>
-
-            <div className="grid-3">
-              <DatePicker
-                label="Match Date *"
-                value={formData.matchDate}
-                onChange={(e) => setFormData({ ...formData, matchDate: e.target.value })}
-                required
-              />
-
-              <Select
-                label="Stage"
-                value={formData.tournamentStage}
-                onChange={(e) => setFormData({ ...formData, tournamentStage: e.target.value })}
-                options={[
-                  { value: 'group', label: 'Group / League Match' },
-                  { value: 'quarter_final', label: 'Quarter Final' },
-                  { value: 'semi_final', label: 'Semi Final' },
-                  { value: 'final', label: 'Final' },
-                ]}
-              />
-
-              <Input
-                label="Overs"
-                type="number"
-                value={formData.overs}
-                onChange={(e) => setFormData({ ...formData, overs: Number(e.target.value) })}
-              />
-            </div>
-
-            <div
-              style={{
-                background: '#f8fafc',
-                padding: '14px',
-                borderRadius: '8px',
-                border: '1px solid var(--border-color)',
-                marginBottom: '16px',
-              }}
-            >
-              <div
-                style={{
-                  fontSize: '12px',
-                  fontWeight: 700,
-                  marginBottom: '10px',
-                  color: 'var(--accent-blue)',
-                }}
-              >
-                Match Day Costs (Rs.)
-              </div>
-              <div className="grid-3" style={{ marginBottom: 0 }}>
-                <Input
-                  label="Ground Booking"
-                  type="number"
-                  placeholder="10000"
-                  value={formData.groundCost}
-                  onChange={(e) => setFormData({ ...formData, groundCost: e.target.value })}
-                />
-                <Input
-                  label="Refreshments"
-                  type="number"
-                  placeholder="500"
-                  value={formData.refreshmentCost}
-                  onChange={(e) => setFormData({ ...formData, refreshmentCost: e.target.value })}
-                />
-                <Input
-                  label="Ball & Umpire"
-                  type="number"
-                  placeholder="2000"
-                  value={formData.ballCost}
-                  onChange={(e) => setFormData({ ...formData, ballCost: e.target.value })}
-                />
-              </div>
-            </div>
-          </form>
-        </Modal>
+          teams={teams}
+          tournaments={tournaments}
+          onSuccess={invalidateData}
+        />
 
         {/* Modal: Edit Match */}
-        <Modal
+        <EditMatchModal
           isOpen={isEditOpen}
-          onClose={() => setIsEditOpen(false)}
-          title="Edit Match Record"
-          footer={
-            <>
-              <Button variant="secondary" onClick={() => setIsEditOpen(false)}>
-                Cancel
-              </Button>
-              <Button variant="primary" onClick={handleUpdateMatch}>
-                Save Changes
-              </Button>
-            </>
-          }
-        >
-          <form onSubmit={handleUpdateMatch}>
-            <div className="grid-2">
-              <Input
-                label="Venue / Ground *"
-                value={editFormData.venue}
-                onChange={(e) => setEditFormData({ ...editFormData, venue: e.target.value })}
-                required
-              />
-
-              <Input
-                label="Opponent Team"
-                value={editFormData.opponentTeam}
-                onChange={(e) => setEditFormData({ ...editFormData, opponentTeam: e.target.value })}
-                required
-              />
-            </div>
-
-            <div className="grid-3">
-              <DatePicker
-                label="Match Date"
-                value={editFormData.matchDate}
-                onChange={(e) => setEditFormData({ ...editFormData, matchDate: e.target.value })}
-              />
-
-              <Select
-                label="Stage"
-                value={editFormData.tournamentStage}
-                onChange={(e) =>
-                  setEditFormData({ ...editFormData, tournamentStage: e.target.value })
-                }
-                options={[
-                  { value: 'group', label: 'Group / League Match' },
-                  { value: 'quarter_final', label: 'Quarter Final' },
-                  { value: 'semi_final', label: 'Semi Final' },
-                  { value: 'final', label: 'Final' },
-                ]}
-              />
-
-              <Select
-                label="Result"
-                value={editFormData.result}
-                onChange={(e) => setEditFormData({ ...editFormData, result: e.target.value })}
-                options={[
-                  { value: 'won', label: 'Won' },
-                  { value: 'lost', label: 'Lost' },
-                  { value: 'draw', label: 'Draw / Tied' },
-                  { value: 'upcoming', label: 'Upcoming' },
-                ]}
-              />
-            </div>
-
-            <div className="grid-3">
-              <Input
-                label="Ground Booking Cost (Rs.)"
-                type="number"
-                value={editFormData.groundCost}
-                onChange={(e) =>
-                  setEditFormData({ ...editFormData, groundCost: Number(e.target.value) })
-                }
-              />
-
-              <Input
-                label="Refreshments (Rs.)"
-                type="number"
-                value={editFormData.refreshmentCost}
-                onChange={(e) =>
-                  setEditFormData({ ...editFormData, refreshmentCost: Number(e.target.value) })
-                }
-              />
-
-              <Input
-                label="Prize Money Won (Rs.)"
-                type="number"
-                value={editFormData.winningPrizeMoney}
-                onChange={(e) =>
-                  setEditFormData({ ...editFormData, winningPrizeMoney: Number(e.target.value) })
-                }
-              />
-            </div>
-
-            <Textarea
-              label="Match Remarks / Notes"
-              rows={2}
-              value={editFormData.notes}
-              onChange={(e) => setEditFormData({ ...editFormData, notes: e.target.value })}
-            />
-          </form>
-        </Modal>
+          onClose={() => {
+            setIsEditOpen(false);
+            setEditingMatch(null);
+          }}
+          match={editingMatch}
+          onSuccess={invalidateData}
+        />
 
         {/* Modal: Match Squad Fees Collection Drawer */}
         <Modal
@@ -1097,161 +639,26 @@ export default function MatchesPage() {
                 </div>
 
                 {/* Inline Add Player Fee Form */}
-                {showAddPlayerPayment && (
-                  <form
-                    onSubmit={handleAddPlayerPayment}
-                    style={{
-                      padding: '14px',
-                      background: '#f0f9ff',
-                      border: '1px solid #bae6fd',
-                      borderRadius: '8px',
-                      marginBottom: '16px',
+                {showAddPlayerPayment && selectedMatch && (
+                  <AssignSquadFeeForm
+                    matchId={selectedMatch._id}
+                    defaultFee={selectedMatch.perPlayerFee || 1000}
+                    players={players}
+                    onSuccess={() => {
+                      setShowAddPlayerPayment(false);
+                      refreshMatchPayments(selectedMatch._id);
                     }}
-                  >
-                    <div
-                      style={{
-                        fontWeight: 700,
-                        fontSize: '13px',
-                        color: 'var(--accent-blue)',
-                        marginBottom: '10px',
-                      }}
-                    >
-                      Add Player to Squad &amp; Assign Fee
-                    </div>
-                    <div className="grid-3" style={{ marginBottom: '10px' }}>
-                      <Select
-                        label="Select Player *"
-                        value={newPayment.playerId}
-                        onChange={(e) =>
-                          setNewPayment({ ...newPayment, playerId: e.target.value })
-                        }
-                        required
-                        options={[
-                          { value: '', label: '— Choose Player —' },
-                          ...players.map((p) => ({
-                            value: p._id,
-                            label: `${p.name} ${p.jerseyNumber ? `(#${p.jerseyNumber})` : ''}`,
-                          })),
-                        ]}
-                      />
-                      <Input
-                        label="Fee Assigned (Rs.) *"
-                        type="number"
-                        value={newPayment.feeAssigned}
-                        onChange={(e) =>
-                          setNewPayment({
-                            ...newPayment,
-                            feeAssigned: Number(e.target.value),
-                          })
-                        }
-                        required
-                      />
-                      <Input
-                        label="Fee Paid (Rs.) *"
-                        type="number"
-                        value={newPayment.feePaid}
-                        onChange={(e) =>
-                          setNewPayment({
-                            ...newPayment,
-                            feePaid: Number(e.target.value),
-                          })
-                        }
-                        required
-                      />
-                    </div>
-                    <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
-                      <Button
-                        variant="secondary"
-                        size="sm"
-                        onClick={() => setShowAddPlayerPayment(false)}
-                      >
-                        Cancel
-                      </Button>
-                      <Button
-                        variant="success"
-                        size="sm"
-                        type="submit"
-                        icon={<CheckCircle2 size={12} />}
-                      >
-                        Save Player Fee
-                      </Button>
-                    </div>
-                  </form>
+                    onCancel={() => setShowAddPlayerPayment(false)}
+                  />
                 )}
 
                 {/* Squad Payments Table */}
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Player</TableHead>
-                      <TableHead>Assigned</TableHead>
-                      <TableHead>Paid</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead align="right">Action</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {matchPayments.length === 0 ? (
-                      <TableEmpty
-                        colSpan={5}
-                        message="No squad payments recorded for this match yet. Click '+ Add Player Fee' above to record players."
-                      />
-                    ) : (
-                      matchPayments.map((p) => (
-                        <TableRow key={p._id}>
-                          <TableCell>
-                            <div style={{ fontWeight: 600 }}>{p.playerId?.name || 'Player'}</div>
-                            {p.playerId?.jerseyNumber && (
-                              <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-                                #{p.playerId.jerseyNumber}
-                              </div>
-                            )}
-                          </TableCell>
-                          <TableCell>Rs. {fNum(p.feeAssigned)}</TableCell>
-                          <TableCell style={{ color: 'var(--accent-green)', fontWeight: 700 }}>
-                            Rs. {fNum(p.feePaid)}
-                          </TableCell>
-                          <TableCell>
-                            <Badge
-                              variant={
-                                p.paymentStatus === 'paid'
-                                  ? 'success'
-                                  : p.paymentStatus === 'partial'
-                                  ? 'warning'
-                                  : 'danger'
-                              }
-                            >
-                              {p.paymentStatus}
-                            </Badge>
-                          </TableCell>
-                          <TableCell align="right">
-                            <div className="action-group" style={{ justifyContent: 'flex-end' }}>
-                              {p.paymentStatus !== 'paid' && (
-                                <Button
-                                  variant="success"
-                                  size="sm"
-                                  icon={<CheckCircle2 size={14} />}
-                                  onClick={() => handleQuickPay(p._id, p.feeAssigned)}
-                                  title="Mark as Paid"
-                                >
-                                  Mark Paid
-                                </Button>
-                              )}
-                              <Button
-                                variant="danger"
-                                size="sm"
-                                isIconOnly
-                                icon={<Trash2 size={14} />}
-                                onClick={() => handleDeletePayment(p._id)}
-                                title="Remove player from match"
-                              />
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      ))
-                    )}
-                  </TableBody>
-                </Table>
+                <DataTable<MatchPayment>
+                  data={matchPayments}
+                  keyExtractor={(p) => p._id}
+                  emptyMessage="No squad payments recorded for this match yet. Click '+ Add Player Fee' above to record players."
+                  columns={squadPaymentColumns}
+                />
               </div>
             );
           })()}

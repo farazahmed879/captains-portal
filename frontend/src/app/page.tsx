@@ -3,9 +3,11 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Header } from '../components/Header';
 import { Button, Badge } from '../components/ui';
 import { fetchApi } from '../lib/api';
+import { queryKeys } from '../lib/queryKeys';
 import {
   TrendingUpIcon,
   DollarIcon,
@@ -25,6 +27,7 @@ import {
   JerseyIcon,
   ClockIcon,
 } from '../components/icons';
+import { PlayerReturnModal } from '../components/PlayerReturnModal';
 
 type WidgetKey = 'players' | 'tournaments' | 'teams' | 'sponsors';
 
@@ -34,12 +37,10 @@ const WIDGET_SELECTIONS_KEY = 'captains_portal_dashboard_selections';
 export default function DashboardPage() {
   const router = useRouter();
   const [teamId, setTeamId] = useState<string>('');
-  const [stats, setStats] = useState<any>(null);
-  const [playersList, setPlayersList] = useState<any[]>([]);
-  const [tournamentsList, setTournamentsList] = useState<any[]>([]);
-  const [teamsList, setTeamsList] = useState<any[]>([]);
-  const [sponsorsList, setSponsorsList] = useState<any[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
+
+  // Return/Refund Modal state
+  const [isReturnModalOpen, setIsReturnModalOpen] = useState<boolean>(false);
+  const [returnTargetPlayer, setReturnTargetPlayer] = useState<any>(null);
 
   // Dynamic selected widgets: Initially empty per user request
   const [selectedWidgets, setSelectedWidgets] = useState<WidgetKey[]>(() => {
@@ -166,11 +167,16 @@ export default function DashboardPage() {
     updateWidgets([]);
   };
 
-  const loadData = () => {
-    setLoading(true);
-    const query = teamId ? `?teamId=${teamId}` : '';
+  const queryClient = useQueryClient();
+  const query = teamId ? `?teamId=${teamId}` : '';
 
-    Promise.all([
+  const {
+    data: statsRes,
+    isLoading: isStatsLoading,
+    refetch: refetchStats,
+  } = useQuery({
+    queryKey: ['dashboard', 'stats', teamId],
+    queryFn: () =>
       fetchApi<{
         success: boolean;
         summary: any;
@@ -178,57 +184,62 @@ export default function DashboardPage() {
         recentMatches: any[];
         topDebtors: any[];
       }>(`/dashboard/stats${query}`),
-      fetchApi<{ success: boolean; players: any[] }>(`/players${query}`).catch(() => ({
-        success: false,
-        players: [],
-      })),
-      fetchApi<{ success: boolean; tournaments: any[] }>(`/tournaments${query}`).catch(() => ({
-        success: false,
-        tournaments: [],
-      })),
-      fetchApi<{ success: boolean; teams: any[] }>('/teams').catch(() => ({
-        success: false,
-        teams: [],
-      })),
-      fetchApi<{ success: boolean; sponsors: any[] }>(`/sponsors${query}`).catch(() => ({
-        success: false,
-        sponsors: [],
-      })),
-      fetchApi<{ success: boolean; user: any }>('/auth/me').catch(() => ({
-        success: false,
-        user: null,
-      })),
-    ])
-      .then(([statsRes, playersRes, tournRes, teamsRes, sponsRes, meRes]) => {
-        if (statsRes.success) setStats(statsRes);
-        if (playersRes.success && playersRes.players) setPlayersList(playersRes.players);
-        if (tournRes.success && tournRes.tournaments) setTournamentsList(tournRes.tournaments);
-        if (teamsRes.success && teamsRes.teams) setTeamsList(teamsRes.teams);
-        if (sponsRes.success && sponsRes.sponsors) setSponsorsList(sponsRes.sponsors);
+  });
 
-        // Hydrate saved dashboard settings from MongoDB if present
-        if (meRes.success && meRes.user?.dashboardSettings) {
-          const dbSettings = meRes.user.dashboardSettings;
-          if (Array.isArray(dbSettings.widgets) && dbSettings.widgets.length > 0) {
-            setSelectedWidgets(dbSettings.widgets);
-          }
-          if (dbSettings.selections) {
-            setWidgetSelections((prev) => ({
-              playerId: dbSettings.selections.playerId || prev.playerId,
-              tournamentId: dbSettings.selections.tournamentId || prev.tournamentId,
-              teamId: dbSettings.selections.teamId || prev.teamId,
-              sponsorId: dbSettings.selections.sponsorId || prev.sponsorId,
-            }));
-          }
-        }
-      })
-      .catch((err) => console.error('Failed to load dashboard data', err))
-      .finally(() => setLoading(false));
-  };
+  const { data: playersRes } = useQuery({
+    queryKey: ['players', { teamId }],
+    queryFn: () => fetchApi<{ success: boolean; players: any[] }>(`/players${query}`),
+  });
+
+  const { data: tournRes } = useQuery({
+    queryKey: ['tournaments', { teamId }],
+    queryFn: () => fetchApi<{ success: boolean; tournaments: any[] }>(`/tournaments${query}`),
+  });
+
+  const { data: teamsRes } = useQuery({
+    queryKey: ['teams'],
+    queryFn: () => fetchApi<{ success: boolean; teams: any[] }>('/teams'),
+  });
+
+  const { data: sponsRes } = useQuery({
+    queryKey: ['sponsors', { teamId }],
+    queryFn: () => fetchApi<{ success: boolean; sponsors: any[] }>(`/sponsors${query}`),
+  });
+
+  const { data: meRes } = useQuery({
+    queryKey: ['auth', 'me'],
+    queryFn: () => fetchApi<{ success: boolean; user: any }>('/auth/me'),
+  });
+
+  const stats = statsRes?.success ? statsRes : null;
+  const playersList = playersRes?.success && playersRes.players ? playersRes.players : [];
+  const tournamentsList = tournRes?.success && tournRes.tournaments ? tournRes.tournaments : [];
+  const teamsList = teamsRes?.success && teamsRes.teams ? teamsRes.teams : [];
+  const sponsorsList = sponsRes?.success && sponsRes.sponsors ? sponsRes.sponsors : [];
+  const loading = isStatsLoading;
 
   useEffect(() => {
-    loadData();
-  }, [teamId]);
+    if (meRes?.success && meRes.user?.dashboardSettings) {
+      const dbSettings = meRes.user.dashboardSettings;
+      if (Array.isArray(dbSettings.widgets) && dbSettings.widgets.length > 0) {
+        setSelectedWidgets(dbSettings.widgets);
+      }
+      if (dbSettings.selections) {
+        setWidgetSelections((prev) => ({
+          playerId: dbSettings.selections.playerId || prev.playerId,
+          tournamentId: dbSettings.selections.tournamentId || prev.tournamentId,
+          teamId: dbSettings.selections.teamId || prev.teamId,
+          sponsorId: dbSettings.selections.sponsorId || prev.sponsorId,
+        }));
+      }
+    }
+  }, [meRes]);
+
+  const loadData = () => {
+    queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+    queryClient.invalidateQueries({ queryKey: ['players'] });
+    refetchStats();
+  };
 
   const fNum = (val: number | undefined) => {
     return (val || 0).toLocaleString('en-US');
@@ -661,7 +672,7 @@ export default function DashboardPage() {
                         }}
                         title="Select an individual player or view all"
                       >
-                        <option value="all">👥 All Players (Overview)</option>
+                        <option value="all">All Players (Overview)</option>
                         {playersList.map((p) => (
                           <option key={p._id} value={p._id}>
                             {p.jerseyNumber !== undefined &&
@@ -760,12 +771,12 @@ export default function DashboardPage() {
                                 textOverflow: 'ellipsis',
                               }}
                             >
-                              📞 {selectedIndividualPlayer.phone || 'No phone recorded'}
+                              {selectedIndividualPlayer.phone ? `Phone: ${selectedIndividualPlayer.phone}` : 'No phone recorded'}
                             </div>
                           </div>
                         </div>
 
-                        <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                        <div style={{ textAlign: 'right', flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px' }}>
                           {(selectedIndividualPlayer.pendingDue || 0) > 0 ? (
                             <Badge
                               variant="danger"
@@ -782,15 +793,52 @@ export default function DashboardPage() {
                               Fully Cleared
                             </Badge>
                           )}
+
+                          {(selectedIndividualPlayer.totalReturned || 0) > 0 && (
+                            <span
+                              style={{
+                                fontSize: '10px',
+                                fontWeight: 700,
+                                color: '#b45309',
+                                background: '#fef3c7',
+                                border: '1px solid #fde68a',
+                                padding: '1px 6px',
+                                borderRadius: '4px',
+                              }}
+                              title="Total funds returned/refunded to this player from winnings/sponsors"
+                            >
+                              Rs. {fNum(selectedIndividualPlayer.totalReturned)} Returned
+                            </span>
+                          )}
                         </div>
                       </div>
 
-                      {/* 3 KPI Cells for Individual Player */}
-                      <div className="widget-kpi-row">
+                      {/* 6 KPI Cells for Individual Player: Matches, Tournaments, Assigned, Paid, Returned, Due */}
+                      <div
+                        className="widget-kpi-row"
+                        style={{
+                          display: 'grid',
+                          gridTemplateColumns: 'repeat(3, 1fr)',
+                          gap: '8px',
+                          marginBottom: '10px',
+                        }}
+                      >
                         <div className="widget-kpi-cell">
                           <div className="widget-kpi-label">Matches Played</div>
                           <div className="widget-kpi-val" style={{ color: 'var(--accent-blue)' }}>
                             {selectedIndividualPlayer.matchesPlayed || 0}
+                          </div>
+                        </div>
+                        <div className="widget-kpi-cell">
+                          <div className="widget-kpi-label">Tournaments</div>
+                          <div className="widget-kpi-val" style={{ color: 'var(--accent-purple)' }}>
+                            {selectedIndividualPlayer.tournamentsCount || 0}
+                          </div>
+                        </div>
+                        <div className="widget-kpi-cell">
+                          <div className="widget-kpi-label">Fee Assigned</div>
+                          <div className="widget-kpi-val" style={{ color: 'var(--text-primary)' }}>
+                            Rs. {fNum(selectedIndividualPlayer.totalFeeAssigned)}
                           </div>
                         </div>
                         <div className="widget-kpi-cell">
@@ -800,14 +848,28 @@ export default function DashboardPage() {
                           </div>
                         </div>
                         <div className="widget-kpi-cell">
+                          <div className="widget-kpi-label">Returned / Refund</div>
+                          <div
+                            className="widget-kpi-val"
+                            style={{
+                              color:
+                                (selectedIndividualPlayer.totalReturned || 0) > 0
+                                  ? 'var(--accent-amber)'
+                                  : 'var(--text-muted)',
+                            }}
+                          >
+                            Rs. {fNum(selectedIndividualPlayer.totalReturned || 0)}
+                          </div>
+                        </div>
+                        <div className="widget-kpi-cell">
                           <div className="widget-kpi-label">Outstanding Due</div>
                           <div
                             className="widget-kpi-val"
                             style={{
                               color:
                                 (selectedIndividualPlayer.pendingDue || 0) > 0
-                                  ? 'var(--accent-rose)'
-                                  : 'var(--accent-green)',
+                                    ? 'var(--accent-rose)'
+                                    : 'var(--accent-green)',
                             }}
                           >
                             Rs. {fNum(selectedIndividualPlayer.pendingDue || 0)}
@@ -815,60 +877,106 @@ export default function DashboardPage() {
                         </div>
                       </div>
 
-                      {/* Secondary Info & Quick Switch Back */}
+                      {/* Secondary Info, Quick Return Action & Switch Back */}
                       <div
                         style={{
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'space-between',
+                          gap: '8px',
                           padding: '8px 12px',
-                          background: '#f1f5f9',
+                          background: '#f8fafc',
+                          border: '1px solid #e2e8f0',
                           borderRadius: '8px',
                           fontSize: '11.5px',
                           color: 'var(--text-secondary)',
                           marginTop: 'auto',
                         }}
                       >
-                        <span>
-                          Batting: <strong>{selectedIndividualPlayer.battingStyle?.replace(/_/g, ' ') || 'Right Hand'}</strong>
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() => updateSelection('playerId', 'all')}
-                          style={{
-                            background: 'transparent',
-                            border: 'none',
-                            color: 'var(--accent-blue)',
-                            fontWeight: 700,
-                            cursor: 'pointer',
-                            fontSize: '11px',
-                          }}
-                        >
-                          ← Switch to All Players
-                        </button>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <span>
+                            Batting: <strong>{selectedIndividualPlayer.battingStyle?.replace(/_/g, ' ') || 'Right Hand'}</strong>
+                          </span>
+                        </div>
+
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setReturnTargetPlayer(selectedIndividualPlayer);
+                              setIsReturnModalOpen(true);
+                            }}
+                            style={{
+                              background: '#fef3c7',
+                              border: '1px solid #fde68a',
+                              color: '#b45309',
+                              borderRadius: '6px',
+                              padding: '4px 10px',
+                              fontWeight: 700,
+                              fontSize: '11px',
+                              cursor: 'pointer',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '4px',
+                              transition: 'all 0.15s ease',
+                            }}
+                            title="Return excess fee, winning prize share, or sponsor payout"
+                          >
+                            <span>Return Money</span>
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => updateSelection('playerId', 'all')}
+                            style={{
+                              background: 'transparent',
+                              border: 'none',
+                              color: 'var(--accent-blue)',
+                              fontWeight: 700,
+                              cursor: 'pointer',
+                              fontSize: '11px',
+                            }}
+                          >
+                            ← Switch to All
+                          </button>
+                        </div>
                       </div>
                     </div>
                   ) : (
                     /* OPTION B: ALL PLAYERS OVERVIEW */
                     <>
                       {/* KPI Row */}
-                      <div className="widget-kpi-row">
+                      <div
+                        className="widget-kpi-row"
+                        style={{
+                          display: 'grid',
+                          gridTemplateColumns: 'repeat(4, 1fr)',
+                          gap: '6px',
+                          marginBottom: '10px',
+                        }}
+                      >
                         <div className="widget-kpi-cell">
-                          <div className="widget-kpi-label">Squad Size</div>
+                          <div className="widget-kpi-label">Squad</div>
                           <div className="widget-kpi-val">
                             {playersList.length || stats?.summary?.totalPlayers || 0}
                           </div>
                         </div>
                         <div className="widget-kpi-cell">
-                          <div className="widget-kpi-label">Uncollected</div>
-                          <div className="widget-kpi-val" style={{ color: 'var(--accent-rose)' }}>
-                            Rs. {fNum(stats?.finances?.totalPendingDues)}
+                          <div className="widget-kpi-label">Assigned</div>
+                          <div className="widget-kpi-val" style={{ color: 'var(--text-primary)' }}>
+                            Rs. {fNum(stats?.finances?.totalFeeAssigned)}
                           </div>
                         </div>
                         <div className="widget-kpi-cell">
                           <div className="widget-kpi-label">Collected</div>
                           <div className="widget-kpi-val" style={{ color: 'var(--accent-green)' }}>
                             Rs. {fNum(stats?.finances?.totalFeeCollected)}
+                          </div>
+                        </div>
+                        <div className="widget-kpi-cell">
+                          <div className="widget-kpi-label">Uncollected</div>
+                          <div className="widget-kpi-val" style={{ color: 'var(--accent-rose)' }}>
+                            Rs. {fNum(stats?.finances?.totalPendingDues)}
                           </div>
                         </div>
                       </div>
@@ -885,7 +993,7 @@ export default function DashboardPage() {
                               fontWeight: 600,
                             }}
                           >
-                            🎉 All players are 100% cleared! No outstanding match fees.
+                            All players are 100% cleared! No outstanding match fees.
                           </div>
                         ) : (
                           stats?.topDebtors?.slice(0, 4).map((pl: any) => (
@@ -955,6 +1063,11 @@ export default function DashboardPage() {
                                   }}
                                 >
                                   Paid: Rs. {fNum(pl.paid)} / {fNum(pl.assigned)}
+                                  {(pl.returned || 0) > 0 && (
+                                    <span style={{ color: '#b45309', marginLeft: '4px' }}>
+                                      • Ret: Rs. {fNum(pl.returned)}
+                                    </span>
+                                  )}
                                 </div>
                               </div>
                             </div>
@@ -1023,7 +1136,7 @@ export default function DashboardPage() {
                         }}
                         title="Select an individual tournament or view all"
                       >
-                        <option value="all">🏆 All Tournaments</option>
+                        <option value="all">All Tournaments</option>
                         {tournamentsList.map((t) => (
                           <option key={t._id} value={t._id}>
                             {t.name}
@@ -1381,7 +1494,7 @@ export default function DashboardPage() {
                         }}
                         title="Select an individual team or view all"
                       >
-                        <option value="all">🛡️ All Teams</option>
+                        <option value="all">All Teams</option>
                         {teamsList.map((tm) => (
                           <option key={tm._id} value={tm._id}>
                             {tm.shortName} - {tm.name}
@@ -1441,7 +1554,7 @@ export default function DashboardPage() {
                             </Badge>
                           </div>
                           <div style={{ fontSize: '11.5px', color: 'var(--text-muted)' }}>
-                            📍 Base City: {selectedIndividualTeam.city || 'Karachi'}
+                            Base City: {selectedIndividualTeam.city || 'Karachi'}
                             {selectedIndividualTeam.description && ` • ${selectedIndividualTeam.description}`}
                           </div>
                         </div>
@@ -1724,7 +1837,7 @@ export default function DashboardPage() {
                         }}
                         title="Select an individual sponsor or view all"
                       >
-                        <option value="all">🤝 All Sponsors</option>
+                        <option value="all">All Sponsors</option>
                         {sponsorsList.map((s) => (
                           <option key={s._id} value={s._id}>
                             {s.companyName || s.sponsorName}
@@ -1776,7 +1889,7 @@ export default function DashboardPage() {
                             </Badge>
                           </div>
                           <div style={{ fontSize: '11.5px', color: 'var(--text-muted)' }}>
-                            👤 Contact Partner: {selectedIndividualSponsor.sponsorName}
+                            Contact Partner: {selectedIndividualSponsor.sponsorName}
                           </div>
                         </div>
 
@@ -1986,6 +2099,18 @@ export default function DashboardPage() {
           </div>
         )}
       </div>
+
+      {/* Modal for returning fee / prize share / sponsor payout to player */}
+      <PlayerReturnModal
+        isOpen={isReturnModalOpen}
+        onClose={() => {
+          setIsReturnModalOpen(false);
+          setReturnTargetPlayer(null);
+        }}
+        player={returnTargetPlayer}
+        tournaments={tournamentsList}
+        onSuccess={loadData}
+      />
     </>
   );
 }

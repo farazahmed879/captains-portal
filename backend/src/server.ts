@@ -14,6 +14,7 @@ import matchPaymentRoutes from './routes/matchPaymentRoutes';
 import expenseRoutes from './routes/expenseRoutes';
 import sponsorRoutes from './routes/sponsorRoutes';
 import dashboardRoutes from './routes/dashboardRoutes';
+import playerReturnRoutes from './routes/playerReturnRoutes';
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -38,6 +39,7 @@ app.get('/api/health', (req: Request, res: Response) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/teams', teamRoutes);
 app.use('/api/players', playerRoutes);
+app.use('/api/player-returns', playerReturnRoutes);
 app.use('/api/tournaments', tournamentRoutes);
 app.use('/api/matches', matchRoutes);
 app.use('/api/payments', matchPaymentRoutes);

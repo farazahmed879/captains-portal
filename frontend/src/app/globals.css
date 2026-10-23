@@ -880,6 +880,108 @@ html[data-dock="right"]:not([data-dock-autohide="true"]) .main-content { padding
   border: 1px solid #e2e8f0;
 }
 
+/* Stat Badge (label + value pill) */
+.stat-badge {
+  gap: 6px;
+  padding: 5px 10px;
+}
+
+.stat-badge-label {
+  font-size: 9.5px;
+  font-weight: 600;
+  opacity: 0.75;
+}
+
+.stat-badge-value {
+  font-size: 11.5px;
+  font-weight: 800;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+/* Avatar */
+.avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border-radius: 8px;
+  background: #e0f2fe;
+  border: 1px solid #bae6fd;
+  color: #0369a1;
+  font-weight: 800;
+}
+
+.avatar-sm { width: 28px; height: 28px; font-size: 11px; }
+.avatar-md { width: 38px; height: 38px; font-size: 13px; }
+.avatar-lg { width: 52px; height: 52px; font-size: 16px; }
+
+/* Alert */
+.alert {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  border: 1px solid transparent;
+}
+
+.alert-icon { display: inline-flex; }
+.alert-danger { background: #fef2f2; border-color: #fecaca; color: #b91c1c; }
+.alert-success { background: #f0fdf4; border-color: #bbf7d0; color: #15803d; }
+.alert-warning { background: #fffbeb; border-color: #fde68a; color: #b45309; }
+.alert-info { background: #f0f9ff; border-color: #bae6fd; color: #0369a1; }
+
+/* Player snapshot (used in modals) */
+.player-snapshot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 12px 14px;
+}
+
+.player-snapshot-identity {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.player-snapshot-name {
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--text-primary);
+}
+
+.player-snapshot-role {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.player-snapshot-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+/* Generic form helpers */
+.form-stack { display: flex; flex-direction: column; gap: 16px; }
+.form-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border-color);
+}
+
+@media (max-width: 560px) {
+  .form-grid-2 { grid-template-columns: 1fr; }
+}
+
 /* Buttons */
 .btn {
   display: inline-flex;
@@ -3425,3 +3527,446 @@ select.ledger-select:focus,
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
 }
+
+/* ==========================================================
+   TOURNAMENT LEDGER GRID & BOXES (PLAYER DETAILS UI)
+   ========================================================== */
+.tournament-ledger-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(390px, 1fr));
+  gap: 18px;
+  align-items: stretch;
+}
+
+@media (max-width: 860px) {
+  .tournament-ledger-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.tourney-box-card {
+  background: #ffffff;
+  border: 1px solid var(--border-color);
+  border-radius: 16px;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  position: relative;
+}
+
+.tourney-box-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 24px -4px rgba(15, 23, 42, 0.09);
+  border-color: #cbd5e1;
+}
+
+.tourney-box-card.has-due {
+  border-color: #fecdd3;
+  box-shadow: 0 2px 10px rgba(225, 29, 72, 0.05);
+}
+
+.tourney-box-card.has-due:hover {
+  border-color: #fda4af;
+  box-shadow: 0 10px 26px -4px rgba(225, 29, 72, 0.12);
+}
+
+.tourney-box-card.is-cleared {
+  border-color: #e2e8f0;
+}
+
+/* TOP PORTION: Tournament Details */
+.tourney-box-header {
+  padding: 16px 18px 14px 18px;
+  background: linear-gradient(180deg, #f8fafc 0%, #ffffff 100%);
+  border-bottom: 1px solid #f1f5f9;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.tourney-box-card.has-due .tourney-box-header {
+  background: linear-gradient(180deg, #fff8f8 0%, #ffffff 100%);
+}
+
+.tourney-box-title-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.tourney-box-identity {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  flex: 1;
+}
+
+.tourney-box-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 15px;
+  font-weight: 800;
+  flex-shrink: 0;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
+}
+
+.tourney-box-icon.tourney {
+  background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+  color: #ffffff;
+}
+
+.tourney-box-icon.friendly {
+  background: linear-gradient(135deg, #475569 0%, #334155 100%);
+  color: #ffffff;
+}
+
+.tourney-box-info {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.tourney-box-name {
+  font-size: 15.5px;
+  font-weight: 800;
+  color: var(--text-primary);
+  margin: 0;
+  line-height: 1.25;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  text-decoration: none;
+  word-break: break-word;
+}
+
+.tourney-box-name:hover {
+  color: var(--accent-blue);
+}
+
+.tourney-box-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+.tourney-pill-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 1.5px 7px;
+  font-size: 10.5px;
+  font-weight: 700;
+  border-radius: 6px;
+  background: #f1f5f9;
+  color: #475569;
+  border: 1px solid #e2e8f0;
+}
+
+/* Tournament Financial ROI Banner */
+.tourney-roi-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border-radius: 8px;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.tourney-roi-badge.roi-profit {
+  background: #dcfce7;
+  color: #15803d;
+  border: 1px solid #bbf7d0;
+}
+
+.tourney-roi-badge.roi-loss {
+  background: #fee2e2;
+  color: #b91c1c;
+  border: 1px solid #fecaca;
+}
+
+/* MIDDLE PORTION: Matches Quick Preview / Strips */
+.tourney-box-matches-section {
+  padding: 12px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: #ffffff;
+  flex: 1;
+}
+
+.tourney-box-matches-label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 2px;
+}
+
+.tourney-matches-list {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.tourney-match-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 9px 12px;
+  background: #f8fafc;
+  border: 1px solid #f1f5f9;
+  border-radius: 10px;
+  font-size: 12px;
+  transition: all 0.15s ease;
+}
+
+.tourney-match-item:hover {
+  background: #f1f5f9;
+  border-color: #e2e8f0;
+}
+
+.tourney-match-item.match-unpaid {
+  background: #fff8f8;
+  border-color: #fee2e2;
+}
+
+.tourney-match-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  flex: 1;
+}
+
+.tourney-match-details {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.tourney-match-opponent {
+  font-weight: 700;
+  color: var(--text-primary);
+  font-size: 12.5px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  text-decoration: none;
+}
+
+.tourney-match-opponent:hover {
+  color: var(--accent-blue);
+}
+
+.tourney-match-sub {
+  font-size: 11px;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 2px;
+}
+
+.tourney-match-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+/* BOTTOM PORTION: Payment Breakdown & Actions */
+.tourney-box-payment-section {
+  padding: 14px 18px 16px 18px;
+  background: #fcfdfe;
+  border-top: 1px solid #f1f5f9;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: auto;
+}
+
+.tourney-payment-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+}
+
+@media (max-width: 480px) {
+  .tourney-payment-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.tourney-pay-tile {
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  min-width: 0;
+}
+
+.tourney-pay-label {
+  font-size: 9.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  letter-spacing: 0.04em;
+  margin-bottom: 2px;
+}
+
+.tourney-pay-val {
+  font-size: 13.5px;
+  font-weight: 800;
+  color: var(--text-primary);
+  white-space: nowrap;
+}
+
+.tourney-pay-val.paid {
+  color: #16a34a;
+}
+
+.tourney-pay-val.returned {
+  color: #d97706;
+}
+
+.tourney-pay-val.due {
+  color: #e11d48;
+}
+
+.tourney-pay-tile.tile-due {
+  background: #fff5f5;
+  border-color: #fecdd3;
+}
+
+.tourney-pay-tile.tile-cleared {
+  background: #f0fdf4;
+  border-color: #bbf7d0;
+}
+
+.tourney-box-footer-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+/* ==========================================================
+   SWEETALERT2 & TOAST (SNACKBAR) CUSTOM STYLING
+   ========================================================== */
+.cp-swal-popup {
+  border-radius: 18px !important;
+  padding: 24px 20px !important;
+  background: #ffffff !important;
+  border: 1px solid var(--border-color) !important;
+  box-shadow: 0 20px 40px -8px rgba(15, 23, 42, 0.22) !important;
+  font-family: var(--font-sans), inherit !important;
+}
+
+.cp-swal-title {
+  font-size: 18px !important;
+  font-weight: 800 !important;
+  color: var(--text-primary) !important;
+  padding: 10px 0 6px 0 !important;
+  letter-spacing: -0.01em !important;
+}
+
+.cp-swal-html {
+  font-size: 13.5px !important;
+  color: var(--text-secondary) !important;
+  line-height: 1.5 !important;
+  margin: 4px 0 16px 0 !important;
+}
+
+.cp-swal-btn {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 9px 18px !important;
+  font-size: 13px !important;
+  font-weight: 700 !important;
+  border-radius: 9px !important;
+  border: none !important;
+  cursor: pointer !important;
+  transition: all 0.16s ease !important;
+  margin: 0 5px !important;
+  font-family: inherit !important;
+}
+
+.cp-swal-btn-primary {
+  background: var(--accent-blue) !important;
+  color: #ffffff !important;
+  box-shadow: 0 2px 8px rgba(2, 132, 199, 0.3) !important;
+}
+
+.cp-swal-btn-primary:hover {
+  background: #0369a1 !important;
+  transform: translateY(-1px) !important;
+}
+
+.cp-swal-btn-danger {
+  background: #e11d48 !important;
+  color: #ffffff !important;
+  box-shadow: 0 2px 8px rgba(225, 29, 72, 0.3) !important;
+}
+
+.cp-swal-btn-danger:hover {
+  background: #be123c !important;
+  transform: translateY(-1px) !important;
+}
+
+.cp-swal-btn-cancel {
+  background: #f1f5f9 !important;
+  color: #475569 !important;
+  border: 1px solid #cbd5e1 !important;
+}
+
+.cp-swal-btn-cancel:hover {
+  background: #e2e8f0 !important;
+  color: #0f172a !important;
+}
+
+/* Toast / Snackbar Styling */
+.cp-toast-popup {
+  border-radius: 12px !important;
+  padding: 10px 16px !important;
+  background: #0f172a !important;
+  color: #ffffff !important;
+  box-shadow: 0 12px 28px -4px rgba(15, 23, 42, 0.35) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  font-family: var(--font-sans), inherit !important;
+}
+
+.cp-toast-title {
+  font-size: 13px !important;
+  font-weight: 700 !important;
+  color: #ffffff !important;
+}
+
+.swal2-timer-progress-bar {
+  background: var(--accent-blue) !important;
+}
+
+

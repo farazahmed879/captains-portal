@@ -7,6 +7,7 @@ import { Tournament } from '../models/Tournament';
 import { Expense } from '../models/Expense';
 import { Sponsor } from '../models/Sponsor';
 import { MatchPayment } from '../models/MatchPayment';
+import { PlayerReturn } from '../models/PlayerReturn';
 
 export const getDashboardStats = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
@@ -56,11 +57,14 @@ export const getDashboardStats = async (req: AuthRequest, res: Response): Promis
     const totalReturns = netSponsorship + totalPrizeMoney;
     const netProfitLoss = totalReturns - totalInvested;
 
-    // 4. Player Match Fees Ledger
+    // 4. Player Match Fees Ledger & Returns
     const payments = await MatchPayment.find(baseFilter);
     const totalFeeAssigned = payments.reduce((acc, p) => acc + (p.feeAssigned || 0), 0);
     const totalFeeCollected = payments.reduce((acc, p) => acc + (p.feePaid || 0), 0);
-    const totalPendingDues = totalFeeAssigned - totalFeeCollected;
+
+    const playerReturns = await PlayerReturn.find(baseFilter);
+    const totalPlayerReturns = playerReturns.reduce((acc, r) => acc + (r.amount || 0), 0);
+    const totalPendingDues = Math.max(0, totalFeeAssigned - totalFeeCollected);
 
     // 5. Recent Matches
     const recentMatches = await Match.find(baseFilter)
@@ -77,13 +81,20 @@ export const getDashboardStats = async (req: AuthRequest, res: Response): Promis
         const plPayments = await MatchPayment.find({ playerId: pl._id });
         const assigned = plPayments.reduce((acc, p) => acc + (p.feeAssigned || 0), 0);
         const paid = plPayments.reduce((acc, p) => acc + (p.feePaid || 0), 0);
+        const plReturns = await PlayerReturn.find({ playerId: pl._id });
+        const returned = plReturns.reduce((acc, r) => acc + (r.amount || 0), 0);
+        const feeRefunds = plReturns
+          .filter((r) => r.source === 'excess_fee_refund')
+          .reduce((acc, r) => acc + (r.amount || 0), 0);
+        const pending = Math.max(0, assigned - (paid - feeRefunds));
         return {
           id: pl._id,
           name: pl.name,
           phone: pl.phone,
           assigned,
           paid,
-          pending: assigned - paid,
+          returned,
+          pending,
         };
       })
     );
@@ -115,6 +126,7 @@ export const getDashboardStats = async (req: AuthRequest, res: Response): Promis
         netProfitLoss,
         totalFeeAssigned,
         totalFeeCollected,
+        totalPlayerReturns,
         totalPendingDues,
         collectionRate:
           totalFeeAssigned > 0 ? Math.round((totalFeeCollected / totalFeeAssigned) * 100) : 100,

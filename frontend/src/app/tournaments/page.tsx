@@ -1,10 +1,15 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { queryKeys } from '../../lib/queryKeys';
+import { Tournament } from '../../types';
+import { getTournamentColumns } from '../../columns';
 import { Header } from '../../components/Header';
 import { fetchApi } from '../../lib/api';
+import { confirmDelete, showToast } from '../../lib/alerts';
 import {
   Button,
   Badge,
@@ -13,13 +18,7 @@ import {
   Textarea,
   Modal,
   Card,
-  Table,
-  TableHeader,
-  TableBody,
-  TableRow,
-  TableHead,
-  TableCell,
-  TableEmpty,
+  DataTable,
   Pagination,
   ViewSwitcher,
 } from '../../components/ui';
@@ -33,146 +32,58 @@ import {
   MapPinIcon,
   CalendarIcon,
 } from '../../components/icons';
+import { CreateTournamentModal } from '../../components/CreateTournamentModal';
+import { EditTournamentModal } from '../../components/EditTournamentModal';
 
 export default function TournamentsPage() {
   const router = useRouter();
-  const [tournaments, setTournaments] = useState<any[]>([]);
-  const [teams, setTeams] = useState<any[]>([]);
+  const queryClient = useQueryClient();
   const [selectedTeamId, setSelectedTeamId] = useState<string>('');
-  const [loading, setLoading] = useState<boolean>(true);
 
   // Modals
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
   const [isEditOpen, setIsEditOpen] = useState<boolean>(false);
+  const [editingTournament, setEditingTournament] = useState<any>(null);
 
-  const [formData, setFormData] = useState({
-    teamId: '',
-    name: '',
-    organizer: '',
-    venue: '',
-    format: 'Tape Ball',
-    startDate: '',
-    endDate: '',
-    entryFee: '',
-    expectedWinningPrize: '',
-    actualWinningPrizeWon: '',
-    status: 'ongoing',
-    notes: '',
+  // React Queries
+  const tournamentsQuery = useQuery({
+    queryKey: ['tournaments', { teamId: selectedTeamId }],
+    queryFn: () => {
+      const query = selectedTeamId ? `?teamId=${selectedTeamId}` : '';
+      return fetchApi<{ success: boolean; tournaments: any[] }>(`/tournaments${query}`);
+    },
   });
 
-  const [editFormData, setEditFormData] = useState({
-    id: '',
-    name: '',
-    organizer: '',
-    venue: '',
-    format: 'Tape Ball',
-    entryFee: 0,
-    expectedWinningPrize: 0,
-    actualWinningPrizeWon: 0,
-    status: 'ongoing',
-    notes: '',
+  const teamsQuery = useQuery({
+    queryKey: queryKeys.teams(),
+    queryFn: () => fetchApi<{ success: boolean; teams: any[] }>('/teams'),
   });
 
-  const loadData = () => {
-    setLoading(true);
-    const query = selectedTeamId ? `?teamId=${selectedTeamId}` : '';
-    Promise.all([
-      fetchApi<{ success: boolean; tournaments: any[] }>(`/tournaments${query}`),
-      fetchApi<{ success: boolean; teams: any[] }>('/teams'),
-    ])
-      .then(([tournRes, teamsRes]) => {
-        if (tournRes.success) setTournaments(tournRes.tournaments);
-        if (teamsRes.success) {
-          setTeams(teamsRes.teams);
-          if (teamsRes.teams.length > 0 && !formData.teamId) {
-            setFormData((prev) => ({ ...prev, teamId: teamsRes.teams[0]._id }));
-          }
-        }
-      })
-      .catch((err) => console.error(err))
-      .finally(() => setLoading(false));
-  };
+  const tournaments = tournamentsQuery.data?.tournaments || [];
+  const teams = teamsQuery.data?.teams || [];
+  const loading = tournamentsQuery.isLoading || teamsQuery.isLoading;
 
-  useEffect(() => {
-    loadData();
-  }, [selectedTeamId]);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-      const res = await fetchApi<{ success: boolean; tournament: any }>('/tournaments', {
-        method: 'POST',
-        body: JSON.stringify({
-          ...formData,
-          entryFee: Number(formData.entryFee) || 0,
-          expectedWinningPrize: Number(formData.expectedWinningPrize) || 0,
-          actualWinningPrizeWon: Number(formData.actualWinningPrizeWon) || 0,
-        }),
-      });
-      if (res.success) {
-        setIsModalOpen(false);
-        setFormData({
-          teamId: teams[0]?._id || '',
-          name: '',
-          organizer: '',
-          venue: '',
-          format: 'Tape Ball',
-          startDate: '',
-          endDate: '',
-          entryFee: '',
-          expectedWinningPrize: '',
-          actualWinningPrizeWon: '',
-          status: 'ongoing',
-          notes: '',
-        });
-        loadData();
-      }
-    } catch (err) {
-      alert('Failed to register tournament');
-    }
+  const invalidateData = () => {
+    queryClient.invalidateQueries({ queryKey: ['tournaments'] });
+    queryClient.invalidateQueries({ queryKey: ['dashboard'] });
   };
 
   const handleEditOpen = (trn: any) => {
-    setEditFormData({
-      id: trn._id,
-      name: trn.name,
-      organizer: trn.organizer || '',
-      venue: trn.venue || '',
-      format: trn.format || 'Hard Ball',
-      entryFee: trn.entryFee || 0,
-      expectedWinningPrize: trn.expectedWinningPrize || 0,
-      actualWinningPrizeWon: trn.actualWinningPrizeWon || 0,
-      status: trn.status || 'ongoing',
-      notes: trn.notes || '',
-    });
+    setEditingTournament(trn);
     setIsEditOpen(true);
   };
 
-  const handleUpdate = async (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-      const res = await fetchApi<{ success: boolean }>(`/tournaments/${editFormData.id}`, {
-        method: 'PUT',
-        body: JSON.stringify(editFormData),
-      });
-      if (res.success) {
-        setIsEditOpen(false);
-        loadData();
-      }
-    } catch (err) {
-      alert('Failed to update tournament');
-    }
-  };
-
   const handleDelete = async (id: string, name: string) => {
-    if (!confirm(`Are you sure you want to delete tournament "${name}"?`)) return;
+    const confirmed = await confirmDelete(`tournament "${name}"`);
+    if (!confirmed) return;
     try {
       const res = await fetchApi<{ success: boolean }>(`/tournaments/${id}`, { method: 'DELETE' });
       if (res.success) {
-        loadData();
+        showToast.success(`Tournament "${name}" deleted successfully.`);
+        invalidateData();
       }
     } catch (err) {
-      alert('Failed to delete tournament');
+      showToast.error('Failed to delete tournament.');
     }
   };
 
@@ -198,7 +109,7 @@ export default function TournamentsPage() {
     currentPage * pageSize
   );
 
-  const getStatusBadgeVariant = (status: string) => {
+  const getStatusBadgeVariant = (status?: string) => {
     switch (status?.toLowerCase()) {
       case 'champions':
         return 'gold' as const;
@@ -210,6 +121,17 @@ export default function TournamentsPage() {
         return 'warning' as const;
     }
   };
+
+  const tournamentColumns = useMemo(
+    () =>
+      getTournamentColumns({
+        onEdit: handleEditOpen,
+        onDelete: handleDelete,
+        getStatusBadgeVariant,
+        fNum,
+      }),
+    [fNum]
+  );
 
   return (
     <>
@@ -273,102 +195,13 @@ export default function TournamentsPage() {
         {/* VIEW 1: TABLE (LIST) VIEW */}
         {viewMode === 'table' && (
           <div>
-            <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Tournament</TableHead>
-                <TableHead>Format</TableHead>
-                <TableHead>Venue & Date</TableHead>
-                <TableHead>Entry Fee</TableHead>
-                <TableHead>Match Costs</TableHead>
-                <TableHead>Prize Won</TableHead>
-                <TableHead>Net ROI</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead align="right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredTournaments.length === 0 ? (
-                <TableEmpty colSpan={9} message="No tournaments found matching criteria." />
-              ) : (
-                paginatedTournaments.map((trn) => {
-                  const netPnl = trn.financials?.netPnl ?? 0;
-                  const isProfitable = netPnl >= 0;
-                  return (
-                    <TableRow key={trn._id} onClick={() => router.push(`/tournaments/${trn._id}`)}>
-                      <TableCell>
-                        <Link
-                          href={`/tournaments/${trn._id}`}
-                          style={{
-                            fontWeight: 700,
-                            color: 'var(--text-primary)',
-                            textDecoration: 'none',
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '5px',
-                          }}
-                        >
-                          <span>{trn.name}</span>
-                          <ExternalLinkIcon size={11} color="var(--accent-blue)" />
-                        </Link>
-                        <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-                          Team: {trn.teamId?.name || 'Gulzar Cricket Team'}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="purple">{trn.format || 'Hard Ball'}</Badge>
-                      </TableCell>
-                      <TableCell>
-                        <div style={{ fontSize: '13px' }}>{trn.venue || 'Karachi Grounds'}</div>
-                        <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-                          {new Date(trn.startDate).toLocaleDateString()}
-                        </div>
-                      </TableCell>
-                      <TableCell style={{ fontWeight: 600 }}>
-                        Rs. {fNum(trn.financials?.entryFee || trn.entryFee)}
-                      </TableCell>
-                      <TableCell style={{ fontWeight: 600, color: 'var(--accent-rose)' }}>
-                        Rs. {fNum(trn.financials?.matchExpenses || 0)}
-                      </TableCell>
-                      <TableCell style={{ fontWeight: 700, color: 'var(--accent-green)' }}>
-                        Rs. {fNum(trn.financials?.actualWinningPrizeWon || trn.actualWinningPrizeWon || 0)}
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={isProfitable ? 'success' : 'danger'}>
-                          {isProfitable ? '+' : ''}Rs. {fNum(netPnl)}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={getStatusBadgeVariant(trn.status)}>
-                          {trn.status?.toUpperCase() || 'ONGOING'}
-                        </Badge>
-                      </TableCell>
-                      <TableCell align="right">
-                        <div className="action-group" style={{ justifyContent: 'flex-end' }}>
-                          <Button
-                            variant="secondary"
-                            size="sm"
-                            isIconOnly
-                            icon={<PencilIcon size={14} color="var(--accent-blue)" />}
-                            onClick={() => handleEditOpen(trn)}
-                            title="Edit Tournament"
-                          />
-                          <Button
-                            variant="danger"
-                            size="sm"
-                            isIconOnly
-                            icon={<TrashIcon size={14} />}
-                            onClick={() => handleDelete(trn._id, trn.name)}
-                            title="Delete Tournament"
-                          />
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })
-              )}
-            </TableBody>
-          </Table>
+            <DataTable<Tournament>
+              data={paginatedTournaments}
+              keyExtractor={(trn: any) => trn._id}
+              emptyMessage="No tournaments found matching criteria."
+              onRowClick={(trn: any) => router.push(`/tournaments/${trn._id}`)}
+              columns={tournamentColumns}
+            />
 
           <Pagination
             currentPage={currentPage}
@@ -469,7 +302,7 @@ export default function TournamentsPage() {
                         border: '1px solid var(--border-color)',
                       }}
                     >
-                      🏆 {trn.notes}
+                      {trn.notes}
                     </p>
                   )}
 
@@ -580,204 +413,23 @@ export default function TournamentsPage() {
       )}
 
         {/* Modal: Add Tournament */}
-        <Modal
+        <CreateTournamentModal
           isOpen={isModalOpen}
           onClose={() => setIsModalOpen(false)}
-          title="Register Tournament or League"
-          footer={
-            <>
-              <Button variant="secondary" onClick={() => setIsModalOpen(false)}>
-                Cancel
-              </Button>
-              <Button variant="primary" onClick={handleSubmit}>
-                Save Tournament
-              </Button>
-            </>
-          }
-        >
-          <form onSubmit={handleSubmit}>
-            <div className="grid-2">
-              <Select
-                label="Participating Team *"
-                value={formData.teamId}
-                onChange={(e) => setFormData({ ...formData, teamId: e.target.value })}
-                required
-                options={teams.map((team) => ({ value: team._id, label: team.name }))}
-              />
-
-              <Input
-                label="Tournament Name *"
-                placeholder="e.g. Catchy Classic 26"
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                required
-              />
-            </div>
-
-            <div className="grid-2">
-              <Select
-                label="Format"
-                value={formData.format}
-                onChange={(e) => setFormData({ ...formData, format: e.target.value })}
-                options={[
-                  { value: 'Hard Ball', label: 'Hard Ball' },
-                  { value: 'Tape Ball', label: 'Tape Ball' },
-                  { value: 'T20', label: 'T20' },
-                  { value: 'T10', label: 'T10' },
-                  { value: '100 Balls', label: '100 Balls' },
-                ]}
-              />
-
-              <Input
-                label="Ground Venue"
-                placeholder="e.g. Landhi / Korangi Eidgah"
-                value={formData.venue}
-                onChange={(e) => setFormData({ ...formData, venue: e.target.value })}
-              />
-            </div>
-
-            <div className="grid-3">
-              <Input
-                label="Entry Fee (Investment) *"
-                type="number"
-                placeholder="50000"
-                value={formData.entryFee}
-                onChange={(e) => setFormData({ ...formData, entryFee: e.target.value })}
-                required
-              />
-
-              <Input
-                label="Expected / Winning Prize"
-                type="number"
-                placeholder="145000"
-                value={formData.expectedWinningPrize}
-                onChange={(e) => setFormData({ ...formData, expectedWinningPrize: e.target.value })}
-              />
-
-              <Input
-                label="Actual Prize Won (if any)"
-                type="number"
-                placeholder="30000"
-                value={formData.actualWinningPrizeWon}
-                onChange={(e) => setFormData({ ...formData, actualWinningPrizeWon: e.target.value })}
-              />
-            </div>
-
-            <Select
-              label="Status"
-              value={formData.status}
-              onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-              options={[
-                { value: 'upcoming', label: 'Upcoming' },
-                { value: 'ongoing', label: 'Ongoing' },
-                { value: 'completed', label: 'Completed' },
-                { value: 'champions', label: 'Champions' },
-              ]}
-            />
-
-            <Textarea
-              label="Notes / Remarks"
-              rows={2}
-              value={formData.notes}
-              onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-            />
-          </form>
-        </Modal>
+          teams={teams}
+          onSuccess={invalidateData}
+        />
 
         {/* Modal: Edit Tournament */}
-        <Modal
+        <EditTournamentModal
           isOpen={isEditOpen}
-          onClose={() => setIsEditOpen(false)}
-          title="Edit Tournament Record"
-          footer={
-            <>
-              <Button variant="secondary" onClick={() => setIsEditOpen(false)}>
-                Cancel
-              </Button>
-              <Button variant="primary" onClick={handleUpdate}>
-                Save Changes
-              </Button>
-            </>
-          }
-        >
-          <form onSubmit={handleUpdate}>
-            <div className="grid-2">
-              <Input
-                label="Tournament Name *"
-                value={editFormData.name}
-                onChange={(e) => setEditFormData({ ...editFormData, name: e.target.value })}
-                required
-              />
-
-              <Select
-                label="Format"
-                value={editFormData.format}
-                onChange={(e) => setEditFormData({ ...editFormData, format: e.target.value })}
-                options={[
-                  { value: 'Hard Ball', label: 'Hard Ball' },
-                  { value: 'Tape Ball', label: 'Tape Ball' },
-                  { value: 'T20', label: 'T20' },
-                  { value: 'T10', label: 'T10' },
-                  { value: '100 Balls', label: '100 Balls' },
-                ]}
-              />
-            </div>
-
-            <div className="grid-2">
-              <Input
-                label="Venue / Stadium"
-                value={editFormData.venue}
-                onChange={(e) => setEditFormData({ ...editFormData, venue: e.target.value })}
-              />
-
-              <Select
-                label="Status"
-                value={editFormData.status}
-                onChange={(e) => setEditFormData({ ...editFormData, status: e.target.value })}
-                options={[
-                  { value: 'upcoming', label: 'Upcoming' },
-                  { value: 'ongoing', label: 'Ongoing' },
-                  { value: 'completed', label: 'Completed' },
-                  { value: 'champions', label: 'Champions' },
-                ]}
-              />
-            </div>
-
-            <div className="grid-3">
-              <Input
-                label="Entry Fee (Rs.)"
-                type="number"
-                value={editFormData.entryFee}
-                onChange={(e) => setEditFormData({ ...editFormData, entryFee: Number(e.target.value) })}
-              />
-
-              <Input
-                label="Expected / Winning Prize"
-                type="number"
-                value={editFormData.expectedWinningPrize}
-                onChange={(e) =>
-                  setEditFormData({ ...editFormData, expectedWinningPrize: Number(e.target.value) })
-                }
-              />
-
-              <Input
-                label="Actual Prize Won (Rs.)"
-                type="number"
-                value={editFormData.actualWinningPrizeWon}
-                onChange={(e) =>
-                  setEditFormData({ ...editFormData, actualWinningPrizeWon: Number(e.target.value) })
-                }
-              />
-            </div>
-
-            <Textarea
-              label="Remarks / Notes"
-              rows={2}
-              value={editFormData.notes}
-              onChange={(e) => setEditFormData({ ...editFormData, notes: e.target.value })}
-            />
-          </form>
-        </Modal>
+          onClose={() => {
+            setIsEditOpen(false);
+            setEditingTournament(null);
+          }}
+          tournament={editingTournament}
+          onSuccess={invalidateData}
+        />
       </div>
     </>
   );

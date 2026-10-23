@@ -1,11 +1,16 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { queryKeys } from '../../../lib/queryKeys';
+import { SponsorTransaction } from '../../../types';
+import { getSponsorTransactionColumns } from '../../../columns';
 import { Header } from '../../../components/Header';
 import { StatCard } from '../../../components/StatCard';
 import { fetchApi } from '../../../lib/api';
+import { confirmDelete, showToast } from '../../../lib/alerts';
 import {
   Button,
   Badge,
@@ -14,13 +19,7 @@ import {
   Textarea,
   Modal,
   Card,
-  Table,
-  TableHeader,
-  TableBody,
-  TableRow,
-  TableHead,
-  TableCell,
-  TableEmpty,
+  DataTable,
 } from '../../../components/ui';
 import {
   Handshake,
@@ -46,27 +45,16 @@ import {
   SponsorTxType,
   paymentMethodLabel,
 } from '../../../components/SponsorTransactionModal';
+import { EditSponsorModal } from '../../../components/EditSponsorModal';
 
 export default function SponsorDetailPage() {
   const params = useParams();
   const router = useRouter();
   const id = params?.id as string;
+  const queryClient = useQueryClient();
 
-  const [sponsor, setSponsor] = useState<any>(null);
-  const [loading, setLoading] = useState<boolean>(true);
-
-  // Edit Sponsor Modal state (profile fields only – money is managed via the ledger)
+  // Edit Sponsor Modal state
   const [isEditOpen, setIsEditOpen] = useState<boolean>(false);
-  const [editFormData, setEditFormData] = useState({
-    sponsorName: '',
-    companyName: '',
-    phone: '',
-    email: '',
-    contractType: 'general_grant',
-    deliverablesAgreed: '',
-    status: 'active',
-    notes: '',
-  });
 
   // Ledger transaction modal state
   const [txModal, setTxModal] = useState<{ open: boolean; type: SponsorTxType; tx: any | null }>({
@@ -74,81 +62,68 @@ export default function SponsorDetailPage() {
     type: 'investment',
     tx: null,
   });
-  const [tournaments, setTournaments] = useState<any[]>([]);
+
+  // React Queries
+  const sponsorQuery = useQuery({
+    queryKey: queryKeys.sponsor(id),
+    queryFn: () => fetchApi<{ success: boolean; sponsor: any }>(`/sponsors/${id}`),
+    enabled: !!id,
+  });
+
+  const tourneysQuery = useQuery({
+    queryKey: queryKeys.tournaments(),
+    queryFn: () => fetchApi<{ success: boolean; tournaments: any[] }>('/tournaments'),
+  });
+
+  const sponsor = sponsorQuery.data?.sponsor;
+  const tournaments = tourneysQuery.data?.tournaments || [];
+  const loading = sponsorQuery.isLoading;
 
   const applySponsor = (s: any) => {
-    setSponsor(s);
-    setEditFormData({
-      sponsorName: s.sponsorName || '',
-      companyName: s.companyName || '',
-      phone: s.phone || '',
-      email: s.email || '',
-      contractType: s.contractType || 'general_grant',
-      deliverablesAgreed: s.deliverablesAgreed || '',
-      status: s.status || 'active',
-      notes: s.notes || '',
-    });
+    queryClient.setQueryData(queryKeys.sponsor(id), { success: true, sponsor: s });
+    queryClient.invalidateQueries({ queryKey: ['sponsors'] });
+    queryClient.invalidateQueries({ queryKey: ['dashboard'] });
   };
 
-  const loadSponsor = () => {
-    if (!id) return;
-    setLoading(true);
-    fetchApi<{ success: boolean; sponsor: any }>(`/sponsors/${id}`)
-      .then((res) => {
-        if (res.success) applySponsor(res.sponsor);
-      })
-      .catch((err) => console.error(err))
-      .finally(() => setLoading(false));
-  };
 
-  useEffect(() => {
-    loadSponsor();
-    fetchApi<{ success: boolean; tournaments: any[] }>('/tournaments')
-      .then((res) => res.success && setTournaments(res.tournaments || []))
-      .catch(() => {});
-  }, [id]);
 
-  const handleUpdateSponsor = async (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-      const res = await fetchApi<{ success: boolean }>(`/sponsors/${id}`, {
-        method: 'PUT',
-        body: JSON.stringify(editFormData),
-      });
-      if (res.success) {
-        setIsEditOpen(false);
-        loadSponsor();
-      }
-    } catch (err) {
-      alert('Failed to update sponsor');
-    }
+  const invalidateData = () => {
+    queryClient.invalidateQueries({ queryKey: queryKeys.sponsor(id) });
+    queryClient.invalidateQueries({ queryKey: ['sponsors'] });
+    queryClient.invalidateQueries({ queryKey: ['dashboard'] });
   };
 
   const openTxModal = (type: SponsorTxType, tx: any = null) => setTxModal({ open: true, type, tx });
 
   const handleDeleteTx = async (tx: any) => {
     const label = tx.type === 'investment' ? 'investment' : 'payout';
-    if (!confirm(`Delete this ${label} of Rs. ${fNum(tx.amount)}? Totals will be recalculated.`)) return;
+    const confirmed = await confirmDelete(`${label} transaction of Rs. ${fNum(tx.amount)}`);
+    if (!confirmed) return;
     try {
       const res = await fetchApi<{ success: boolean; sponsor: any }>(
         `/sponsors/${id}/transactions/${tx._id}`,
         { method: 'DELETE' }
       );
-      if (res.success) applySponsor(res.sponsor);
+      if (res.success) {
+        showToast.success('Transaction deleted.');
+        applySponsor(res.sponsor);
+      }
     } catch (err) {
-      alert('Failed to delete transaction');
+      showToast.error('Failed to delete transaction.');
     }
   };
 
   const handleDeleteSponsor = async () => {
-    if (!confirm(`Are you sure you want to delete sponsor "${sponsor?.sponsorName}"?`)) return;
+    const confirmed = await confirmDelete(`sponsor "${sponsor?.sponsorName}"`);
+    if (!confirmed) return;
     try {
       const res = await fetchApi<{ success: boolean }>(`/sponsors/${id}`, { method: 'DELETE' });
       if (res.success) {
+        showToast.success(`Sponsor "${sponsor?.sponsorName}" deleted.`);
         router.push('/sponsors');
       }
     } catch (err) {
-      alert('Failed to delete sponsor');
+      showToast.error('Failed to delete sponsor.');
     }
   };
 
@@ -189,6 +164,16 @@ export default function SponsorDetailPage() {
     .reverse();
   const investmentCount = txs.filter((t) => t.type === 'investment').length;
   const payoutCount = txs.length - investmentCount;
+
+  const transactionColumns = useMemo(
+    () =>
+      getSponsorTransactionColumns({
+        onEdit: (t: SponsorTransaction) => openTxModal(t.type as any, t),
+        onDelete: handleDeleteTx,
+        fNum,
+      }),
+    [fNum]
+  );
 
   return (
     <>
@@ -278,7 +263,7 @@ export default function SponsorDetailPage() {
                   boxShadow: '0 8px 20px rgba(5, 150, 105, 0.25)',
                 }}
               >
-                🤝
+                {(sponsor.companyName || sponsor.sponsorName || 'S').substring(0, 2).toUpperCase()}
               </div>
 
               <div>
@@ -497,96 +482,12 @@ export default function SponsorDetailPage() {
             </div>
           </div>
 
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Date</TableHead>
-                <TableHead>Type</TableHead>
-                <TableHead>Details</TableHead>
-                <TableHead>Method / Ref</TableHead>
-                <TableHead align="right">Inflow</TableHead>
-                <TableHead align="right">Outflow</TableHead>
-                <TableHead align="right">Balance</TableHead>
-                <TableHead align="right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {ledgerRows.length === 0 ? (
-                <TableEmpty colSpan={8} message="No transactions yet. Click “Add Funds” to record the first investment." />
-              ) : (
-                ledgerRows.map((t) => {
-                  const isIn = t.type === 'investment';
-                  return (
-                    <TableRow key={t._id}>
-                      <TableCell style={{ whiteSpace: 'nowrap' }}>
-                        <div style={{ fontWeight: 600 }}>{new Date(t.date).toLocaleDateString()}</div>
-                        {t.createdAt && (
-                          <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-                            Logged {new Date(t.createdAt).toLocaleDateString()}
-                          </div>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={isIn ? 'success' : 'danger'}>{isIn ? 'INVESTMENT' : 'PAYOUT'}</Badge>
-                      </TableCell>
-                      <TableCell style={{ maxWidth: '280px', fontSize: '12.5px', color: 'var(--text-secondary)' }}>
-                        {t.notes || (isIn ? 'Sponsorship funds received' : 'Return paid to sponsor')}
-                        {t.tournamentId?.name && (
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '2px' }}>
-                            <Trophy size={11} color="var(--accent-blue)" />
-                            <Link href={`/tournaments/${t.tournamentId._id}`} style={{ color: 'var(--accent-blue)' }}>
-                              {t.tournamentId.name}
-                            </Link>
-                          </div>
-                        )}
-                      </TableCell>
-                      <TableCell style={{ fontSize: '12.5px' }}>
-                        <div>{paymentMethodLabel(t.method)}</div>
-                        {t.reference && (
-                          <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>#{t.reference}</div>
-                        )}
-                      </TableCell>
-                      <TableCell align="right" style={{ fontWeight: 700, color: 'var(--accent-green)' }}>
-                        {isIn ? `+ Rs. ${fNum(t.amount)}` : '—'}
-                      </TableCell>
-                      <TableCell align="right" style={{ fontWeight: 700, color: 'var(--accent-rose)' }}>
-                        {!isIn ? `− Rs. ${fNum(t.amount)}` : '—'}
-                      </TableCell>
-                      <TableCell
-                        align="right"
-                        style={{
-                          fontWeight: 800,
-                          color: t.balance < 0 ? 'var(--accent-rose)' : 'var(--text-primary)',
-                        }}
-                      >
-                        Rs. {fNum(t.balance)}
-                      </TableCell>
-                      <TableCell align="right">
-                        <div className="action-group" style={{ justifyContent: 'flex-end' }}>
-                          <Button
-                            variant="secondary"
-                            size="sm"
-                            isIconOnly
-                            icon={<Pencil size={12} color="var(--accent-blue)" />}
-                            onClick={() => openTxModal(t.type, t)}
-                            title="Edit entry"
-                          />
-                          <Button
-                            variant="danger"
-                            size="sm"
-                            isIconOnly
-                            icon={<Trash2 size={12} />}
-                            onClick={() => handleDeleteTx(t)}
-                            title="Delete entry"
-                          />
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })
-              )}
-            </TableBody>
-          </Table>
+          <DataTable<SponsorTransaction>
+            data={ledgerRows}
+            keyExtractor={(t: any) => t._id}
+            emptyMessage="No transactions yet. Click “Add Funds” to record the first investment."
+            columns={transactionColumns}
+          />
         </Card>
 
         {/* 2-Columns: Contract Deliverables & Notes */}
@@ -668,110 +569,12 @@ export default function SponsorDetailPage() {
       </div>
 
       {/* Edit Sponsor Modal */}
-      <Modal
+      <EditSponsorModal
         isOpen={isEditOpen}
         onClose={() => setIsEditOpen(false)}
-        title={`Edit Sponsor: ${sponsor.sponsorName}`}
-        footer={
-          <>
-            <Button variant="secondary" onClick={() => setIsEditOpen(false)}>
-              Cancel
-            </Button>
-            <Button variant="primary" onClick={handleUpdateSponsor}>
-              Save Sponsor
-            </Button>
-          </>
-        }
-      >
-        <form onSubmit={handleUpdateSponsor}>
-          <div className="grid-2">
-            <Input
-              label="Sponsor Contact Name *"
-              value={editFormData.sponsorName}
-              onChange={(e) => setEditFormData({ ...editFormData, sponsorName: e.target.value })}
-              required
-            />
-            <Input
-              label="Company / Brand Name"
-              value={editFormData.companyName}
-              onChange={(e) => setEditFormData({ ...editFormData, companyName: e.target.value })}
-            />
-          </div>
-
-          <div className="grid-2">
-            <Input
-              label="Phone"
-              value={editFormData.phone}
-              onChange={(e) => setEditFormData({ ...editFormData, phone: e.target.value })}
-            />
-            <Input
-              label="Email"
-              type="email"
-              value={editFormData.email}
-              onChange={(e) => setEditFormData({ ...editFormData, email: e.target.value })}
-            />
-          </div>
-
-          <div className="grid-2">
-            <Select
-              label="Status"
-              value={editFormData.status}
-              onChange={(e) => setEditFormData({ ...editFormData, status: e.target.value })}
-              options={[
-                { value: 'pledged', label: 'Pledged' },
-                { value: 'active', label: 'Active' },
-                { value: 'completed', label: 'Completed' },
-              ]}
-            />
-            <Select
-              label="Contract Type"
-              value={editFormData.contractType}
-              onChange={(e) =>
-                setEditFormData({ ...editFormData, contractType: e.target.value })
-              }
-              options={[
-                { value: 'jersey_front', label: 'Jersey Front Chest Logo' },
-                { value: 'jersey_back', label: 'Jersey Back Logo' },
-                { value: 'sleeve', label: 'Sleeve Logo' },
-                { value: 'tournament_banner', label: 'Tournament Banners' },
-                { value: 'equipment_kit', label: 'Equipment & Kit Bag' },
-                { value: 'general_grant', label: 'General Annual Grant' },
-              ]}
-            />
-          </div>
-
-          <div
-            style={{
-              marginBottom: '14px',
-              padding: '10px 12px',
-              background: '#f0f9ff',
-              border: '1px solid #bae6fd',
-              borderRadius: '8px',
-              fontSize: '12.5px',
-              color: 'var(--text-secondary)',
-            }}
-          >
-            💡 Invested amount &amp; payouts are calculated from the ledger. Use <strong>Add Funds</strong> or{' '}
-            <strong>Record Payout</strong> to change them.
-          </div>
-
-          <Textarea
-            label="Deliverables Agreed"
-            rows={2}
-            value={editFormData.deliverablesAgreed}
-            onChange={(e) =>
-              setEditFormData({ ...editFormData, deliverablesAgreed: e.target.value })
-            }
-          />
-
-          <Textarea
-            label="Notes"
-            rows={2}
-            value={editFormData.notes}
-            onChange={(e) => setEditFormData({ ...editFormData, notes: e.target.value })}
-          />
-        </form>
-      </Modal>
+        sponsor={sponsor}
+        onSuccess={invalidateData}
+      />
 
       {/* Ledger Transaction Modal (Add Funds / Payout / Edit) */}
       <SponsorTransactionModal

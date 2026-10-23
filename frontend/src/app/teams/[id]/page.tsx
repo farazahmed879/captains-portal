@@ -3,9 +3,12 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { queryKeys } from '../../../lib/queryKeys';
 import { Header } from '../../../components/Header';
 import { StatCard } from '../../../components/StatCard';
 import { fetchApi } from '../../../lib/api';
+import { confirmDelete, showToast } from '../../../lib/alerts';
 import {
   Button,
   Badge,
@@ -13,14 +16,9 @@ import {
   Textarea,
   Modal,
   Card,
-  Table,
-  TableHeader,
-  TableBody,
-  TableRow,
-  TableHead,
-  TableCell,
-  TableEmpty,
+  DataTable,
 } from '../../../components/ui';
+import { EditTeamModal } from '../../../components/EditTeamModal';
 import {
   Shield,
   Users,
@@ -39,78 +37,47 @@ export default function TeamProfilePage() {
   const params = useParams();
   const router = useRouter();
   const id = params?.id as string;
+  const queryClient = useQueryClient();
 
-  const [data, setData] = useState<any>(null);
-  const [loading, setLoading] = useState<boolean>(true);
   const [activeTab, setActiveTab] = useState<'squad' | 'matches' | 'tournaments'>('squad');
 
   // Edit Team Modal state
   const [isEditOpen, setIsEditOpen] = useState<boolean>(false);
-  const [editFormData, setEditFormData] = useState({
-    name: '',
-    shortName: '',
-    city: '',
-    primaryColor: '#0ea5e9',
-    description: '',
+
+  const teamQuery = useQuery({
+    queryKey: queryKeys.team(id),
+    queryFn: () =>
+      fetchApi<{
+        success: boolean;
+        team: any;
+        players: any[];
+        matches: any[];
+        tournaments: any[];
+        stats: any;
+      }>(`/teams/${id}`),
+    enabled: !!id,
   });
 
-  const loadTeamProfile = () => {
-    if (!id) return;
-    setLoading(true);
-    fetchApi<{
-      success: boolean;
-      team: any;
-      players: any[];
-      matches: any[];
-      tournaments: any[];
-      stats: any;
-    }>(`/teams/${id}`)
-      .then((res) => {
-        if (res.success) {
-          setData(res);
-          const t = res.team;
-          setEditFormData({
-            name: t.name || '',
-            shortName: t.shortName || '',
-            city: t.city || '',
-            primaryColor: t.primaryColor || '#0ea5e9',
-            description: t.description || '',
-          });
-        }
-      })
-      .catch((err) => console.error(err))
-      .finally(() => setLoading(false));
-  };
+  const data = teamQuery.data;
+  const loading = teamQuery.isLoading;
 
-  useEffect(() => {
-    loadTeamProfile();
-  }, [id]);
-
-  const handleUpdateTeam = async (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-      const res = await fetchApi<{ success: boolean }>(`/teams/${id}`, {
-        method: 'PUT',
-        body: JSON.stringify(editFormData),
-      });
-      if (res.success) {
-        setIsEditOpen(false);
-        loadTeamProfile();
-      }
-    } catch (err) {
-      alert('Failed to update team');
-    }
+  const invalidateTeam = () => {
+    queryClient.invalidateQueries({ queryKey: queryKeys.team(id) });
+    queryClient.invalidateQueries({ queryKey: queryKeys.teams() });
+    queryClient.invalidateQueries({ queryKey: ['dashboard'] });
   };
 
   const handleDeleteTeam = async () => {
-    if (!confirm(`Are you sure you want to delete team "${data?.team?.name}"?`)) return;
+    const confirmed = await confirmDelete(`team "${data?.team?.name}"`);
+    if (!confirmed) return;
     try {
       const res = await fetchApi<{ success: boolean }>(`/teams/${id}`, { method: 'DELETE' });
       if (res.success) {
+        showToast.success(`Team "${data?.team?.name}" deleted.`);
         router.push('/teams');
       }
     } catch (err) {
-      alert('Failed to delete team');
+      showToast.error('Failed to delete team.');
     }
   };
 
@@ -289,7 +256,7 @@ export default function TeamProfilePage() {
                 color: 'var(--text-secondary)',
               }}
             >
-              🏏 {team.description}
+              {team.description}
             </div>
           )}
         </Card>
@@ -377,83 +344,81 @@ export default function TeamProfilePage() {
               Registered Squad Members ({players.length})
             </h3>
 
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Jersey #</TableHead>
-                  <TableHead>Player</TableHead>
-                  <TableHead>Role</TableHead>
-                  <TableHead>Batting Style</TableHead>
-                  <TableHead>Bowling Style</TableHead>
-                  <TableHead>Phone</TableHead>
-                  <TableHead align="right">Action</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {players.length === 0 ? (
-                  <TableEmpty colSpan={7} message="No players assigned to this team roster yet." />
-                ) : (
-                  players.map((p: any) => (
-                    <TableRow key={p._id}>
-                      <TableCell>
-                        <Badge variant="purple" style={{ fontWeight: 800 }}>
-                          {p.jerseyNumber ? `#${p.jerseyNumber}` : '-'}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <Link
-                          href={`/players/${p._id}`}
-                          style={{
-                            textDecoration: 'none',
-                            color: 'var(--text-primary)',
-                            fontWeight: 600,
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '4px',
-                          }}
-                        >
-                          {p.name}
-                          <ExternalLink size={10} color="var(--accent-blue)" />
-                        </Link>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="secondary">
-                          {p.role?.replace('_', ' ').toUpperCase() || 'PLAYER'}
-                        </Badge>
-                      </TableCell>
-                      <TableCell
-                        style={{
-                          textTransform: 'capitalize',
-                          fontSize: '12px',
-                          color: 'var(--text-secondary)',
-                        }}
-                      >
-                        {p.battingStyle?.replace('_', ' ') || 'Right Hand'}
-                      </TableCell>
-                      <TableCell
-                        style={{
-                          textTransform: 'capitalize',
-                          fontSize: '12px',
-                          color: 'var(--text-secondary)',
-                        }}
-                      >
-                        {p.bowlingStyle?.replace('_', ' ') || 'N/A'}
-                      </TableCell>
-                      <TableCell style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
-                        {p.phone || '-'}
-                      </TableCell>
-                      <TableCell align="right">
-                        <Link href={`/players/${p._id}`} passHref legacyBehavior>
-                          <Button variant="secondary" size="sm">
-                            View Profile
-                          </Button>
-                        </Link>
-                      </TableCell>
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
+            <DataTable
+              data={players}
+              keyExtractor={(p: any) => p._id}
+              emptyMessage="No players assigned to this team roster yet."
+              columns={[
+                {
+                  header: 'Jersey #',
+                  width: '10%',
+                  render: (p: any) => (
+                    <Badge variant="purple" style={{ fontWeight: 800 }}>
+                      {p.jerseyNumber ? `#${p.jerseyNumber}` : '-'}
+                    </Badge>
+                  ),
+                },
+                {
+                  header: 'Player',
+                  width: '24%',
+                  render: (p: any) => (
+                    <Link
+                      href={`/players/${p._id}`}
+                      style={{
+                        textDecoration: 'none',
+                        color: 'var(--text-primary)',
+                        fontWeight: 600,
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                      }}
+                    >
+                      {p.name}
+                      <ExternalLink size={10} color="var(--accent-blue)" />
+                    </Link>
+                  ),
+                },
+                {
+                  header: 'Role',
+                  width: '14%',
+                  render: (p: any) => (
+                    <Badge variant="secondary">
+                      {p.role?.replace('_', ' ').toUpperCase() || 'PLAYER'}
+                    </Badge>
+                  ),
+                },
+                {
+                  header: 'Batting Style',
+                  width: '16%',
+                  style: { textTransform: 'capitalize', fontSize: '12px', color: 'var(--text-secondary)' },
+                  render: (p: any) => p.battingStyle?.replace('_', ' ') || 'Right Hand',
+                },
+                {
+                  header: 'Bowling Style',
+                  width: '16%',
+                  style: { textTransform: 'capitalize', fontSize: '12px', color: 'var(--text-secondary)' },
+                  render: (p: any) => p.bowlingStyle?.replace('_', ' ') || 'N/A',
+                },
+                {
+                  header: 'Phone',
+                  width: '12%',
+                  style: { fontSize: '12px', color: 'var(--text-secondary)' },
+                  render: (p: any) => p.phone || '-',
+                },
+                {
+                  header: 'Action',
+                  width: '8%',
+                  align: 'right',
+                  render: (p: any) => (
+                    <Link href={`/players/${p._id}`} passHref legacyBehavior>
+                      <Button variant="secondary" size="sm">
+                        View Profile
+                      </Button>
+                    </Link>
+                  ),
+                },
+              ]}
+            />
           </Card>
         )}
 
@@ -475,88 +440,99 @@ export default function TeamProfilePage() {
               Matches Played ({matches.length})
             </h3>
 
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Match</TableHead>
-                  <TableHead>Type / League</TableHead>
-                  <TableHead>Date</TableHead>
-                  <TableHead>Venue</TableHead>
-                  <TableHead>Result</TableHead>
-                  <TableHead>Match Expense</TableHead>
-                  <TableHead align="right">Action</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {matches.length === 0 ? (
-                  <TableEmpty colSpan={7} message="No matches recorded for this team yet." />
-                ) : (
-                  matches.map((m: any) => (
-                    <TableRow key={m._id}>
-                      <TableCell>
-                        <Link
-                          href={`/matches/${m._id}`}
-                          style={{
-                            textDecoration: 'none',
-                            color: 'var(--text-primary)',
-                            fontWeight: 600,
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '4px',
-                          }}
-                        >
-                          vs {m.opponentTeam}
-                          <ExternalLink size={10} color="var(--accent-blue)" />
-                        </Link>
-                      </TableCell>
-                      <TableCell>
-                        {m.tournamentId ? (
-                          <Link
-                            href={`/tournaments/${m.tournamentId._id}`}
-                            style={{
-                              color: 'var(--accent-blue)',
-                              textDecoration: 'none',
-                              fontSize: '12px',
-                            }}
-                          >
-                            🏆 {m.tournamentId.name}
-                          </Link>
-                        ) : (
-                          <Badge variant="secondary">Friendly</Badge>
-                        )}
-                      </TableCell>
-                      <TableCell style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
-                        {new Date(m.matchDate).toLocaleDateString()}
-                      </TableCell>
-                      <TableCell style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
-                        {m.venue || '-'}
-                      </TableCell>
-                      <TableCell>
-                        <Badge
-                          variant={
-                            m.result === 'won'
-                              ? 'success'
-                              : m.result === 'lost'
-                              ? 'danger'
-                              : 'warning'
-                          }
-                        >
-                          {m.result ? m.result.toUpperCase() : 'PENDING'}
-                        </Badge>
-                      </TableCell>
-                      <TableCell style={{ fontWeight: 600 }}>Rs. {fNum(m.totalMatchExpense)}</TableCell>
-                      <TableCell align="right">
-                        <Link href={`/matches/${m._id}`} passHref legacyBehavior>
-                          <Button variant="secondary" size="sm">
-                            View Details
-                          </Button>
-                        </Link>
-                      </TableCell>
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
+            <DataTable
+              data={matches}
+              keyExtractor={(m: any) => m._id}
+              emptyMessage="No matches recorded for this team yet."
+              columns={[
+                {
+                  header: 'Match',
+                  width: '24%',
+                  render: (m: any) => (
+                    <Link
+                      href={`/matches/${m._id}`}
+                      style={{
+                        textDecoration: 'none',
+                        color: 'var(--text-primary)',
+                        fontWeight: 600,
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                      }}
+                    >
+                      vs {m.opponentTeam}
+                      <ExternalLink size={10} color="var(--accent-blue)" />
+                    </Link>
+                  ),
+                },
+                {
+                  header: 'Type / League',
+                  width: '20%',
+                  render: (m: any) =>
+                    m.tournamentId ? (
+                      <Link
+                        href={`/tournaments/${m.tournamentId._id}`}
+                        style={{
+                          color: 'var(--accent-blue)',
+                          textDecoration: 'none',
+                          fontSize: '12px',
+                        }}
+                      >
+                        {m.tournamentId.name}
+                      </Link>
+                    ) : (
+                      <Badge variant="secondary">Friendly</Badge>
+                    ),
+                },
+                {
+                  header: 'Date',
+                  width: '14%',
+                  style: { fontSize: '12px', color: 'var(--text-secondary)' },
+                  render: (m: any) => new Date(m.matchDate).toLocaleDateString(),
+                },
+                {
+                  header: 'Venue',
+                  width: '14%',
+                  style: { fontSize: '12px', color: 'var(--text-secondary)' },
+                  render: (m: any) => m.venue || '-',
+                },
+                {
+                  header: 'Result',
+                  width: '10%',
+                  render: (m: any) => (
+                    <Badge
+                      variant={
+                        m.result === 'won'
+                          ? 'success'
+                          : m.result === 'lost'
+                          ? 'danger'
+                          : 'warning'
+                      }
+                    >
+                      {m.result ? m.result.toUpperCase() : 'PENDING'}
+                    </Badge>
+                  ),
+                },
+                {
+                  header: 'Match Expense',
+                  width: '10%',
+                  style: { fontWeight: 600 },
+                  render: (m: any) => `Rs. ${fNum(m.totalMatchExpense)}`,
+                },
+                {
+                  header: 'Action',
+                  width: '8%',
+                  align: 'right',
+                  render: (m: any) => (
+                    <Link href={`/matches/${m._id}`} passHref legacyBehavior>
+                      <Button variant="secondary" size="sm">
+                        View Details
+                      </Button>
+                    </Link>
+                  ),
+                },
+              ]}
+            />
           </Card>
         )}
 
@@ -578,154 +554,95 @@ export default function TeamProfilePage() {
               Tournaments Participated ({tournaments.length})
             </h3>
 
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Tournament</TableHead>
-                  <TableHead>Format</TableHead>
-                  <TableHead>Venue</TableHead>
-                  <TableHead>Entry Fee</TableHead>
-                  <TableHead>Prize Won</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead align="right">Action</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {tournaments.length === 0 ? (
-                  <TableEmpty colSpan={7} message="No tournaments linked to this team yet." />
-                ) : (
-                  tournaments.map((t: any) => (
-                    <TableRow key={t._id}>
-                      <TableCell>
-                        <Link
-                          href={`/tournaments/${t._id}`}
-                          style={{
-                            textDecoration: 'none',
-                            color: 'var(--text-primary)',
-                            fontWeight: 600,
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '4px',
-                          }}
-                        >
-                          🏆 {t.name}
-                          <ExternalLink size={10} color="var(--accent-blue)" />
-                        </Link>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="purple">{t.format || 'Hard Ball'}</Badge>
-                      </TableCell>
-                      <TableCell style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
-                        {t.venue || '-'}
-                      </TableCell>
-                      <TableCell>Rs. {fNum(t.entryFee)}</TableCell>
-                      <TableCell style={{ fontWeight: 600, color: 'var(--accent-green)' }}>
-                        Rs. {fNum(t.actualWinningPrizeWon)}
-                      </TableCell>
-                      <TableCell>
-                        <Badge
-                          variant={
-                            t.status === 'champions'
-                              ? 'gold'
-                              : t.status === 'ongoing'
-                              ? 'primary'
-                              : 'warning'
-                          }
-                        >
-                          {t.status?.toUpperCase() || 'COMPLETED'}
-                        </Badge>
-                      </TableCell>
-                      <TableCell align="right">
-                        <Link href={`/tournaments/${t._id}`} passHref legacyBehavior>
-                          <Button variant="secondary" size="sm">
-                            View Tournament
-                          </Button>
-                        </Link>
-                      </TableCell>
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
+            <DataTable
+              data={tournaments}
+              keyExtractor={(t: any) => t._id}
+              emptyMessage="No tournaments linked to this team yet."
+              columns={[
+                {
+                  header: 'Tournament',
+                  width: '26%',
+                  render: (t: any) => (
+                    <Link
+                      href={`/tournaments/${t._id}`}
+                      style={{
+                        textDecoration: 'none',
+                        color: 'var(--text-primary)',
+                        fontWeight: 600,
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                      }}
+                    >
+                      {t.name}
+                      <ExternalLink size={10} color="var(--accent-blue)" />
+                    </Link>
+                  ),
+                },
+                {
+                  header: 'Format',
+                  width: '12%',
+                  render: (t: any) => <Badge variant="purple">{t.format || 'Hard Ball'}</Badge>,
+                },
+                {
+                  header: 'Venue',
+                  width: '16%',
+                  style: { fontSize: '12px', color: 'var(--text-secondary)' },
+                  render: (t: any) => t.venue || '-',
+                },
+                {
+                  header: 'Entry Fee',
+                  width: '14%',
+                  render: (t: any) => `Rs. ${fNum(t.entryFee)}`,
+                },
+                {
+                  header: 'Prize Won',
+                  width: '14%',
+                  style: { fontWeight: 600, color: 'var(--accent-green)' },
+                  render: (t: any) => `Rs. ${fNum(t.actualWinningPrizeWon)}`,
+                },
+                {
+                  header: 'Status',
+                  width: '10%',
+                  render: (t: any) => (
+                    <Badge
+                      variant={
+                        t.status === 'champions'
+                          ? 'gold'
+                          : t.status === 'ongoing'
+                          ? 'primary'
+                          : 'warning'
+                      }
+                    >
+                      {t.status?.toUpperCase() || 'COMPLETED'}
+                    </Badge>
+                  ),
+                },
+                {
+                  header: 'Action',
+                  width: '8%',
+                  align: 'right',
+                  render: (t: any) => (
+                    <Link href={`/tournaments/${t._id}`} passHref legacyBehavior>
+                      <Button variant="secondary" size="sm">
+                        View Tournament
+                      </Button>
+                    </Link>
+                  ),
+                },
+              ]}
+            />
           </Card>
         )}
       </div>
 
       {/* Edit Team Modal */}
-      <Modal
+      <EditTeamModal
         isOpen={isEditOpen}
         onClose={() => setIsEditOpen(false)}
-        title={`Edit Team: ${team.name}`}
-        footer={
-          <>
-            <Button variant="secondary" onClick={() => setIsEditOpen(false)}>
-              Cancel
-            </Button>
-            <Button variant="primary" onClick={handleUpdateTeam}>
-              Save Team Changes
-            </Button>
-          </>
-        }
-      >
-        <form onSubmit={handleUpdateTeam}>
-          <div className="grid-2">
-            <Input
-              label="Team Name *"
-              value={editFormData.name}
-              onChange={(e) => setEditFormData({ ...editFormData, name: e.target.value })}
-              required
-            />
-            <Input
-              label="Short Code *"
-              placeholder="e.g. GCT"
-              value={editFormData.shortName}
-              onChange={(e) => setEditFormData({ ...editFormData, shortName: e.target.value })}
-              required
-            />
-          </div>
-
-          <div className="grid-2">
-            <Input
-              label="City / Home Ground"
-              value={editFormData.city}
-              onChange={(e) => setEditFormData({ ...editFormData, city: e.target.value })}
-            />
-            <div className="form-group">
-              <label className="form-label">Primary Theme Color</label>
-              <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                <input
-                  type="color"
-                  value={editFormData.primaryColor}
-                  onChange={(e) =>
-                    setEditFormData({ ...editFormData, primaryColor: e.target.value })
-                  }
-                  style={{
-                    width: '42px',
-                    height: '38px',
-                    padding: '0',
-                    cursor: 'pointer',
-                    borderRadius: '8px',
-                    border: '1px solid var(--border-color)',
-                  }}
-                />
-                <Input
-                  value={editFormData.primaryColor}
-                  onChange={(e) =>
-                    setEditFormData({ ...editFormData, primaryColor: e.target.value })
-                  }
-                />
-              </div>
-            </div>
-          </div>
-
-          <Textarea
-            label="Description / Franchise Bio"
-            rows={3}
-            value={editFormData.description}
-            onChange={(e) => setEditFormData({ ...editFormData, description: e.target.value })}
-          />
-        </form>
-      </Modal>
+        team={team}
+        onSuccess={invalidateTeam}
+      />
     </>
   );
 }

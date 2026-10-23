@@ -3,6 +3,7 @@ import { AuthRequest } from '../middlewares/auth';
 import { Player } from '../models/Player';
 import { MatchPayment } from '../models/MatchPayment';
 import { Match } from '../models/Match';
+import { PlayerReturn } from '../models/PlayerReturn';
 
 export const getPlayers = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
@@ -21,14 +22,46 @@ export const getPlayers = async (req: AuthRequest, res: Response): Promise<void>
 
     const players = await Player.find(filter).populate('teamIds', 'name shortName primaryColor').sort({ name: 1 });
 
-    // Aggregate financial ledger for each player
+    // Aggregate financial ledger & statistics for each player
     const playerSummaries = await Promise.all(
       players.map(async (player) => {
-        const payments = await MatchPayment.find({ playerId: player._id });
+        const payments = await MatchPayment.find({ playerId: player._id }).populate({
+          path: 'matchId',
+          select: 'tournamentId',
+        });
         const totalFeeAssigned = payments.reduce((acc, p) => acc + (p.feeAssigned || 0), 0);
         const totalFeePaid = payments.reduce((acc, p) => acc + (p.feePaid || 0), 0);
-        const pendingDue = totalFeeAssigned - totalFeePaid;
         const matchesPlayed = payments.length;
+
+        // Returns and refunds made to player
+        const returns = await PlayerReturn.find({ playerId: player._id });
+        const totalReturned = returns.reduce((acc, r) => acc + (r.amount || 0), 0);
+
+        // Calculate unique tournaments played
+        const tournamentIdSet = new Set<string>();
+        payments.forEach((p: any) => {
+          const tId = p.matchId?.tournamentId?.toString();
+          if (tId) tournamentIdSet.add(tId);
+        });
+
+        // Also check matches where player was in squad
+        const squadMatches = await Match.find({
+          squadPlayerIds: player._id,
+          tournamentId: { $exists: true, $ne: null },
+        }).select('tournamentId');
+        squadMatches.forEach((m: any) => {
+          if (m.tournamentId) tournamentIdSet.add(m.tournamentId.toString());
+        });
+        const tournamentsCount = tournamentIdSet.size;
+
+        // Fee refunds vs Prize/Sponsor returns:
+        // Excess fee refund reduces effective fee paid
+        const feeRefunds = returns
+          .filter((r) => r.source === 'excess_fee_refund')
+          .reduce((acc, r) => acc + (r.amount || 0), 0);
+        const effectiveFeePaid = Math.max(0, totalFeePaid - feeRefunds);
+        const pendingDue = Math.max(0, totalFeeAssigned - effectiveFeePaid);
+        const advanceCredit = Math.max(0, totalFeePaid - totalFeeAssigned - totalReturned);
 
         // Count MOM awards
         const momCount = await Match.countDocuments({ momPlayerId: player._id });
@@ -36,9 +69,12 @@ export const getPlayers = async (req: AuthRequest, res: Response): Promise<void>
         return {
           ...player.toObject(),
           matchesPlayed,
+          tournamentsCount,
           totalFeeAssigned,
           totalFeePaid,
+          totalReturned,
           pendingDue,
+          advanceCredit,
           momCount,
         };
       })
@@ -72,6 +108,36 @@ export const getPlayerProfile = async (req: AuthRequest, res: Response): Promise
 
     const totalFeeAssigned = payments.reduce((acc, p) => acc + (p.feeAssigned || 0), 0);
     const totalFeePaid = payments.reduce((acc, p) => acc + (p.feePaid || 0), 0);
+
+    // Returns and refunds
+    const returns = await PlayerReturn.find({ playerId: player._id })
+      .populate('tournamentId', 'name')
+      .populate('matchId', 'opponentTeam matchDate')
+      .sort({ returnDate: -1, createdAt: -1 });
+    const totalReturned = returns.reduce((acc, r) => acc + (r.amount || 0), 0);
+
+    // Tournaments count
+    const tournamentIdSet = new Set<string>();
+    payments.forEach((p: any) => {
+      const tId = p.matchId?.tournamentId?._id?.toString() || p.matchId?.tournamentId?.toString();
+      if (tId) tournamentIdSet.add(tId);
+    });
+    const squadMatches = await Match.find({
+      squadPlayerIds: player._id,
+      tournamentId: { $exists: true, $ne: null },
+    }).select('tournamentId');
+    squadMatches.forEach((m: any) => {
+      if (m.tournamentId) tournamentIdSet.add(m.tournamentId.toString());
+    });
+    const tournamentsCount = tournamentIdSet.size;
+
+    const feeRefunds = returns
+      .filter((r) => r.source === 'excess_fee_refund')
+      .reduce((acc, r) => acc + (r.amount || 0), 0);
+    const effectiveFeePaid = Math.max(0, totalFeePaid - feeRefunds);
+    const pendingDue = Math.max(0, totalFeeAssigned - effectiveFeePaid);
+    const advanceCredit = Math.max(0, totalFeePaid - totalFeeAssigned - totalReturned);
+
     const momMatches = await Match.find({ momPlayerId: player._id });
 
     res.json({
@@ -80,8 +146,12 @@ export const getPlayerProfile = async (req: AuthRequest, res: Response): Promise
       ledger: {
         totalFeeAssigned,
         totalFeePaid,
-        pendingDue: totalFeeAssigned - totalFeePaid,
+        totalReturned,
+        pendingDue,
+        advanceCredit,
+        tournamentsCount,
         matchHistory: payments,
+        returns,
         momAwards: momMatches,
       },
     });
