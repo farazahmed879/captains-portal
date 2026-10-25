@@ -4,6 +4,8 @@ dotenv.config();
 import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import { connectDB } from './config/db';
+import { connectPrisma } from './config/prisma';
+import { errorHandler } from './middlewares/errorHandler';
 
 import authRoutes from './routes/authRoutes';
 import teamRoutes from './routes/teamRoutes';
@@ -15,12 +17,14 @@ import expenseRoutes from './routes/expenseRoutes';
 import sponsorRoutes from './routes/sponsorRoutes';
 import dashboardRoutes from './routes/dashboardRoutes';
 import playerReturnRoutes from './routes/playerReturnRoutes';
+import userRoutes from './routes/userRoutes';
 
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// Connect to Database
+// Connect to Database (Mongoose & Prisma)
 connectDB();
+connectPrisma();
 
 // Middlewares
 app.use(cors({ origin: '*' }));
@@ -46,20 +50,15 @@ app.use('/api/payments', matchPaymentRoutes);
 app.use('/api/expenses', expenseRoutes);
 app.use('/api/sponsors', sponsorRoutes);
 app.use('/api/dashboard', dashboardRoutes);
+app.use('/api/users', userRoutes);
 
 // 404 Handler
 app.use((req: Request, res: Response) => {
   res.status(404).json({ success: false, message: `Route not found: ${req.originalUrl}` });
 });
 
-// Global Error Handler
-app.use((err: any, req: Request, res: Response, next: NextFunction) => {
-  console.error('Unhandled Server Error:', err);
-  res.status(err.status || 500).json({
-    success: false,
-    message: err.message || 'Internal Server Error',
-  });
-});
+// Centralized Global Error Handler
+app.use(errorHandler);
 
 app.listen(PORT, () => {
   console.log(`🚀 Captains Portal Backend Server is running on http://localhost:${PORT}`);

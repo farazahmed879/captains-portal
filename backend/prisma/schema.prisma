@@ -1,0 +1,256 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+// ---------------------------------------------------------
+// COMPOSITE TYPES (MongoDB Embedded Documents)
+// ---------------------------------------------------------
+
+type DashboardSelections {
+  playerId     String?  @default("all")
+  tournamentId String?  @default("all")
+  teamId       String?  @default("all")
+  sponsorId    String?  @default("all")
+}
+
+type DashboardSettings {
+  widgets    String[]
+  selections DashboardSelections?
+}
+
+type SponsorTransaction {
+  id           String    @default(uuid()) @map("_id")
+  type         String    // "investment" | "payout"
+  amount       Float
+  date         DateTime  @default(now())
+  method       String?   @default("cash")
+  reference    String?
+  tournamentId String?   @db.ObjectId
+  notes        String?
+  createdAt    DateTime? @default(now())
+}
+
+// ---------------------------------------------------------
+// DOMAIN MODELS
+// ---------------------------------------------------------
+
+model Tenant {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  name      String
+  slug      String   @unique
+  logo      String?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("tenants")
+}
+
+model User {
+  id                String             @id @default(auto()) @map("_id") @db.ObjectId
+  tenantId          String             @db.ObjectId
+  name              String
+  email             String
+  password          String
+  phone             String?
+  playerId          String?            @db.ObjectId
+  role              String             @default("captain") // super_admin, captain, treasurer, viewer
+  avatar            String?
+  isActive          Boolean            @default(true)
+  dashboardSettings DashboardSettings?
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+
+  @@unique([tenantId, email])
+  @@index([tenantId])
+  @@map("users")
+}
+
+model Player {
+  id           String    @id @default(auto()) @map("_id") @db.ObjectId
+  tenantId     String    @db.ObjectId
+  teamIds      String[]  @db.ObjectId
+  name         String
+  phone        String?
+  email        String?
+  role         String    @default("all_rounder") // batsman, bowler, all_rounder, wicket_keeper
+  battingStyle String    @default("right_hand")  // right_hand, left_hand
+  bowlingStyle String    @default("right_arm_medium")
+  jerseyNumber Int?
+  profilePhoto String?
+  isRegular    Boolean   @default(true)
+  notes        String?
+  isActive     Boolean   @default(true)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@index([tenantId, name])
+  @@map("players")
+}
+
+model Team {
+  id           String   @id @default(auto()) @map("_id") @db.ObjectId
+  tenantId     String   @db.ObjectId
+  captainId    String   @db.ObjectId
+  name         String
+  shortName    String
+  city         String?  @default("Karachi")
+  logo         String?
+  primaryColor String?  @default("#0284c7")
+  description  String?
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@unique([tenantId, name])
+  @@index([tenantId])
+  @@map("teams")
+}
+
+model Tournament {
+  id                    String    @id @default(auto()) @map("_id") @db.ObjectId
+  tenantId              String    @db.ObjectId
+  teamId                String    @db.ObjectId
+  name                  String
+  organizer             String?
+  venue                 String?
+  format                String    @default("T20")
+  startDate             DateTime
+  endDate               DateTime?
+  entryFee              Float     @default(0)
+  expectedWinningPrize  Float?    @default(0)
+  actualWinningPrizeWon Float?    @default(0)
+  status                String    @default("ongoing") // upcoming, ongoing, completed, knocked_out, champions
+  notes                 String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@index([tenantId, teamId, name])
+  @@map("tournaments")
+}
+
+model Match {
+  id                 String    @id @default(auto()) @map("_id") @db.ObjectId
+  tenantId           String    @db.ObjectId
+  teamId             String    @db.ObjectId
+  matchType          String    @default("friendly") // friendly, tournament
+  tournamentId       String?   @db.ObjectId
+  tournamentStage    String?   @default("regular")
+  matchDate          DateTime
+  opponentTeam       String
+  venue              String
+  overs              Int
+  groundCost         Float     @default(0)
+  umpireCost         Float     @default(0)
+  ballCost           Float     @default(0)
+  refreshmentCost    Float     @default(0)
+  otherCosts         Float     @default(0)
+  totalMatchExpense  Float     @default(0)
+  perPlayerFee       Float     @default(0)
+  squadPlayerIds     String[]  @db.ObjectId
+  result             String    @default("pending") // won, lost, draw, tied, upcoming, cancelled
+  teamScore          String?
+  opponentScore      String?
+  winningPrizeMoney  Float     @default(0)
+  momPlayerId        String?   @db.ObjectId
+  momAwardDetails    String?
+  momPrizeMoney      Float     @default(0)
+  notes              String?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  @@index([tenantId])
+  @@index([teamId])
+  @@map("matches")
+}
+
+model Expense {
+  id           String    @id @default(auto()) @map("_id") @db.ObjectId
+  tenantId     String    @db.ObjectId
+  teamId       String    @db.ObjectId
+  tournamentId String?   @db.ObjectId
+  category     String    @default("equipment")
+  title        String
+  amount       Float
+  expenseDate  DateTime  @default(now())
+  paidBy       String    @default("Captain")
+  receiptUrl   String?
+  description  String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@index([tenantId, teamId, expenseDate])
+  @@map("expenses")
+}
+
+model Sponsor {
+  id                 String               @id @default(auto()) @map("_id") @db.ObjectId
+  tenantId           String               @db.ObjectId
+  teamId             String               @db.ObjectId
+  tournamentId       String?              @db.ObjectId
+  sponsorName        String
+  companyName        String?
+  phone              String?
+  email              String?
+  amountInvested     Float                @default(0)
+  investmentDate     DateTime             @default(now())
+  contractType       String               @default("general_grant")
+  returnsPaid        Float                @default(0)
+  returnDate         DateTime?
+  deliverablesAgreed String?
+  status             String               @default("active") // pledged, active, completed
+  notes              String?
+  transactions       SponsorTransaction[]
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
+
+  @@index([tenantId, teamId])
+  @@map("sponsors")
+}
+
+model MatchPayment {
+  id             String    @id @default(auto()) @map("_id") @db.ObjectId
+  tenantId       String    @db.ObjectId
+  teamId         String    @db.ObjectId
+  matchId        String    @db.ObjectId
+  playerId       String    @db.ObjectId
+  feeAssigned    Float     @default(0)
+  feePaid        Float     @default(0)
+  paymentStatus  String    @default("pending") // paid, partial, pending
+  paymentMethod  String    @default("cash")
+  paymentDate    DateTime?
+  transactionRef String?
+  notes          String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@unique([matchId, playerId])
+  @@index([tenantId, playerId])
+  @@map("matchpayments")
+}
+
+model PlayerReturn {
+  id             String    @id @default(auto()) @map("_id") @db.ObjectId
+  tenantId       String    @db.ObjectId
+  teamId         String?   @db.ObjectId
+  playerId       String    @db.ObjectId
+  amount         Float     @default(0)
+  returnDate     DateTime  @default(now())
+  source         String    @default("excess_fee_refund")
+  reason         String?
+  paymentMethod  String    @default("cash")
+  tournamentId   String?   @db.ObjectId
+  matchId        String?   @db.ObjectId
+  transactionRef String?
+  notes          String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@index([tenantId, playerId, returnDate])
+  @@map("playerreturns")
+}

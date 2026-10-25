@@ -230,7 +230,7 @@ export default function PlayersPage() {
             </div>
 
             {/* Search Player */}
-            <div style={{ width: '220px' }}>
+            <div className="filter-field filter-field-search" style={{ width: '220px' }}>
               <Input
                 placeholder="Search player name..."
                 value={search}
@@ -243,7 +243,7 @@ export default function PlayersPage() {
             </div>
 
             {/* Role Filter */}
-            <div style={{ width: '150px' }}>
+            <div className="filter-field" style={{ width: '150px' }}>
               <Select
                 value={roleFilter}
                 onChange={(e) => {
@@ -258,7 +258,7 @@ export default function PlayersPage() {
             </div>
 
             {/* Sort Dropdown */}
-            <div style={{ minWidth: '170px' }}>
+            <div className="filter-field" style={{ minWidth: '170px' }}>
               <Select
                 value={sortBy}
                 onChange={(e) => {

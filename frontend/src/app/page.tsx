@@ -19,7 +19,6 @@ import {
   PlusIcon,
   CloseIcon,
   ExternalLinkIcon,
-  SparklesIcon,
   LayoutDashboardIcon,
   ChevronRightIcon,
   MapPinIcon,
@@ -28,6 +27,8 @@ import {
   ClockIcon,
 } from '../components/icons';
 import { PlayerReturnModal } from '../components/PlayerReturnModal';
+import { UserRoleManagement } from '../components/UserRoleManagement';
+import { useAuth } from '../lib/auth';
 
 type WidgetKey = 'players' | 'tournaments' | 'teams' | 'sponsors';
 
@@ -36,7 +37,9 @@ const WIDGET_SELECTIONS_KEY = 'captains_portal_dashboard_selections';
 
 export default function DashboardPage() {
   const router = useRouter();
+  const { user: authUser } = useAuth();
   const [teamId, setTeamId] = useState<string>('');
+  const [adminTab, setAdminTab] = useState<'overview' | 'users'>('overview');
 
   // Return/Refund Modal state
   const [isReturnModalOpen, setIsReturnModalOpen] = useState<boolean>(false);
@@ -266,20 +269,84 @@ export default function DashboardPage() {
     return sponsorsList.find((s) => s._id === widgetSelections.sponsorId) || null;
   }, [widgetSelections.sponsorId, sponsorsList]);
 
+  const isSuperAdmin = (authUser?.role || meRes?.user?.role) === 'super_admin';
+
   return (
     <>
       <Header
-        title="Captain's Command Center"
-        subtitle="Dynamic Personalized Dashboard with Individual Player, Tournament & Team Selection"
+        title={
+          adminTab === 'users' && isSuperAdmin
+            ? 'Super Admin Directory & Role Management'
+            : "Captain's Command Center"
+        }
+        subtitle={
+          adminTab === 'users' && isSuperAdmin
+            ? 'Manage all platform accounts, designate Team Captains or Normal Players, and control system roles'
+            : 'Dynamic Personalized Dashboard with Individual Player, Tournament & Team Selection'
+        }
         selectedTeamId={teamId}
         onTeamChange={setTeamId}
       />
 
       <div className="content-body" style={{ padding: '14px 24px 28px 24px' }}>
-        {/* =========================================================================
-            TOP 4 BOXES: SMALL, LOW-PROFILE FINANCIAL METRICS (POSITIONED AT TOP)
-           ========================================================================= */}
-        <div className="mini-stats-grid">
+        {/* Super Admin Dashboard Navigation Tabs */}
+        {isSuperAdmin && (
+          <div className="superadmin-dash-switch-bar">
+            <div className="superadmin-dash-switch-pills">
+              <button
+                type="button"
+                id="tab-command-overview"
+                className={`superadmin-tab-btn ${adminTab === 'overview' ? 'active' : ''}`}
+                onClick={() => setAdminTab('overview')}
+              >
+                <LayoutDashboardIcon size={16} />
+                <span>Command Center & Match Hub</span>
+              </button>
+              <button
+                type="button"
+                id="tab-user-role-management"
+                className={`superadmin-tab-btn ${adminTab === 'users' ? 'active' : ''}`}
+                onClick={() => setAdminTab('users')}
+              >
+                <ShieldIcon size={16} />
+                <span>Users & Role Management</span>
+                <span className="superadmin-tab-tag">Super Admin</span>
+              </button>
+            </div>
+
+            {adminTab === 'overview' ? (
+              <button
+                type="button"
+                id="btn-switch-to-user-management"
+                className="superadmin-quick-jump-btn"
+                onClick={() => setAdminTab('users')}
+              >
+                <UsersIcon size={14} />
+                <span>Manage Users & Roles &rarr;</span>
+              </button>
+            ) : (
+              <button
+                type="button"
+                id="btn-switch-to-overview"
+                className="superadmin-quick-jump-btn"
+                onClick={() => setAdminTab('overview')}
+              >
+                <LayoutDashboardIcon size={14} />
+                <span>&larr; Return to Match Hub</span>
+              </button>
+            )}
+          </div>
+        )}
+
+        {/* Tab 1: User & Role Management View (Super Admin Only) */}
+        {adminTab === 'users' && isSuperAdmin ? (
+          <UserRoleManagement />
+        ) : (
+          <>
+            {/* =========================================================================
+                TOP 4 BOXES: SMALL, LOW-PROFILE FINANCIAL METRICS (POSITIONED AT TOP)
+               ========================================================================= */}
+            <div className="mini-stats-grid">
           {/* Box 1: Total Invested */}
           <div className="mini-stat-card">
             <div
@@ -624,7 +691,7 @@ export default function DashboardPage() {
 
             <div style={{ marginTop: '24px' }}>
               <Button variant="secondary" size="sm" onClick={addAllWidgets}>
-                <SparklesIcon size={14} color="var(--accent-purple)" />
+                <PlusIcon size={14} color="var(--accent-purple)" />
                 <span style={{ fontWeight: 700 }}>Quick Start: Add All 4 Widgets</span>
               </Button>
             </div>
@@ -815,7 +882,7 @@ export default function DashboardPage() {
 
                       {/* 6 KPI Cells for Individual Player: Matches, Tournaments, Assigned, Paid, Returned, Due */}
                       <div
-                        className="widget-kpi-row"
+                        className="widget-kpi-row r-grid-3"
                         style={{
                           display: 'grid',
                           gridTemplateColumns: 'repeat(3, 1fr)',
@@ -947,7 +1014,7 @@ export default function DashboardPage() {
                     <>
                       {/* KPI Row */}
                       <div
-                        className="widget-kpi-row"
+                        className="widget-kpi-row r-grid-4"
                         style={{
                           display: 'grid',
                           gridTemplateColumns: 'repeat(4, 1fr)',
@@ -1238,7 +1305,7 @@ export default function DashboardPage() {
                       </div>
 
                       {/* 4 Financial KPI Cells */}
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px' }}>
+                      <div className="r-grid-4" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px' }}>
                         <div className="widget-kpi-cell">
                           <div className="widget-kpi-label">Entry Fee</div>
                           <div className="widget-kpi-val" style={{ color: 'var(--accent-rose)' }}>
@@ -2097,6 +2164,8 @@ export default function DashboardPage() {
               </div>
             )}
           </div>
+        )}
+          </>
         )}
       </div>
 

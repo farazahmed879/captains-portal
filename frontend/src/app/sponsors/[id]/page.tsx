@@ -491,7 +491,7 @@ export default function SponsorDetailPage() {
         </Card>
 
         {/* 2-Columns: Contract Deliverables & Notes */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+        <div className="r-split" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
           {/* Deliverables Card */}
           <Card>
             <h3

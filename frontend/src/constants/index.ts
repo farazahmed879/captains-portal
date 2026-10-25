@@ -22,6 +22,7 @@ import {
 } from './enums';
 
 export * from './enums';
+export * from './assets';
 
 export interface SelectOption<T = string> {
   value: T;

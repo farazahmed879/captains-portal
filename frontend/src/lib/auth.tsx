@@ -28,6 +28,7 @@ interface AuthContextType {
   isLoading: boolean;
   isAuthenticated: boolean;
   login: (phoneOrEmail: string, password?: string) => Promise<{ success: boolean; message?: string }>;
+  register: (data: { name: string; phone?: string; email?: string; password: string; teamName?: string }) => Promise<{ success: boolean; message?: string }>;
   logout: () => void;
 }
 
@@ -37,16 +38,46 @@ const AuthContext = createContext<AuthContextType>({
   isLoading: true,
   isAuthenticated: false,
   login: async () => ({ success: false }),
+  register: async () => ({ success: false }),
   logout: () => {},
 });
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<UserSession | null>(null);
-  const [token, setToken] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [user, setUser] = useState<UserSession | null>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const savedUser = localStorage.getItem('cp_user');
+        if (savedUser) {
+          const parsed = JSON.parse(savedUser);
+          if (parsed.phone === '0300-1234567' || !parsed.phone) {
+            parsed.phone = '0342-2181946';
+          }
+          return parsed;
+        }
+      } catch {}
+    }
+    return null;
+  });
+
+  const [token, setToken] = useState<string | null>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        return localStorage.getItem('token');
+      } catch {}
+    }
+    return null;
+  });
+
+  const [isLoading, setIsLoading] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return !localStorage.getItem('token');
+    }
+    return false;
+  });
+
   const router = useRouter();
 
-  // Load session from localStorage on mount
+  // Load / verify session from localStorage on mount
   useEffect(() => {
     try {
       const savedToken = localStorage.getItem('token');
@@ -54,12 +85,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       if (savedToken) {
         setToken(savedToken);
-        if (savedUser) {
-          const parsed = JSON.parse(savedUser);
-          if (parsed.phone === '0300-1234567' || !parsed.phone) {
-            parsed.phone = '0342-2181946';
-          }
-          setUser(parsed);
+        if (savedUser && !user) {
+          try {
+            const parsed = JSON.parse(savedUser);
+            if (parsed.phone === '0300-1234567' || !parsed.phone) {
+              parsed.phone = '0342-2181946';
+            }
+            setUser(parsed);
+          } catch {}
         }
 
         // Verify with backend
@@ -131,6 +164,41 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const registerUser = async (data: { name: string; phone?: string; email?: string; password: string; teamName?: string }) => {
+    try {
+      const res = await fetchApi<{
+        success: boolean;
+        token?: string;
+        user?: any;
+        message?: string;
+      }>('/auth/register', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      });
+
+      if (res.success && res.token && res.user) {
+        const userObj: UserSession = {
+          id: res.user.id || res.user._id,
+          name: res.user.name,
+          email: res.user.email,
+          phone: res.user.phone,
+          role: res.user.role,
+          tenantId: res.user.tenantId,
+        };
+
+        setToken(res.token);
+        setUser(userObj);
+        localStorage.setItem('token', res.token);
+        localStorage.setItem('cp_user', JSON.stringify(userObj));
+        return { success: true };
+      }
+
+      return { success: false, message: res.message || 'Registration failed' };
+    } catch (err: any) {
+      return { success: false, message: err?.message || 'Connection error. Please try again.' };
+    }
+  };
+
   const logout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('cp_user');
@@ -147,6 +215,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         isLoading,
         isAuthenticated: !!user,
         login,
+        register: registerUser,
         logout,
       }}
     >

@@ -21,6 +21,7 @@ import {
   ReceiptIcon,
   SponsorIcon,
 } from "./icons";
+import { ASSETS } from "../constants";
 
 export type DockPosition = "bottom" | "left" | "right";
 
@@ -132,9 +133,14 @@ export const Dock: React.FC = () => {
   // Update layout data-attributes on <html> for zero-layout-shift responsive padding
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify({ position, autoHide }));
-    document.documentElement.dataset.dock = effectivePos;
-    document.documentElement.dataset.dockAutohide = String(autoHide);
-  }, [position, autoHide, effectivePos]);
+    if (pathname === '/login' || pathname === '/register') {
+      document.documentElement.dataset.dock = 'none';
+      document.documentElement.dataset.dockAutohide = 'true';
+    } else {
+      document.documentElement.dataset.dock = effectivePos;
+      document.documentElement.dataset.dockAutohide = String(autoHide);
+    }
+  }, [position, autoHide, effectivePos, pathname]);
 
   // Close popup menu on outside click
   useEffect(() => {
@@ -291,7 +297,7 @@ export const Dock: React.FC = () => {
     setTimeout(() => setBouncing((b) => (b === key ? null : b)), 650);
   };
 
-  if (pathname === "/login") {
+  if (pathname === "/login" || pathname === "/register") {
     return null;
   }
 
@@ -330,7 +336,11 @@ export const Dock: React.FC = () => {
               className="dock-icon dock-brand"
               aria-label="Captains Portal home"
             >
-              CP
+              <img
+                src={ASSETS.LOGO}
+                alt="Captains Portal"
+                className="dock-brand-img"
+              />
               <span className="dock-status-dot" />
             </Link>
             <span className="dock-tooltip">

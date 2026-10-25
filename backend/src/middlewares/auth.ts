@@ -10,6 +10,8 @@ export interface AuthRequest extends Request {
     email: string;
     role: string;
     name: string;
+    phone?: string;
+    playerId?: string;
   };
 }
 
@@ -46,4 +48,16 @@ export const authenticate = async (
   } catch (error) {
     res.status(401).json({ success: false, message: 'Invalid or expired token.' });
   }
+};
+
+export const requireSuperAdmin = (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+): void => {
+  if (req.user?.role !== 'super_admin') {
+    res.status(403).json({ success: false, message: 'Super admin authorization required.' });
+    return;
+  }
+  next();
 };

@@ -207,7 +207,7 @@ export default function SponsorsPage() {
         {/* Action & Filter Toolbar */}
         <div className="filter-bar">
           <div className="filter-bar-left">
-            <div style={{ width: '260px' }}>
+            <div className="filter-field filter-field-search" style={{ width: '260px' }}>
               <Input
                 placeholder="Search sponsor or brand..."
                 value={searchQuery}
@@ -219,7 +219,7 @@ export default function SponsorsPage() {
               />
             </div>
 
-            <div style={{ width: '190px' }}>
+            <div className="filter-field" style={{ width: '190px' }}>
               <Select
                 value={contractFilter}
                 onChange={(e) => {

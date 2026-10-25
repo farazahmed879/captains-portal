@@ -414,7 +414,7 @@ export default function MatchDetailPage() {
         </div>
 
         {/* 2-Columns: Ground Cost Breakdown & Squad Ledger */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '20px' }}>
+        <div className="r-split" style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '20px' }}>
           {/* Ground Cost Itemized Breakdown */}
           <Card>
             <h3

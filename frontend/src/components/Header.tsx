@@ -7,6 +7,7 @@ import { useAuth } from '../lib/auth';
 import { PlusCircleIcon, ShieldIcon } from './icons';
 import { LogOut, LogIn, User as UserIcon } from 'lucide-react';
 import { UserProfileModal } from './UserProfileModal';
+import { ASSETS } from '../constants';
 
 interface HeaderProps {
   title: string;
@@ -25,6 +26,8 @@ export const Header: React.FC<HeaderProps> = ({
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const { user, logout, isAuthenticated } = useAuth();
 
+  const isSuperAdmin = user?.role === 'super_admin';
+
   useEffect(() => {
     fetchApi<{ success: boolean; teams: any[] }>('/teams')
       .then((res) => {
@@ -35,63 +38,117 @@ export const Header: React.FC<HeaderProps> = ({
       .catch((err) => console.log('Could not load teams', err));
   }, []);
 
+  // Teams that belong to the logged-in captain or player (except for superadmin who sees all)
+  const userTeams = React.useMemo(() => {
+    if (isSuperAdmin) return teams;
+    if (!user) return [];
+
+    return teams.filter((t) => {
+      // 1. User is the captain of this team
+      const isCaptain =
+        t.captainId === user.id ||
+        t.captainId?._id === user.id ||
+        t.captainId === (user as any)._id ||
+        t.captainId?._id === (user as any)._id;
+
+      if (isCaptain) return true;
+
+      // 2. User is linked as player to this team
+      const playerTeamIds = (user.player as any)?.teamIds || [];
+      const hasPlayerTeam = playerTeamIds.some(
+        (ptid: any) => (ptid._id || ptid.id || ptid) === (t.id || t._id)
+      );
+
+      return hasPlayerTeam;
+    });
+  }, [teams, user, isSuperAdmin]);
+
+  // For captains & players: auto-select their assigned team if no valid team is currently selected
+  useEffect(() => {
+    if (!isSuperAdmin && onTeamChange && userTeams.length > 0) {
+      const isCurrentValid = userTeams.some((t) => (t.id || t._id) === selectedTeamId);
+      if (!isCurrentValid) {
+        onTeamChange(userTeams[0].id || userTeams[0]._id);
+      }
+    }
+  }, [isSuperAdmin, userTeams, selectedTeamId, onTeamChange]);
+
   return (
     <>
       <header className="topbar">
-        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+        <div className="topbar-left">
           <Link
             href="/"
             className="header-brand"
             title="Go to Dashboard"
             aria-label="Captains Portal Dashboard"
           >
-            <div className="header-brand-icon">CP</div>
+            <div className="header-brand-icon">
+              <img
+                src={ASSETS.LOGO}
+                alt="Captains Portal Logo"
+                className="header-brand-img"
+              />
+            </div>
             <div className="header-brand-text">
               <span className="header-brand-title">CAPTAINS</span>
               <span className="header-brand-sub">Sports Pro</span>
             </div>
           </Link>
 
-          <div>
-            <h1 style={{ fontSize: '20px', fontWeight: 800, fontFamily: 'var(--font-heading)', letterSpacing: '-0.025em', color: 'var(--text-primary)', margin: 0, lineHeight: 1.2 }}>
+          <div className="topbar-heading">
+            <h1 className="topbar-title">
               {title}
             </h1>
             {subtitle && (
-              <p style={{ fontSize: '12.5px', color: 'var(--text-muted)', marginTop: '2px', fontWeight: 500 }}>
+              <p className="topbar-subtitle">
                 {subtitle}
               </p>
             )}
           </div>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-          {/* Team Selector */}
+        <div className="topbar-actions">
+          {/* Team Selector - Shows only user's team for captains/players, except superadmin */}
           {onTeamChange && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <div
+              className="topbar-team-picker"
+              title={isSuperAdmin ? 'Global Team Selector (Super Admin)' : 'Your Assigned Team'}
+            >
               <ShieldIcon size={16} color="var(--accent-blue)" />
               <select
-                className="form-select"
-                style={{ width: '180px', padding: '6px 10px', fontSize: '13px' }}
+                className="form-select topbar-team-select"
                 value={selectedTeamId || ''}
                 onChange={(e) => onTeamChange(e.target.value)}
               >
-                <option value="">All Teams (Global)</option>
-                {teams.map((t) => (
-                  <option key={t._id} value={t._id}>
-                    {t.name}
+                {/* Only Super Admin can view All Teams (Global) */}
+                {isSuperAdmin && <option value="">All Teams (Global)</option>}
+
+                {userTeams.length === 0 && !isSuperAdmin ? (
+                  <option value="" disabled>
+                    No Team Assigned
                   </option>
-                ))}
+                ) : (
+                  userTeams.map((t) => {
+                    const tid = t.id || t._id;
+                    return (
+                      <option key={tid} value={tid}>
+                        {t.name}
+                      </option>
+                    );
+                  })
+                )}
               </select>
             </div>
           )}
 
-          <Link href="/matches" className="btn btn-primary btn-sm">
+          <Link href="/matches" className="btn btn-primary btn-sm topbar-quick-btn" title="New Match" aria-label="New Match">
             <PlusCircleIcon size={14} />
-            <span>New Match</span>
+            <span className="btn-label">New Match</span>
           </Link>
-          <Link href="/finances" className="btn btn-secondary btn-sm">
+          <Link href="/finances" className="btn btn-secondary btn-sm topbar-quick-btn" title="Add Expense" aria-label="Add Expense">
             <PlusCircleIcon size={14} />
-            <span>Add Expense</span>
+            <span className="btn-label">Add Expense</span>
           </Link>
 
           {/* User Session & Logout */}
@@ -122,7 +179,7 @@ export const Header: React.FC<HeaderProps> = ({
                 aria-label="Logout"
               >
                 <LogOut size={13} />
-                <span>Logout</span>
+                <span className="btn-label">Logout</span>
               </button>
             </div>
           ) : (

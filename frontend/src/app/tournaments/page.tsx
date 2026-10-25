@@ -149,7 +149,7 @@ export default function TournamentsPage() {
         {/* Controls: Search, Status Filter, View Toggle, Add Button */}
         <div className="filter-bar">
           <div className="filter-bar-left">
-            <div style={{ width: '260px' }}>
+            <div className="filter-field filter-field-search" style={{ width: '260px' }}>
               <Input
                 placeholder="Search tournaments or venues..."
                 value={searchQuery}
@@ -161,7 +161,7 @@ export default function TournamentsPage() {
               />
             </div>
 
-            <div style={{ width: '190px' }}>
+            <div className="filter-field" style={{ width: '190px' }}>
               <Select
                 value={statusFilter}
                 onChange={(e) => {
@@ -308,6 +308,7 @@ export default function TournamentsPage() {
 
                   {/* Financial Breakdown Grid */}
                   <div
+                    className="r-grid-4"
                     style={{
                       display: 'grid',
                       gridTemplateColumns: 'repeat(4, 1fr)',

@@ -3,10 +3,16 @@ import type { Metadata } from 'next';
 import { Dock } from '../components/Dock';
 import { AuthProvider } from '../lib/auth';
 import { QueryProvider } from '../lib/QueryProvider';
+import { ASSETS } from '../constants';
 
 export const metadata: Metadata = {
   title: "Captains Portal | Sports Team, Matches & Finance Hub",
   description: "Comprehensive management portal for cricket and sports team captains: players ledger, match fees, tournament ROI, sponsors and expenditures.",
+  icons: {
+    icon: ASSETS.LOGO,
+    shortcut: ASSETS.LOGO,
+    apple: ASSETS.LOGO,
+  },
 };
 
 export default function RootLayout({

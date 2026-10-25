@@ -252,7 +252,7 @@ export default function MatchesPage() {
         {/* Filter Bar: Search, Tournament Filter, Result Filter, View Switcher, Add Match */}
         <div className="filter-bar">
           <div className="filter-bar-left">
-            <div style={{ width: '240px' }}>
+            <div className="filter-field filter-field-search" style={{ width: '240px' }}>
               <Input
                 placeholder="Search venue or opponent..."
                 value={searchQuery}
@@ -264,7 +264,7 @@ export default function MatchesPage() {
               />
             </div>
 
-            <div style={{ width: '210px' }}>
+            <div className="filter-field" style={{ width: '210px' }}>
               <Select
                 value={selectedTournamentFilter}
                 onChange={(e) => {
@@ -278,7 +278,7 @@ export default function MatchesPage() {
               />
             </div>
 
-            <div style={{ width: '140px' }}>
+            <div className="filter-field" style={{ width: '140px' }}>
               <Select
                 value={resultFilter}
                 onChange={(e) => {

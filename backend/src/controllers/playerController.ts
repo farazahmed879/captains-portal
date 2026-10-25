@@ -1,224 +1,56 @@
 import { Response } from 'express';
 import { AuthRequest } from '../middlewares/auth';
-import { Player } from '../models/Player';
-import { MatchPayment } from '../models/MatchPayment';
-import { Match } from '../models/Match';
-import { PlayerReturn } from '../models/PlayerReturn';
+import { playerService } from '../services';
+import { asyncHandler } from '../utils/asyncHandler';
+import { HTTP_STATUS } from '../constants';
 
-export const getPlayers = async (req: AuthRequest, res: Response): Promise<void> => {
-  try {
-    const { teamId, search, role } = req.query;
-    const filter: any = { tenantId: req.user?.tenantId, isActive: true };
+export const getPlayers = asyncHandler(async (req: AuthRequest, res: Response) => {
+  const { teamId } = req.query;
+  const players = await playerService.getPlayers(req.user!.tenantId, teamId as string | undefined);
 
-    if (teamId) {
-      filter.teamIds = teamId;
-    }
-    if (role) {
-      filter.role = role;
-    }
-    if (search) {
-      filter.name = { $regex: search, $options: 'i' };
-    }
+  res.status(HTTP_STATUS.OK).json({
+    success: true,
+    players,
+  });
+});
 
-    const players = await Player.find(filter).populate('teamIds', 'name shortName primaryColor').sort({ name: 1 });
+export const getPlayerById = asyncHandler(async (req: AuthRequest, res: Response) => {
+  const { id } = req.params;
+  const result = await playerService.getPlayerById(String(id), req.user!.tenantId);
 
-    // Aggregate financial ledger & statistics for each player
-    const playerSummaries = await Promise.all(
-      players.map(async (player) => {
-        const payments = await MatchPayment.find({ playerId: player._id }).populate({
-          path: 'matchId',
-          select: 'tournamentId',
-        });
-        const totalFeeAssigned = payments.reduce((acc, p) => acc + (p.feeAssigned || 0), 0);
-        const totalFeePaid = payments.reduce((acc, p) => acc + (p.feePaid || 0), 0);
-        const matchesPlayed = payments.length;
+  res.status(HTTP_STATUS.OK).json({
+    success: true,
+    ...result,
+  });
+});
 
-        // Returns and refunds made to player
-        const returns = await PlayerReturn.find({ playerId: player._id });
-        const totalReturned = returns.reduce((acc, r) => acc + (r.amount || 0), 0);
+export const getPlayerProfile = getPlayerById;
 
-        // Calculate unique tournaments played
-        const tournamentIdSet = new Set<string>();
-        payments.forEach((p: any) => {
-          const tId = p.matchId?.tournamentId?.toString();
-          if (tId) tournamentIdSet.add(tId);
-        });
+export const createPlayer = asyncHandler(async (req: AuthRequest, res: Response) => {
+  const player = await playerService.createPlayer(req.user!.tenantId, req.body);
 
-        // Also check matches where player was in squad
-        const squadMatches = await Match.find({
-          squadPlayerIds: player._id,
-          tournamentId: { $exists: true, $ne: null },
-        }).select('tournamentId');
-        squadMatches.forEach((m: any) => {
-          if (m.tournamentId) tournamentIdSet.add(m.tournamentId.toString());
-        });
-        const tournamentsCount = tournamentIdSet.size;
+  res.status(HTTP_STATUS.CREATED).json({
+    success: true,
+    player,
+  });
+});
 
-        // Fee refunds vs Prize/Sponsor returns:
-        // Excess fee refund reduces effective fee paid
-        const feeRefunds = returns
-          .filter((r) => r.source === 'excess_fee_refund')
-          .reduce((acc, r) => acc + (r.amount || 0), 0);
-        const effectiveFeePaid = Math.max(0, totalFeePaid - feeRefunds);
-        const pendingDue = Math.max(0, totalFeeAssigned - effectiveFeePaid);
-        const advanceCredit = Math.max(0, totalFeePaid - totalFeeAssigned - totalReturned);
+export const updatePlayer = asyncHandler(async (req: AuthRequest, res: Response) => {
+  const { id } = req.params;
+  const player = await playerService.updatePlayer(String(id), req.user!.tenantId, req.body);
 
-        // Count MOM awards
-        const momCount = await Match.countDocuments({ momPlayerId: player._id });
+  res.status(HTTP_STATUS.OK).json({
+    success: true,
+    player,
+  });
+});
 
-        return {
-          ...player.toObject(),
-          matchesPlayed,
-          tournamentsCount,
-          totalFeeAssigned,
-          totalFeePaid,
-          totalReturned,
-          pendingDue,
-          advanceCredit,
-          momCount,
-        };
-      })
-    );
+export const deletePlayer = asyncHandler(async (req: AuthRequest, res: Response) => {
+  const { id } = req.params;
+  const result = await playerService.deletePlayer(String(id), req.user!.tenantId);
 
-    res.json({ success: true, players: playerSummaries });
-  } catch (error: any) {
-    res.status(500).json({ success: false, message: error.message });
-  }
-};
-
-export const getPlayerProfile = async (req: AuthRequest, res: Response): Promise<void> => {
-  try {
-    const { id } = req.params;
-    const player = await Player.findOne({ _id: id, tenantId: req.user?.tenantId }).populate('teamIds');
-    if (!player) {
-      res.status(404).json({ success: false, message: 'Player not found' });
-      return;
-    }
-
-    const payments = await MatchPayment.find({ playerId: player._id })
-      .populate({
-        path: 'matchId',
-        select: 'opponentTeam matchDate matchType result venue overs tournamentId teamId tournamentStage',
-        populate: [
-          { path: 'tournamentId', select: 'name shortName year' },
-          { path: 'teamId', select: 'name shortName primaryColor' },
-        ],
-      })
-      .sort({ createdAt: -1 });
-
-    const totalFeeAssigned = payments.reduce((acc, p) => acc + (p.feeAssigned || 0), 0);
-    const totalFeePaid = payments.reduce((acc, p) => acc + (p.feePaid || 0), 0);
-
-    // Returns and refunds
-    const returns = await PlayerReturn.find({ playerId: player._id })
-      .populate('tournamentId', 'name')
-      .populate('matchId', 'opponentTeam matchDate')
-      .sort({ returnDate: -1, createdAt: -1 });
-    const totalReturned = returns.reduce((acc, r) => acc + (r.amount || 0), 0);
-
-    // Tournaments count
-    const tournamentIdSet = new Set<string>();
-    payments.forEach((p: any) => {
-      const tId = p.matchId?.tournamentId?._id?.toString() || p.matchId?.tournamentId?.toString();
-      if (tId) tournamentIdSet.add(tId);
-    });
-    const squadMatches = await Match.find({
-      squadPlayerIds: player._id,
-      tournamentId: { $exists: true, $ne: null },
-    }).select('tournamentId');
-    squadMatches.forEach((m: any) => {
-      if (m.tournamentId) tournamentIdSet.add(m.tournamentId.toString());
-    });
-    const tournamentsCount = tournamentIdSet.size;
-
-    const feeRefunds = returns
-      .filter((r) => r.source === 'excess_fee_refund')
-      .reduce((acc, r) => acc + (r.amount || 0), 0);
-    const effectiveFeePaid = Math.max(0, totalFeePaid - feeRefunds);
-    const pendingDue = Math.max(0, totalFeeAssigned - effectiveFeePaid);
-    const advanceCredit = Math.max(0, totalFeePaid - totalFeeAssigned - totalReturned);
-
-    const momMatches = await Match.find({ momPlayerId: player._id });
-
-    res.json({
-      success: true,
-      player,
-      ledger: {
-        totalFeeAssigned,
-        totalFeePaid,
-        totalReturned,
-        pendingDue,
-        advanceCredit,
-        tournamentsCount,
-        matchHistory: payments,
-        returns,
-        momAwards: momMatches,
-      },
-    });
-  } catch (error: any) {
-    res.status(500).json({ success: false, message: error.message });
-  }
-};
-
-export const createPlayer = async (req: AuthRequest, res: Response): Promise<void> => {
-  try {
-    const { name, phone, email, role, battingStyle, bowlingStyle, jerseyNumber, teamIds, notes } = req.body;
-    if (!name) {
-      res.status(400).json({ success: false, message: 'Player name is required' });
-      return;
-    }
-
-    const player = await Player.create({
-      tenantId: req.user?.tenantId,
-      name,
-      phone,
-      email,
-      role: role || 'all_rounder',
-      battingStyle: battingStyle || 'right_hand',
-      bowlingStyle: bowlingStyle || 'right_arm_medium',
-      jerseyNumber,
-      teamIds: teamIds || [],
-      notes,
-    });
-
-    res.status(201).json({ success: true, player });
-  } catch (error: any) {
-    res.status(500).json({ success: false, message: error.message });
-  }
-};
-
-export const updatePlayer = async (req: AuthRequest, res: Response): Promise<void> => {
-  try {
-    const { id } = req.params;
-    const player = await Player.findOneAndUpdate(
-      { _id: id, tenantId: req.user?.tenantId },
-      req.body,
-      { new: true }
-    );
-    if (!player) {
-      res.status(404).json({ success: false, message: 'Player not found' });
-      return;
-    }
-    res.json({ success: true, player });
-  } catch (error: any) {
-    res.status(500).json({ success: false, message: error.message });
-  }
-};
-
-export const deletePlayer = async (req: AuthRequest, res: Response): Promise<void> => {
-  try {
-    const { id } = req.params;
-    const player = await Player.findOneAndUpdate(
-      { _id: id, tenantId: req.user?.tenantId },
-      { isActive: false },
-      { new: true }
-    );
-    if (!player) {
-      res.status(404).json({ success: false, message: 'Player not found' });
-      return;
-    }
-    res.json({ success: true, message: 'Player deactivated successfully' });
-  } catch (error: any) {
-    res.status(500).json({ success: false, message: error.message });
-  }
-};
+  res.status(HTTP_STATUS.OK).json({
+    success: true,
+    ...result,
+  });
+});
