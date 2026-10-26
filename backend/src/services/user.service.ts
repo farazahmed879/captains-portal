@@ -9,6 +9,7 @@ export class UserService {
     const rawUsers = await userRepository.findMany(tenantId);
 
     let superAdmins = 0;
+    let admins = 0;
     let captains = 0;
     let normalPlayers = 0;
     let treasurers = 0;
@@ -16,6 +17,7 @@ export class UserService {
     const enrichedUsers = await Promise.all(
       rawUsers.map(async (u) => {
         if (u.role === UserRole.SUPER_ADMIN) superAdmins++;
+        else if (u.role === UserRole.ADMIN) admins++;
         else if (u.role === UserRole.CAPTAIN) captains++;
         else if (u.role === UserRole.VIEWER) normalPlayers++;
         else if (u.role === UserRole.TREASURER) treasurers++;
@@ -34,6 +36,8 @@ export class UserService {
         const roleLabel =
           u.role === UserRole.SUPER_ADMIN
             ? 'Super Admin'
+            : u.role === UserRole.ADMIN
+            ? 'Admin'
             : u.role === UserRole.CAPTAIN
             ? 'Team Captain'
             : u.role === UserRole.TREASURER
@@ -48,7 +52,7 @@ export class UserService {
           phone: u.phone,
           role: u.role,
           roleLabel,
-          isCaptain: u.role === UserRole.CAPTAIN || u.role === UserRole.SUPER_ADMIN,
+          isCaptain: u.role === UserRole.CAPTAIN || u.role === UserRole.SUPER_ADMIN || u.role === UserRole.ADMIN,
           isPlayer: u.role === UserRole.VIEWER || !!player,
           isActive: u.isActive,
           player: player
@@ -73,6 +77,7 @@ export class UserService {
       counts: {
         total: rawUsers.length,
         superAdmins,
+        admins,
         captains,
         normalPlayers,
         treasurers,
@@ -91,12 +96,9 @@ export class UserService {
       throw ApiError.notFound(MESSAGES.USER_NOT_FOUND);
     }
 
-    // Safety: Prevent removing the last active super_admin
-    if (targetUser.role === UserRole.SUPER_ADMIN && newRole !== UserRole.SUPER_ADMIN) {
-      const activeAdminCount = await userRepository.countAdmins(tenantId);
-      if (activeAdminCount <= 1) {
-        throw ApiError.badRequest(MESSAGES.CANNOT_DEMOTE_LAST_ADMIN);
-      }
+    // Safety: Super Admin accounts cannot have their role changed
+    if (targetUser.role === UserRole.SUPER_ADMIN) {
+      throw ApiError.badRequest('Super Admin role is locked and cannot be changed.');
     }
 
     const updated = await userRepository.updateRole(userId, newRole);
@@ -117,10 +119,7 @@ export class UserService {
     }
 
     if (targetUser.role === UserRole.SUPER_ADMIN && !isActive) {
-      const activeAdminCount = await userRepository.countAdmins(tenantId);
-      if (activeAdminCount <= 1) {
-        throw ApiError.badRequest(MESSAGES.CANNOT_DEACTIVATE_LAST_ADMIN);
-      }
+      throw ApiError.badRequest('Super Admin accounts are protected and cannot be deactivated.');
     }
 
     const updated = await userRepository.updateStatus(userId, isActive);
@@ -203,10 +202,7 @@ export class UserService {
     }
 
     if (targetUser.role === UserRole.SUPER_ADMIN) {
-      const activeAdminCount = await userRepository.countAdmins(tenantId);
-      if (activeAdminCount <= 1) {
-        throw ApiError.badRequest(MESSAGES.CANNOT_DEMOTE_LAST_ADMIN);
-      }
+      throw ApiError.badRequest('Super Admin accounts are protected and cannot be deleted.');
     }
 
     await userRepository.delete(userId);

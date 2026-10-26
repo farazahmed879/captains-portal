@@ -9,3 +9,4 @@ export * from './tournamentColumns';
 export * from './teamColumns';
 export * from './expenseColumns';
 export * from './sponsorColumns';
+export * from '../components/user-management/userRoleColumns';

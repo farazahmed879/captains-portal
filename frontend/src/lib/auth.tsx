@@ -49,9 +49,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const savedUser = localStorage.getItem('cp_user');
         if (savedUser) {
           const parsed = JSON.parse(savedUser);
-          if (parsed.phone === '0300-1234567' || !parsed.phone) {
-            parsed.phone = '0342-2181946';
-          }
           return parsed;
         }
       } catch {}
@@ -88,9 +85,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (savedUser && !user) {
           try {
             const parsed = JSON.parse(savedUser);
-            if (parsed.phone === '0300-1234567' || !parsed.phone) {
-              parsed.phone = '0342-2181946';
-            }
             setUser(parsed);
           } catch {}
         }
@@ -103,7 +97,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 id: res.user._id || res.user.id,
                 name: res.user.name,
                 email: res.user.email,
-                phone: res.user.phone || '0342-2181946',
+                phone: res.user.phone || '',
                 role: res.user.role,
                 tenantId: res.user.tenantId,
                 playerId: res.user.playerId,

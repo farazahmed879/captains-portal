@@ -137,3 +137,91 @@ export const CardFooter: React.FC<React.HTMLAttributes<HTMLDivElement>> = ({
     </div>
   );
 };
+
+export interface SubCardProps extends React.HTMLAttributes<HTMLDivElement> {
+  dimmed?: boolean;
+  hoverable?: boolean;
+  padding?: 'sm' | 'md' | 'lg' | string;
+  borderRadius?: string;
+  borderLeftColor?: string;
+}
+
+export const SubCard: React.FC<SubCardProps> = ({
+  dimmed = true,
+  hoverable = false,
+  padding = 'md',
+  borderRadius = '10px',
+  borderLeftColor,
+  className = '',
+  style,
+  onClick,
+  children,
+  ...props
+}) => {
+  const paddingMap = {
+    sm: '8px 12px',
+    md: '10px 12px',
+    lg: '12px 14px',
+  };
+  const resolvedPadding =
+    typeof padding === 'string' && padding in paddingMap
+      ? paddingMap[padding as keyof typeof paddingMap]
+      : padding;
+
+  return (
+    <div
+      className={`sub-card ${dimmed ? 'dimmed' : ''} ${
+        hoverable || onClick ? 'clickable' : ''
+      } ${className}`.trim()}
+      onClick={onClick}
+      style={{
+        padding: resolvedPadding,
+        borderRadius,
+        borderLeft: borderLeftColor ? `4px solid ${borderLeftColor}` : undefined,
+        cursor: onClick ? 'pointer' : undefined,
+        ...style,
+      }}
+      {...props}
+    >
+      {children}
+    </div>
+  );
+};
+
+export interface KpiCellProps extends React.HTMLAttributes<HTMLDivElement> {
+  label: React.ReactNode;
+  value: React.ReactNode;
+  valueColor?: string;
+  dimmed?: boolean;
+  background?: string;
+}
+
+export const KpiCell: React.FC<KpiCellProps> = ({
+  label,
+  value,
+  valueColor,
+  dimmed = false,
+  background,
+  className = '',
+  style,
+  children,
+  ...props
+}) => {
+  return (
+    <div
+      className={`widget-kpi-cell ${dimmed ? 'dimmed' : ''} ${className}`.trim()}
+      style={{
+        background: background,
+        ...style,
+      }}
+      {...props}
+    >
+      <div className="widget-kpi-label">{label}</div>
+      <div className="widget-kpi-val" style={{ color: valueColor }}>
+        {value}
+      </div>
+      {children}
+    </div>
+  );
+};
+

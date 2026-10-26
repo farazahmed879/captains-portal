@@ -99,7 +99,7 @@ export const RegisterPlayerModal: React.FC<RegisterPlayerModalProps> = ({
           </Alert>
         )}
 
-        <div className="grid-2">
+        <div className="form-grid-2">
           <Input
             label="Full Name *"
             placeholder="e.g. Jawad"
@@ -114,7 +114,7 @@ export const RegisterPlayerModal: React.FC<RegisterPlayerModalProps> = ({
           />
         </div>
 
-        <div className="grid-2">
+        <div className="form-grid-2">
           <Select
             label="Player Role"
             options={PLAYER_ROLE_OPTIONS}

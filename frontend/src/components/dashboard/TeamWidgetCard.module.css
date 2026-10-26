@@ -1,0 +1,143 @@
+.selectorDropdown {
+  font-size: 11px;
+  padding: 3px 22px 3px 8px;
+  height: 26px;
+  max-width: 160px;
+  background-position: right 6px center;
+  background-size: 10px 10px;
+  font-weight: 600;
+}
+
+/* Option A: Individual Team Spotlight */
+.teamSpotlightWrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  flex-grow: 1;
+}
+
+.teamHeaderCard {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.teamTitleGroup {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 2px;
+}
+
+.teamName {
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--text-primary);
+}
+
+.teamShortNameBadge {
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.teamSubText {
+  font-size: 11.5px;
+  color: var(--text-muted);
+}
+
+.secondaryInfoBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 11.5px;
+  color: var(--text-secondary);
+  margin-top: auto;
+}
+
+.switchAllBtn {
+  background: transparent !important;
+  border: none !important;
+  color: var(--accent-blue) !important;
+  font-weight: 700 !important;
+  font-size: 11px !important;
+  padding: 4px 8px !important;
+  height: auto !important;
+}
+
+/* Option B: All Teams Overview */
+.teamsList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.emptyMessage {
+  padding: 24px;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.teamCard {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.teamListTitleGroup {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 2px;
+}
+
+.teamListName {
+  font-size: 13.5px;
+  font-weight: 800;
+  color: var(--text-primary);
+}
+
+.teamListBadge {
+  font-size: 9.5px;
+  font-weight: 800;
+}
+
+.teamListCity {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.teamStatsRow {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.teamStatCol {
+  text-align: center;
+}
+
+.teamStatLabel {
+  font-size: 10px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+}
+
+.teamStatValue {
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--text-primary);
+}
+
+.teamStatValueBlue {
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--accent-blue);
+}
+
+.teamStatValueGreen {
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--accent-green);
+}

@@ -113,7 +113,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
             </div>
             <div>
               <span className="profile-info-label">Phone Number</span>
-              <span className="profile-info-value">{user.phone || '0342-2181946'}</span>
+              <span className="profile-info-value">{user.phone || 'Not provided'}</span>
               <span className="profile-info-sub">Registered Player & Login Number</span>
             </div>
           </div>

@@ -55,8 +55,8 @@ export const requireSuperAdmin = (
   res: Response,
   next: NextFunction
 ): void => {
-  if (req.user?.role !== 'super_admin') {
-    res.status(403).json({ success: false, message: 'Super admin authorization required.' });
+  if (req.user?.role !== 'super_admin' && req.user?.role !== 'admin') {
+    res.status(403).json({ success: false, message: 'Admin authorization required.' });
     return;
   }
   next();

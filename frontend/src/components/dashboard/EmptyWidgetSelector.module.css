@@ -1,0 +1,32 @@
+.playerIcon {
+  background: #e0f2fe;
+  color: #0284c7;
+}
+
+.tournamentIcon {
+  background: #fef3c7;
+  color: #d97706;
+}
+
+.teamIcon {
+  background: #dcfce7;
+  color: #16a34a;
+}
+
+.sponsorIcon {
+  background: #f3e8ff;
+  color: #9333ea;
+}
+
+.cardAddButton {
+  width: 100%;
+  margin-top: auto;
+}
+
+.addAllWrapper {
+  margin-top: 24px;
+}
+
+.quickStartText {
+  font-weight: 700;
+}

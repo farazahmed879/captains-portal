@@ -1,0 +1,220 @@
+.selectorDropdown {
+  font-size: 11px;
+  padding: 3px 22px 3px 8px;
+  height: 26px;
+  max-width: 160px;
+  background-position: right 6px center;
+  background-size: 10px 10px;
+  font-weight: 600;
+}
+
+/* Option A: Individual Player Spotlight */
+.playerSpotlightWrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  flex-grow: 1;
+}
+
+.playerHeaderLeft {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.playerAvatar {
+  width: 42px;
+  height: 42px;
+  border-radius: 10px;
+  background: #e0f2fe;
+  border: 1px solid #bae6fd;
+  color: #0369a1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 800;
+  flex-shrink: 0;
+}
+
+.playerInfoCol {
+  min-width: 0;
+}
+
+.playerNameGroup {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.playerName {
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--text-primary);
+}
+
+.playerPhone {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.playerHeaderRight {
+  text-align: right;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+}
+
+.dueBadge {
+  font-size: 11px;
+  padding: 3px 8px;
+  font-weight: 800;
+}
+
+.clearedBadge {
+  font-size: 11px;
+  padding: 3px 8px;
+}
+
+.returnedBadge {
+  font-size: 10px;
+  font-weight: 700;
+  color: #b45309;
+  background: #fef3c7;
+  border: 1px solid #fde68a;
+  padding: 1px 6px;
+  border-radius: 4px;
+}
+
+.kpiGrid3 {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.secondaryInfoBar {
+  font-size: 11.5px;
+  color: var(--text-secondary);
+  margin-top: auto;
+}
+
+.secondaryInfoLeft {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.secondaryInfoActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.returnMoneyBtn {
+  background: #fef3c7 !important;
+  border: 1px solid #fde68a !important;
+  color: #b45309 !important;
+  border-radius: 6px !important;
+  padding: 4px 10px !important;
+  font-weight: 700 !important;
+  font-size: 11px !important;
+  height: auto !important;
+}
+
+.switchAllBtn {
+  background: transparent !important;
+  border: none !important;
+  color: var(--accent-blue) !important;
+  font-weight: 700 !important;
+  font-size: 11px !important;
+  padding: 4px 8px !important;
+  height: auto !important;
+}
+
+/* Option B: All Players Overview */
+.kpiGrid4 {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.debtorsList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.clearedMessage {
+  padding: 24px;
+  text-align: center;
+  color: var(--accent-green);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.debtorCard {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.debtorLeft {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.debtorAvatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  background: #e0f2fe;
+  color: #0369a1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.debtorName {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.debtorPhone {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.debtorRight {
+  text-align: right;
+}
+
+.debtorBadge {
+  font-size: 10.5px;
+  padding: 2px 7px;
+  font-weight: 800;
+}
+
+.debtorPaidInfo {
+  font-size: 10px;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+.debtorReturnedInfo {
+  color: #b45309;
+  margin-left: 4px;
+}

@@ -1,0 +1,17 @@
+.titleGroup {
+  flex-grow: 1;
+  min-width: 0;
+}
+
+.titleCol {
+  min-width: 0;
+}
+
+.title {
+  white-space: nowrap;
+}
+
+.selectorContainer {
+  margin-left: auto;
+  margin-right: 8px;
+}

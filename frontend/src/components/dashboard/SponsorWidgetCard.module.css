@@ -1,0 +1,141 @@
+.selectorDropdown {
+  font-size: 11px;
+  padding: 3px 22px 3px 8px;
+  height: 26px;
+  max-width: 160px;
+  background-position: right 6px center;
+  background-size: 10px 10px;
+  font-weight: 600;
+}
+
+/* Option A: Individual Sponsor Spotlight */
+.sponsorSpotlightWrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  flex-grow: 1;
+}
+
+.sponsorHeaderCard {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.sponsorTitleGroup {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 2px;
+}
+
+.sponsorName {
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--text-primary);
+}
+
+.contractBadge {
+  font-size: 9.5px;
+  text-transform: capitalize;
+}
+
+.statusBadge {
+  font-size: 9.5px;
+  text-transform: uppercase;
+}
+
+.contactPartnerText {
+  font-size: 11.5px;
+  color: var(--text-muted);
+}
+
+.retainedCol {
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.retainedLabel {
+  font-size: 10px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+}
+
+.retainedValue {
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--accent-green);
+}
+
+.secondaryInfoBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 11.5px;
+  color: var(--text-secondary);
+  margin-top: auto;
+}
+
+.switchAllBtn {
+  background: transparent !important;
+  border: none !important;
+  color: var(--accent-blue) !important;
+  font-weight: 700 !important;
+  font-size: 11px !important;
+  padding: 4px 8px !important;
+  height: auto !important;
+}
+
+/* Option B: All Sponsors Overview */
+.sponsorsList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.emptyMessage {
+  padding: 24px;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.sponsorCard {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.sponsorListName {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.sponsorListBadge {
+  font-size: 9px;
+  padding: 1px 5px;
+  text-transform: capitalize;
+}
+
+.sponsorListContact {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.sponsorListRight {
+  text-align: right;
+}
+
+.sponsorAmountInvested {
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--accent-blue);
+}
+
+.sponsorPayoutText {
+  font-size: 10px;
+  color: var(--text-muted);
+  margin-top: 2px;
+}

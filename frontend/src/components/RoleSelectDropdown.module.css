@@ -1,0 +1,319 @@
+/* RoleSelectDropdown.module.css - High-End Custom Role Select UI */
+
+.container {
+  position: relative;
+  display: inline-flex;
+  vertical-align: middle;
+}
+
+/* ----------------------------------------------------
+   TRIGGER BUTTON
+---------------------------------------------------- */
+.trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 32px;
+  padding: 0 10px 0 8px;
+  border-radius: 9px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid #e2e8f0;
+  background: #ffffff;
+  color: #1e293b;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  user-select: none;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+}
+
+.trigger:hover:not(:disabled) {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+  box-shadow: 0 2px 4px rgba(15, 23, 42, 0.06);
+  transform: translateY(-0.5px);
+}
+
+.trigger.activeOpen {
+  border-color: #0284c7;
+  background: #f0f9ff;
+  box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.12);
+}
+
+.trigger:disabled {
+  opacity: 0.85;
+  cursor: not-allowed;
+  background: #f8fafc;
+  border-color: #e2e8f0;
+}
+
+/* Role-specific trigger accents */
+.trigger.captain {
+  color: #0284c7;
+  border-color: #bae6fd;
+  background: #f0f9ff;
+}
+.trigger.admin {
+  color: #ea580c;
+  border-color: #fed7aa;
+  background: #fff7ed;
+}
+.trigger.viewer {
+  color: #16a34a;
+  border-color: #bbf7d0;
+  background: #f0fdf4;
+}
+.trigger.treasurer {
+  color: #d97706;
+  border-color: #fde68a;
+  background: #fffbeb;
+}
+.trigger.super_admin {
+  color: #7c3aed;
+  border-color: #e9d5ff;
+  background: #faf5ff;
+}
+
+.triggerIconBox {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 5px;
+  flex-shrink: 0;
+}
+
+.triggerLabel {
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.chevron {
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), color 0.2s ease;
+  color: #94a3b8;
+  margin-left: 1px;
+}
+
+.chevron.rotated {
+  transform: rotate(180deg);
+  color: #0284c7;
+}
+
+.lockIcon {
+  color: #94a3b8;
+  margin-left: 2px;
+}
+
+/* ----------------------------------------------------
+   FLOATING MENU PORTAL CARD
+---------------------------------------------------- */
+.menuPortal {
+  position: fixed;
+  width: 326px;
+  background: #ffffff;
+  border: 1px solid rgba(226, 232, 240, 0.95);
+  border-radius: 16px;
+  box-shadow:
+    0 20px 45px -8px rgba(15, 23, 42, 0.18),
+    0 8px 18px -4px rgba(15, 23, 42, 0.08),
+    0 0 0 1px rgba(15, 23, 42, 0.04);
+  padding: 8px;
+  z-index: 999999;
+  animation: dropdownEnter 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+  display: flex;
+  flex-direction: column;
+}
+
+@keyframes dropdownEnter {
+  from {
+    opacity: 0;
+    transform: translateY(-6px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* ----------------------------------------------------
+   MENU HEADER
+---------------------------------------------------- */
+.menuHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 10px 8px 10px;
+  border-bottom: 1px solid #f1f5f9;
+  margin-bottom: 6px;
+}
+
+.menuHeaderTitleRow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.menuHeaderIcon {
+  color: #0284c7;
+}
+
+.menuHeaderTitle {
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #475569;
+}
+
+.menuHeaderBadge {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: #f1f5f9;
+  color: #64748b;
+}
+
+/* ----------------------------------------------------
+   ROLE ITEMS LIST
+---------------------------------------------------- */
+.menuList {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 420px;
+  overflow-y: auto;
+  padding-right: 2px;
+}
+
+.menuList::-webkit-scrollbar {
+  width: 5px;
+}
+
+.menuList::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.menuList::-webkit-scrollbar-thumb {
+  background: #e2e8f0;
+  border-radius: 999px;
+}
+
+.menuList::-webkit-scrollbar-thumb:hover {
+  background: #cbd5e1;
+}
+
+/* ----------------------------------------------------
+   INDIVIDUAL ROLE CARD ITEM
+---------------------------------------------------- */
+.roleItem {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  width: 100%;
+  padding: 9px 11px;
+  border-radius: 12px;
+  border: 1px solid transparent;
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.16s cubic-bezier(0.16, 1, 0.3, 1);
+  position: relative;
+}
+
+.roleItem:hover {
+  background: #f8fafc;
+  border-color: #e2e8f0;
+  transform: translateX(1px);
+}
+
+.roleItem.selected {
+  background: #f0f9ff;
+  border-color: #bae6fd;
+}
+
+/* Icon Box */
+.itemIconBox {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  border: 1px solid;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: transform 0.16s ease;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+}
+
+.roleItem:hover .itemIconBox {
+  transform: scale(1.05);
+}
+
+/* Body / Text */
+.itemBody {
+  display: flex;
+  flex-direction: column;
+  gap: 2.5px;
+  flex: 1;
+  min-width: 0;
+}
+
+.itemTitleRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.itemTitle {
+  font-size: 13px;
+  font-weight: 700;
+  color: #0f172a;
+  letter-spacing: -0.01em;
+}
+
+.itemTag {
+  font-size: 9.5px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 5px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+
+.itemDesc {
+  font-size: 11px;
+  color: #64748b;
+  line-height: 1.35;
+  margin: 0;
+}
+
+/* Right Indicators */
+.itemCheckPill {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #0284c7;
+  color: #ffffff;
+  flex-shrink: 0;
+  box-shadow: 0 2px 5px rgba(2, 132, 199, 0.3);
+}
+
+.itemArrowIcon {
+  color: #cbd5e1;
+  opacity: 0;
+  transition: all 0.16s ease;
+  flex-shrink: 0;
+}
+
+.roleItem:hover:not(.selected) .itemArrowIcon {
+  opacity: 1;
+  color: #94a3b8;
+  transform: translateX(2px);
+}

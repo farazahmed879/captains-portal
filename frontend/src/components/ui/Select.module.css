@@ -1,0 +1,248 @@
+/* Select.module.css - Modern Custom Select with Portal Dropdown */
+
+.formGroup {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+}
+
+.label {
+  display: block;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--text-secondary, #475569);
+  margin-bottom: 6px;
+  user-select: none;
+}
+
+.requiredAsterisk {
+  color: var(--accent-rose, #e11d48);
+  margin-left: 4px;
+}
+
+.wrapper {
+  position: relative;
+  width: 100%;
+}
+
+/* Visually hide native select while keeping it in DOM for react-hook-form */
+.hiddenSelect {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  pointer-events: none;
+  z-index: -1;
+  tabindex: -1;
+}
+
+/* Custom Interactive Trigger */
+.trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  min-height: 38px;
+  padding: 0 12px;
+  background: var(--bg-surface, #ffffff);
+  border: 1px solid var(--border-color, #e2e8f0);
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-primary, #0f172a);
+  cursor: pointer;
+  outline: none;
+  text-align: left;
+  user-select: none;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+  transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.sizeSm {
+  min-height: 28px !important;
+  height: 28px !important;
+  padding: 0 8px !important;
+  font-size: 11.5px !important;
+  border-radius: 6px !important;
+}
+
+.sizeLg {
+  min-height: 44px !important;
+  height: 44px !important;
+  padding: 0 14px !important;
+  font-size: 14px !important;
+  border-radius: 10px !important;
+}
+
+.trigger:hover:not(:disabled) {
+  border-color: #cbd5e1;
+  background: #f8fafc;
+  box-shadow: 0 2px 4px rgba(15, 23, 42, 0.06);
+}
+
+.trigger.open {
+  border-color: #0284c7;
+  background: #ffffff;
+  box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.14);
+}
+
+.trigger.hasError {
+  border-color: var(--accent-rose, #e11d48) !important;
+}
+
+.trigger.hasError.open {
+  box-shadow: 0 0 0 3px rgba(225, 29, 72, 0.14);
+}
+
+.trigger:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  background: #f8fafc;
+  border-color: #e2e8f0;
+}
+
+.valueText {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 500;
+}
+
+.placeholder {
+  color: #94a3b8;
+  font-weight: 400;
+}
+
+.chevron {
+  color: #64748b;
+  flex-shrink: 0;
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), color 0.18s ease;
+}
+
+.chevron.open {
+  transform: rotate(180deg);
+  color: #0284c7;
+}
+
+/* ----------------------------------------------------
+   FLOATING DROPDOWN LIST (Portal)
+---------------------------------------------------- */
+.dropdown {
+  position: fixed;
+  background: #ffffff;
+  border: 1px solid rgba(226, 232, 240, 0.95);
+  border-radius: 12px;
+  box-shadow:
+    0 18px 40px -8px rgba(15, 23, 42, 0.18),
+    0 6px 16px -4px rgba(15, 23, 42, 0.08),
+    0 0 0 1px rgba(15, 23, 42, 0.04);
+  padding: 5px;
+  z-index: 999999;
+  max-height: 250px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  animation: dropdownFadeIn 0.16s cubic-bezier(0.16, 1, 0.3, 1);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+@keyframes dropdownFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-5px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.dropdown::-webkit-scrollbar {
+  width: 5px;
+}
+
+.dropdown::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.dropdown::-webkit-scrollbar-thumb {
+  background: #e2e8f0;
+  border-radius: 999px;
+}
+
+.dropdown::-webkit-scrollbar-thumb:hover {
+  background: #cbd5e1;
+}
+
+/* Dropdown Option Item */
+.dropdownItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 11px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  background: transparent;
+  font-size: 13px;
+  font-weight: 500;
+  color: #1e293b;
+  cursor: pointer;
+  text-align: left;
+  outline: none;
+  user-select: none;
+  transition: all 0.14s ease;
+}
+
+.dropdownItem:hover:not(:disabled) {
+  background: #f8fafc;
+  border-color: #f1f5f9;
+  color: #0284c7;
+}
+
+.dropdownItem.selected {
+  background: #f0f9ff;
+  border-color: #bae6fd;
+  color: #0284c7;
+  font-weight: 600;
+}
+
+.dropdownItem:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  color: #94a3b8;
+}
+
+.itemLabel {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.checkIcon {
+  color: #0284c7;
+  flex-shrink: 0;
+}
+
+/* Helper & Error Text */
+.errorText {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--accent-rose, #e11d48);
+  margin-top: 5px;
+}
+
+.helperText {
+  display: block;
+  font-size: 11px;
+  color: var(--text-muted, #94a3b8);
+  margin-top: 5px;
+}

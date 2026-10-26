@@ -12,7 +12,7 @@ export const DatePicker = forwardRef<HTMLInputElement, DatePickerProps>(
     const inputId = id || (label ? label.toLowerCase().replace(/\s+/g, '-') : undefined);
 
     return (
-      <div className="form-group" style={{ marginBottom: '14px' }}>
+      <div className="form-group">
         {label && (
           <label
             htmlFor={inputId}

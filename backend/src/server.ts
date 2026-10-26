@@ -6,6 +6,7 @@ import cors from 'cors';
 import { connectDB } from './config/db';
 import { connectPrisma } from './config/prisma';
 import { errorHandler } from './middlewares/errorHandler';
+import { setupSwagger } from './config/swagger';
 
 import authRoutes from './routes/authRoutes';
 import teamRoutes from './routes/teamRoutes';
@@ -29,6 +30,9 @@ connectPrisma();
 // Middlewares
 app.use(cors({ origin: '*' }));
 app.use(express.json());
+
+// Swagger API Documentation
+setupSwagger(app);
 
 // API Health Check
 app.get('/api/health', (req: Request, res: Response) => {
@@ -62,6 +66,7 @@ app.use(errorHandler);
 
 app.listen(PORT, () => {
   console.log(`🚀 Captains Portal Backend Server is running on http://localhost:${PORT}`);
+  console.log(`📑 Swagger Documentation available at http://localhost:${PORT}/api/docs`);
 });
 
 export default app;

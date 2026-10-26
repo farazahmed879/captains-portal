@@ -13,7 +13,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
     const inputId = id || (label ? label.toLowerCase().replace(/\s+/g, '-') : undefined);
 
     return (
-      <div className="form-group" style={{ marginBottom: label ? '14px' : '0' }}>
+      <div className="form-group">
         {label && (
           <label
             htmlFor={inputId}

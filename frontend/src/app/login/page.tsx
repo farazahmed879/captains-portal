@@ -127,7 +127,7 @@ export default function LoginPage() {
               <button
                 type="button"
                 className="auth-social-btn"
-                onClick={() => handleQuickLogin('0342-2181946', 'admin123')}
+                onClick={() => handleQuickLogin('0300-9999999', 'password123')}
               >
                 <ShieldCheck size={15} color="#34d399" />
                 <span>Fill Captain Demo Credentials</span>
@@ -144,22 +144,26 @@ export default function LoginPage() {
               {/* Demo Fictional Details Box */}
               <div className="auth-demo-box">
                 <div className="auth-demo-header">
-                  <span>Demo Only · Fictional Details</span>
+                  <span>Demo Only · Test Captain</span>
                   <button
                     type="button"
                     className="auth-demo-fill-btn"
-                    onClick={() => handleQuickLogin('0342-2181946', 'admin123')}
+                    onClick={() => handleQuickLogin('0300-9999999', 'password123')}
                   >
                     Apply
                   </button>
                 </div>
                 <div className="auth-demo-row">
+                  <span>Role:</span>
+                  <strong style={{ color: '#10b981' }}>Captain (Test Captain)</strong>
+                </div>
+                <div className="auth-demo-row">
                   <span>Phone / Email:</span>
-                  <strong>0342-2181946</strong>
+                  <strong>0300-9999999</strong>
                 </div>
                 <div className="auth-demo-row">
                   <span>Password:</span>
-                  <strong>admin123</strong>
+                  <strong>password123</strong>
                 </div>
               </div>
             </>
@@ -169,7 +173,7 @@ export default function LoginPage() {
             {/* Phone / Identifier Input */}
             <AuthInput
               label="Phone number or Email"
-              placeholder="e.g. 0342-2181946 or captain@club.com"
+              placeholder="e.g. 0300-9999999 or test@example.com"
               autoComplete="username tel"
               autoFocus
               icon={<Phone size={15} />}
@@ -184,7 +188,7 @@ export default function LoginPage() {
             <AuthInput
               label="Password"
               type={showPassword ? 'text' : 'password'}
-              placeholder="Enter password (admin123 for captain)"
+              placeholder="Enter password (password123 for test captain)"
               autoComplete="current-password"
               icon={<Lock size={15} />}
               rightElement={

@@ -1,0 +1,25 @@
+.toolbarRight {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.actionsGroup {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.actionBtn {
+  font-size: 11px !important;
+  height: 28px !important;
+  padding: 0 8px !important;
+}
+
+.clearBtn {
+  font-size: 11px !important;
+  height: 28px !important;
+  padding: 0 8px !important;
+  color: var(--accent-rose) !important;
+}

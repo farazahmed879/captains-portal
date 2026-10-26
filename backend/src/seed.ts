@@ -55,11 +55,21 @@ const seedAllTournamentsFromExcel = async () => {
     // 2. Super Admin User
     const admin = await User.create({
       tenantId: tenant._id,
-      name: 'Faraz (Captain)',
+      name: 'Faraz (Super Admin)',
       email: 'admin@captainsportal.com',
       password: 'admin123',
       phone: '0342-2181946',
       role: 'super_admin',
+    });
+
+    // Test Captain User
+    const testCaptain = await User.create({
+      tenantId: tenant._id,
+      name: 'Test Captain',
+      email: 'test@example.com',
+      password: 'password123',
+      phone: '0300-9999999',
+      role: 'captain',
     });
 
     // 3. Teams
