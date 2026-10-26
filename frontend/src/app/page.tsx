@@ -8,6 +8,7 @@ import { fetchApi } from '../lib/api';
 import { useAuth } from '../lib/auth';
 import { PlayerReturnModal } from '../components/PlayerReturnModal';
 import { UserRoleManagement } from '../components/UserRoleManagement';
+import { DashboardWidgetSkeleton } from '../components/ui/Skeleton';
 
 // Reusable Dashboard Subcomponents
 import {
@@ -279,7 +280,7 @@ export default function DashboardPage() {
         ) : (
           <>
             {/* Top 4 Financial Metric Boxes */}
-            <MiniStatsGrid stats={stats} />
+            <MiniStatsGrid stats={stats} isLoading={isStatsLoading} />
 
             {/* Dynamic Widget Selector Toolbar */}
             <WidgetToolbar
@@ -291,16 +292,19 @@ export default function DashboardPage() {
               onClearAllWidgets={clearAllWidgets}
             />
 
-            {/* State 1: Empty Dashboard State */}
-            {selectedWidgets.length === 0 && (
+            {/* Dashboard Content: Skeleton Loaders or Widgets */}
+            {isStatsLoading && !stats ? (
+              <div className="grid-2">
+                <DashboardWidgetSkeleton count={Math.max(selectedWidgets.length, 2)} />
+              </div>
+            ) : selectedWidgets.length === 0 ? (
+              /* State 1: Empty Dashboard State */
               <EmptyWidgetSelector
                 onToggleWidget={toggleWidget}
                 onAddAllWidgets={addAllWidgets}
               />
-            )}
-
-            {/* State 2: Dynamic Active Widgets Grid */}
-            {selectedWidgets.length > 0 && (
+            ) : (
+              /* State 2: Dynamic Active Widgets Grid */
               <div className="grid-2">
                 {/* Widget 1: Player Squad & Dues */}
                 {selectedWidgets.includes('players') && (

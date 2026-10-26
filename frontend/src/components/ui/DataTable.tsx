@@ -1,5 +1,6 @@
 import React from 'react';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell, TableEmpty } from './Table';
+import { TableSkeletonRows } from './Skeleton';
 
 export interface Column<T> {
   header: React.ReactNode;
@@ -63,23 +64,7 @@ export function DataTable<T>({
       </TableHeader>
       <TableBody>
         {loading ? (
-          <TableEmpty
-            colSpan={columns.length}
-            message="Loading data..."
-            icon={
-              <span
-                style={{
-                  display: 'inline-block',
-                  width: '24px',
-                  height: '24px',
-                  border: '3px solid #cbd5e1',
-                  borderTopColor: 'var(--accent-blue)',
-                  borderRadius: '50%',
-                  animation: 'spin 0.6s linear infinite',
-                }}
-              />
-            }
-          />
+          <TableSkeletonRows columnsCount={columns.length} rowsCount={6} />
         ) : data.length === 0 ? (
           <TableEmpty colSpan={columns.length} message={emptyMessage} icon={emptyIcon} />
         ) : (

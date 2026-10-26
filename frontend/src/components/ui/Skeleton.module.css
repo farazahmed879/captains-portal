@@ -1,0 +1,155 @@
+/* Skeleton.module.css - Shimmer Pulse Animations & Layouts */
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    #f1f5f9 0%,
+    #e2e8f0 40%,
+    #cbd5e1 50%,
+    #e2e8f0 60%,
+    #f1f5f9 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.6s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  display: block;
+  user-select: none;
+}
+
+.text {
+  height: 14px;
+  border-radius: 4px;
+}
+
+.circular {
+  border-radius: 50%;
+}
+
+.rounded {
+  border-radius: 8px;
+}
+
+.rectangular {
+  border-radius: 0;
+}
+
+/* ----------------------------------------------------
+   MINI STATS SKELETON
+---------------------------------------------------- */
+.miniStatsGrid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+  margin-bottom: 20px;
+}
+
+@media (max-width: 1024px) {
+  .miniStatsGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 600px) {
+  .miniStatsGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.miniStatCardSkeleton {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+}
+
+.miniStatInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1;
+}
+
+/* ----------------------------------------------------
+   DASHBOARD WIDGET SKELETON CARD
+---------------------------------------------------- */
+.widgetCardSkeleton {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  box-shadow: 0 2px 5px rgba(15, 23, 42, 0.04);
+  min-height: 320px;
+}
+
+.widgetHeaderSkeleton {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.widgetHeaderLeft {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.widgetKpiRowSkeleton {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+
+.widgetKpiBoxSkeleton {
+  background: #f8fafc;
+  border: 1px solid #edf2f7;
+  border-radius: 10px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.widgetListSkeleton {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.widgetListItemSkeleton {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  background: #f8fafc;
+  border: 1px solid #f1f5f9;
+  border-radius: 8px;
+}
+
+/* ----------------------------------------------------
+   TABLE ROW SKELETON
+---------------------------------------------------- */
+.tableRowSkeleton {
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.tableCellSkeleton {
+  padding: 14px 16px;
+  vertical-align: middle;
+}

@@ -20,6 +20,7 @@ import {
   ViewSwitcher,
   Avatar,
   StatBadge,
+  CardGridSkeleton,
 } from '../../components/ui';
 import {
   PLAYER_ROLE_OPTIONS,
@@ -309,7 +310,10 @@ export default function PlayersPage() {
       {/* VIEW 2: CONCISE COMPACT GRID (High visibility, minimal scrolling) */}
       {viewMode === 'grid' && (
         <div>
-          <div className="players-compact-grid">
+          {loading ? (
+            <CardGridSkeleton count={6} />
+          ) : (
+            <div className="players-compact-grid">
             {displayedPlayers.length === 0 ? (
               <div style={{ gridColumn: '1 / -1', padding: '40px', textAlign: 'center', color: 'var(--text-muted)' }}>
                 No players match the selected filters.
@@ -445,6 +449,7 @@ export default function PlayersPage() {
               })
             )}
           </div>
+          )}
 
           <Pagination
             currentPage={currentPage}

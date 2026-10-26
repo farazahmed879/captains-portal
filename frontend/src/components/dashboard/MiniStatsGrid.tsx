@@ -6,6 +6,7 @@ import {
   UsersIcon,
 } from '../icons';
 import { formatCurrency } from './types';
+import { MiniStatsSkeleton } from '../ui/Skeleton';
 import styles from './MiniStatsGrid.module.css';
 
 export interface MiniStatsGridProps {
@@ -18,10 +19,15 @@ export interface MiniStatsGridProps {
       totalPendingDues?: number;
     };
   } | null;
+  isLoading?: boolean;
   className?: string;
 }
 
-export const MiniStatsGrid: React.FC<MiniStatsGridProps> = ({ stats, className = '' }) => {
+export const MiniStatsGrid: React.FC<MiniStatsGridProps> = ({ stats, isLoading = false, className = '' }) => {
+  if (isLoading || !stats) {
+    return <MiniStatsSkeleton className={className} />;
+  }
+
   const finances = stats?.finances;
   const netPnl = finances?.netProfitLoss || 0;
   const isProfitable = netPnl >= 0;

@@ -29,6 +29,7 @@ import {
   DataTable,
   Pagination,
   ViewSwitcher,
+  CardGridSkeleton,
 } from '../../components/ui';
 import {
   Handshake,
@@ -278,8 +279,11 @@ export default function SponsorsPage() {
       {/* VIEW 2: GRID (CARDS) VIEW */}
       {viewMode === 'grid' && (
         <div>
-          <div className="grid-2">
-            {paginatedSponsors.map((spons) => (
+          {loading ? (
+            <CardGridSkeleton count={4} />
+          ) : (
+            <div className="grid-2">
+              {paginatedSponsors.map((spons) => (
               <Card key={spons._id} variant="purple">
                 <div
                   style={{
@@ -408,6 +412,7 @@ export default function SponsorsPage() {
               </Card>
             ))}
           </div>
+          )}
 
           <Pagination
             currentPage={currentPage}

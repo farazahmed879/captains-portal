@@ -20,6 +20,7 @@ import {
   CardContent,
   CardFooter,
   Pagination,
+  CardGridSkeleton,
 } from "../../components/ui";
 import { fetchApi } from "../../lib/api";
 import { confirmDelete, showToast } from "../../lib/alerts";
@@ -275,8 +276,11 @@ export default function TeamsPage() {
         {/* VIEW 2: GRID (CARDS) VIEW */}
         {viewMode === "grid" && (
           <div>
-            <div className="grid-2">
-              {paginatedTeams.map((team) => (
+            {loading ? (
+              <CardGridSkeleton count={4} />
+            ) : (
+              <div className="grid-2">
+                {paginatedTeams.map((team) => (
                 <Card
                   key={team._id}
                   style={{
@@ -446,6 +450,7 @@ export default function TeamsPage() {
                 </Card>
               ))}
             </div>
+            )}
 
             <Pagination
               currentPage={currentPage}

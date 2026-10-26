@@ -21,6 +21,7 @@ import {
   DataTable,
   Pagination,
   ViewSwitcher,
+  CardGridSkeleton,
 } from '../../components/ui';
 import {
   PlusIcon,
@@ -217,8 +218,11 @@ export default function TournamentsPage() {
       {/* VIEW 2: GRID (CARDS) VIEW */}
       {viewMode === 'grid' && (
         <div>
-          <div className="grid-2">
-            {paginatedTournaments.map((trn) => {
+          {loading ? (
+            <CardGridSkeleton count={4} />
+          ) : (
+            <div className="grid-2">
+              {paginatedTournaments.map((trn) => {
               const isProfitable = (trn.financials?.netPnl || 0) >= 0;
               return (
                 <Card key={trn._id} variant={isProfitable ? 'emerald' : 'amber'} style={{ position: 'relative' }}>
@@ -401,6 +405,7 @@ export default function TournamentsPage() {
               );
             })}
           </div>
+          )}
 
           <Pagination
             currentPage={currentPage}

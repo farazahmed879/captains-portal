@@ -22,6 +22,7 @@ import {
   Modal,
   Pagination,
   ViewSwitcher,
+  CardGridSkeleton,
 } from '../../components/ui';
 import {
   Swords,
@@ -332,8 +333,11 @@ export default function MatchesPage() {
         ) : (
           /* Cards View */
           <div>
-            <div className="grid-2">
-              {paginatedMatches.map((m) => (
+            {loading ? (
+              <CardGridSkeleton count={4} />
+            ) : (
+              <div className="grid-2">
+                {paginatedMatches.map((m) => (
                 <Card
                   key={m._id}
                   variant={m.result?.toLowerCase() === 'won' ? 'emerald' : m.result?.toLowerCase() === 'lost' ? 'rose' : 'blue'}
@@ -481,6 +485,7 @@ export default function MatchesPage() {
                 </Card>
               ))}
             </div>
+            )}
 
             <Pagination
               currentPage={currentPage}

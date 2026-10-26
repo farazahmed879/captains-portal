@@ -13,4 +13,5 @@ export * from './DataTable';
 export * from './Modal';
 export * from './Pagination';
 export * from './ViewSwitcher';
+export * from './Skeleton';
 export * from '../icons';
