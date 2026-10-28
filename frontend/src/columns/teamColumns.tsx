@@ -89,12 +89,19 @@ export const getTeamColumns = ({
     width: '8%',
     align: 'right',
     render: (team: any) => (
-      <div className="action-group" style={{ justifyContent: 'flex-end' }}>
+      <div
+        className="action-group"
+        style={{ justifyContent: 'flex-end' }}
+        onClick={(e) => e.stopPropagation()}
+      >
         <Button
           variant="secondary"
           size="sm"
           isIconOnly
-          onClick={() => onEdit(team)}
+          onClick={(e) => {
+            e.stopPropagation();
+            onEdit(team);
+          }}
           title="Edit Team"
           icon={<Pencil size={14} color="var(--accent-blue)" />}
         />
@@ -102,7 +109,10 @@ export const getTeamColumns = ({
           variant="danger"
           size="sm"
           isIconOnly
-          onClick={() => onDelete(team._id, team.name)}
+          onClick={(e) => {
+            e.stopPropagation();
+            onDelete(team._id, team.name);
+          }}
           title="Delete Team"
           icon={<Trash2 size={14} />}
         />

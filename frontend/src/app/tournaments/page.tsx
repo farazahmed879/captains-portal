@@ -9,7 +9,7 @@ import { Tournament } from '../../types';
 import { getTournamentColumns } from '../../columns';
 import { Header } from '../../components/Header';
 import { fetchApi } from '../../lib/api';
-import { confirmDelete, showToast } from '../../lib/alerts';
+import { confirmDelete, confirmBulkDelete, showToast } from '../../lib/alerts';
 import {
   Button,
   Badge,
@@ -22,6 +22,8 @@ import {
   Pagination,
   ViewSwitcher,
   CardGridSkeleton,
+  BulkActionBar,
+  GridSelectCheckbox,
 } from '../../components/ui';
 import {
   PlusIcon,
@@ -94,6 +96,29 @@ export default function TournamentsPage() {
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [currentPage, setCurrentPage] = useState<number>(1);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [isBulkDeleting, setIsBulkDeleting] = useState<boolean>(false);
+
+  const toggleSelectOne = (id: string) => {
+    setSelectedIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedIds.length === 0) return;
+    const confirmed = await confirmBulkDelete(selectedIds.length, 'Tournaments');
+    if (!confirmed) return;
+    setIsBulkDeleting(true);
+    try {
+      await Promise.all(selectedIds.map((id) => fetchApi(`/tournaments/${id}`, { method: 'DELETE' })));
+      showToast.success(`${selectedIds.length} tournament(s) deleted successfully.`);
+      setSelectedIds([]);
+      invalidateData();
+    } catch (err) {
+      showToast.error('Failed to delete selected tournaments.');
+    } finally {
+      setIsBulkDeleting(false);
+    }
+  };
   const pageSize = 8;
 
   const filteredTournaments = tournaments.filter((t) => {
@@ -193,6 +218,16 @@ export default function TournamentsPage() {
           </div>
         </div>
 
+        <BulkActionBar
+          selectedIds={selectedIds}
+          pageItemIds={paginatedTournaments.map((trn: any) => trn._id)}
+          allItemIds={filteredTournaments.map((trn: any) => trn._id)}
+          itemLabel="Tournaments"
+          onSelectChange={setSelectedIds}
+          onBulkDelete={handleBulkDelete}
+          deleting={isBulkDeleting}
+        />
+
         {/* VIEW 1: TABLE (LIST) VIEW */}
         {viewMode === 'table' && (
           <div>
@@ -201,6 +236,9 @@ export default function TournamentsPage() {
               keyExtractor={(trn: any) => trn._id}
               emptyMessage="No tournaments found matching criteria."
               onRowClick={(trn: any) => router.push(`/tournaments/${trn._id}`)}
+              selectable
+              selectedIds={selectedIds}
+              onSelectionChange={setSelectedIds}
               columns={tournamentColumns}
             />
 
@@ -275,6 +313,11 @@ export default function TournamentsPage() {
                     </div>
 
                     <div className="action-group">
+                      <GridSelectCheckbox
+                        checked={selectedIds.includes(trn._id)}
+                        onChange={() => toggleSelectOne(trn._id)}
+                        title={`Select ${trn.name}`}
+                      />
                       <Button
                         variant="secondary"
                         size="sm"

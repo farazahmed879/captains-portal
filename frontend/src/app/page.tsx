@@ -6,6 +6,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Header } from '../components/Header';
 import { fetchApi } from '../lib/api';
 import { useAuth } from '../lib/auth';
+import { confirmDelete } from '../lib/alerts';
 import { PlayerReturnModal } from '../components/PlayerReturnModal';
 import { UserRoleManagement } from '../components/UserRoleManagement';
 import { DashboardWidgetSkeleton } from '../components/ui/Skeleton';
@@ -144,11 +145,26 @@ export default function DashboardPage() {
     }
   };
 
+  const removeWidgetWithConfirm = async (widgetKey: WidgetKey, widgetLabel: string) => {
+    const confirmed = await confirmDelete(
+      `"${widgetLabel}" widget`,
+      `Are you sure you want to remove the "${widgetLabel}" widget from your dashboard? You can re-add it anytime from the toolbar.`
+    );
+    if (!confirmed) return;
+    updateWidgets(selectedWidgets.filter((w) => w !== widgetKey));
+  };
+
   const addAllWidgets = () => {
     updateWidgets(['players', 'tournaments', 'teams', 'sponsors']);
   };
 
-  const clearAllWidgets = () => {
+  const clearAllWidgets = async () => {
+    if (selectedWidgets.length === 0) return;
+    const confirmed = await confirmDelete(
+      'all dashboard widgets',
+      'Are you sure you want to clear all active widgets from your dashboard?'
+    );
+    if (!confirmed) return;
     updateWidgets([]);
   };
 
@@ -314,7 +330,7 @@ export default function DashboardPage() {
                     selectedPlayer={selectedIndividualPlayer}
                     stats={stats}
                     onSelectPlayer={(id) => updateSelection('playerId', id)}
-                    onRemove={() => toggleWidget('players')}
+                    onRemove={() => removeWidgetWithConfirm('players', 'Player Squad & Dues')}
                     onOpenReturnModal={(player) => {
                       setReturnTargetPlayer(player);
                       setIsReturnModalOpen(true);
@@ -330,7 +346,7 @@ export default function DashboardPage() {
                     selectedTournament={selectedIndividualTournament}
                     stats={stats}
                     onSelectTournament={(id) => updateSelection('tournamentId', id)}
-                    onRemove={() => toggleWidget('tournaments')}
+                    onRemove={() => removeWidgetWithConfirm('tournaments', 'Tournament & Leagues')}
                   />
                 )}
 
@@ -342,7 +358,7 @@ export default function DashboardPage() {
                     selectedTeam={selectedIndividualTeam}
                     stats={stats}
                     onSelectTeam={(id) => updateSelection('teamId', id)}
-                    onRemove={() => toggleWidget('teams')}
+                    onRemove={() => removeWidgetWithConfirm('teams', 'Club Teams & Squads')}
                   />
                 )}
 
@@ -354,7 +370,7 @@ export default function DashboardPage() {
                     selectedSponsor={selectedIndividualSponsor}
                     stats={stats}
                     onSelectSponsor={(id) => updateSelection('sponsorId', id)}
-                    onRemove={() => toggleWidget('sponsors')}
+                    onRemove={() => removeWidgetWithConfirm('sponsors', 'Brand Sponsors & Grants')}
                   />
                 )}
               </div>

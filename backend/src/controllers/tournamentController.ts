@@ -2,8 +2,10 @@ import { Response } from 'express';
 import { AuthRequest } from '../middlewares/auth';
 import { Tournament } from '../models/Tournament';
 import { Match } from '../models/Match';
+import { MatchPayment } from '../models/MatchPayment';
 import { Expense } from '../models/Expense';
 import { Sponsor } from '../models/Sponsor';
+import '../models/Team';
 
 export const getTournaments = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
@@ -75,7 +77,9 @@ export const getTournamentById = async (req: AuthRequest, res: Response): Promis
       return;
     }
 
-    const matches = await Match.find({ tournamentId: tournament._id }).populate('momPlayerId', 'name').sort({ matchDate: 1 });
+    const matches = await Match.find({ tournamentId: tournament._id })
+      .populate('momPlayerId', 'name')
+      .sort({ matchDate: 1 });
     const expenses = await Expense.find({ tournamentId: tournament._id }).sort({ expenseDate: -1 });
     const sponsors = await Sponsor.find({ tournamentId: tournament._id }).sort({ investmentDate: -1 });
 
@@ -159,6 +163,19 @@ export const deleteTournament = async (req: AuthRequest, res: Response): Promise
       res.status(404).json({ success: false, message: 'Tournament not found' });
       return;
     }
+
+    // Cascade delete matches, match payments, expenses, and sponsors linked to this tournament
+    const tournamentMatches = await Match.find({ tournamentId: id }).select('_id');
+    const matchIds = tournamentMatches.map((m) => m._id);
+    if (matchIds.length > 0) {
+      await MatchPayment.deleteMany({ matchId: { $in: matchIds } });
+    }
+    await Promise.all([
+      Match.deleteMany({ tournamentId: id }),
+      Expense.deleteMany({ tournamentId: id }),
+      Sponsor.deleteMany({ tournamentId: id }),
+    ]);
+
     res.json({ success: true, message: 'Tournament deleted successfully' });
   } catch (error: any) {
     res.status(500).json({ success: false, message: error.message });

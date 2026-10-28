@@ -25,6 +25,8 @@ export interface UserRoleTableProps {
   pageSizeOptions?: number[];
   onPageChange: (page: number) => void;
   onPageSizeChange?: (pageSize: number) => void;
+  selectedIds?: string[];
+  onSelectionChange?: (ids: string[]) => void;
 }
 
 export const UserRoleTable: React.FC<UserRoleTableProps> = ({
@@ -47,6 +49,8 @@ export const UserRoleTable: React.FC<UserRoleTableProps> = ({
   pageSizeOptions = [5, 10, 20, 50],
   onPageChange,
   onPageSizeChange,
+  selectedIds = [],
+  onSelectionChange,
 }) => {
   const columns = useMemo(
     () =>
@@ -104,6 +108,9 @@ export const UserRoleTable: React.FC<UserRoleTableProps> = ({
             }
             rowClassName={(u) => (!u.isActive ? 'user-suspended' : '')}
             keyExtractor={(u) => u._id}
+            selectable={Boolean(onSelectionChange)}
+            selectedIds={selectedIds}
+            onSelectionChange={onSelectionChange}
           />
           {!isLoading && totalItems > 0 && (
             <div style={{ borderBottomLeftRadius: 'var(--radius-lg)', borderBottomRightRadius: 'var(--radius-lg)', overflow: 'hidden' }}>

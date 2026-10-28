@@ -175,7 +175,11 @@ export const TournamentWidgetCard: React.FC<TournamentWidgetCardProps> = ({
           <div className="widget-kpi-row">
             <KpiCell
               label="Active Leagues"
-              value={stats?.summary?.activeTournaments || 0}
+              value={
+                tournamentsList.length > 0
+                  ? tournamentsList.filter((t) => t.status === 'ongoing').length
+                  : stats?.summary?.activeTournaments || 0
+              }
               valueColor="var(--accent-amber)"
             />
             <KpiCell
@@ -185,7 +189,7 @@ export const TournamentWidgetCard: React.FC<TournamentWidgetCardProps> = ({
             />
             <KpiCell
               label="Total Leagues"
-              value={stats?.summary?.totalTournaments || tournamentsList.length}
+              value={tournamentsList.length || stats?.summary?.totalTournaments || 0}
             />
           </div>
 

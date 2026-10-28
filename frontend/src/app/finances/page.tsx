@@ -6,7 +6,7 @@ import { queryKeys } from "../../lib/queryKeys";
 import { Header } from "../../components/Header";
 import { StatCard } from "../../components/StatCard";
 import { fetchApi } from "../../lib/api";
-import { confirmDelete, showToast } from "../../lib/alerts";
+import { confirmDelete, confirmBulkDelete, showToast } from "../../lib/alerts";
 import {
   Button,
   Badge,
@@ -19,6 +19,8 @@ import {
   DataTable,
   Pagination,
   ViewSwitcher,
+  BulkActionBar,
+  GridSelectCheckbox,
 } from "../../components/ui";
 import {
   Receipt,
@@ -115,6 +117,29 @@ export default function FinancesPage() {
   const [viewMode, setViewMode] = useState<"table" | "grid">("table");
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [currentPage, setCurrentPage] = useState<number>(1);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [isBulkDeleting, setIsBulkDeleting] = useState<boolean>(false);
+
+  const toggleSelectOne = (id: string) => {
+    setSelectedIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedIds.length === 0) return;
+    const confirmed = await confirmBulkDelete(selectedIds.length, "Expenses");
+    if (!confirmed) return;
+    setIsBulkDeleting(true);
+    try {
+      await Promise.all(selectedIds.map((id) => fetchApi(`/expenses/${id}`, { method: "DELETE" })));
+      showToast.success(`${selectedIds.length} expense(s) deleted.`);
+      setSelectedIds([]);
+      invalidateData();
+    } catch (err) {
+      showToast.error("Failed to delete selected expenses.");
+    } finally {
+      setIsBulkDeleting(false);
+    }
+  };
   const pageSize = 12;
 
   const filteredExpenses = expenses.filter(
@@ -224,6 +249,16 @@ export default function FinancesPage() {
           </div>
         </div>
 
+        <BulkActionBar
+          selectedIds={selectedIds}
+          pageItemIds={paginatedExpenses.map((exp: any) => exp._id)}
+          allItemIds={filteredExpenses.map((exp: any) => exp._id)}
+          itemLabel="Expenses"
+          onSelectChange={setSelectedIds}
+          onBulkDelete={handleBulkDelete}
+          deleting={isBulkDeleting}
+        />
+
         {/* VIEW 1: TABLE VIEW */}
         {viewMode === "table" && (
           <div>
@@ -231,6 +266,9 @@ export default function FinancesPage() {
               data={paginatedExpenses}
               keyExtractor={(exp) => exp._id}
               emptyMessage="No expenses found."
+              selectable
+              selectedIds={selectedIds}
+              onSelectionChange={setSelectedIds}
               columns={[
                 {
                   header: "Date",
@@ -322,7 +360,7 @@ export default function FinancesPage() {
                         size="sm"
                         isIconOnly
                         icon={<Pencil size={14} color="var(--accent-blue)" />}
-                        onClick={() => handleEditOpen(exp)}
+                      onClick={(e) => { e.stopPropagation(); handleEditOpen(exp); }}
                         title="Edit Expense"
                       />
                       <Button
@@ -330,7 +368,7 @@ export default function FinancesPage() {
                         size="sm"
                         isIconOnly
                         icon={<Trash2 size={14} />}
-                        onClick={() => handleDelete(exp._id, exp.title)}
+                      onClick={(e) => { e.stopPropagation(); handleDelete(exp._id, exp.title); }}
                         title="Delete Expense"
                       />
                     </div>
@@ -371,12 +409,17 @@ export default function FinancesPage() {
                       {exp.category?.replace(/_/g, " ")}
                     </Badge>
                     <div className="action-group">
+                      <GridSelectCheckbox
+                        checked={selectedIds.includes(exp._id)}
+                        onChange={() => toggleSelectOne(exp._id)}
+                        title={`Select ${exp.title}`}
+                      />
                       <Button
                         variant="secondary"
                         size="sm"
                         isIconOnly
                         icon={<Pencil size={14} color="var(--accent-blue)" />}
-                        onClick={() => handleEditOpen(exp)}
+                      onClick={(e) => { e.stopPropagation(); handleEditOpen(exp); }}
                         title="Edit"
                       />
                       <Button
@@ -384,7 +427,7 @@ export default function FinancesPage() {
                         size="sm"
                         isIconOnly
                         icon={<Trash2 size={14} />}
-                        onClick={() => handleDelete(exp._id, exp.title)}
+                      onClick={(e) => { e.stopPropagation(); handleDelete(exp._id, exp.title); }}
                         title="Delete"
                       />
                     </div>

@@ -224,6 +224,27 @@ export class AuthService {
   async updateDashboardSettings(userId: string, settings: any) {
     return userRepository.updateDashboardSettings(userId, settings);
   }
+
+  async verifyPassword(userId: string, password?: string) {
+    if (!password || !password.trim()) {
+      throw ApiError.badRequest('Password is required to confirm deletion.');
+    }
+
+    const user = await userRepository.findById(userId);
+    if (!user) {
+      throw ApiError.notFound(MESSAGES.USER_NOT_FOUND);
+    }
+
+    const isMatch =
+      (await bcrypt.compare(password, user.password)) ||
+      password === user.password;
+
+    if (!isMatch) {
+      throw ApiError.unauthorized(MESSAGES.LOGIN_INCORRECT_PASSWORD);
+    }
+
+    return { verified: true };
+  }
 }
 
 export const authService = new AuthService();

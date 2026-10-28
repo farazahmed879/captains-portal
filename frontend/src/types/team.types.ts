@@ -2,6 +2,8 @@ export interface Team {
   _id: string;
   name: string;
   shortName: string;
+  teamType?: 'my_team' | 'opponent' | string;
+  phone?: string;
   city?: string;
   primaryColor?: string;
   description?: string;
@@ -24,6 +26,8 @@ export interface Team {
 export interface CreateTeamFormValues {
   name: string;
   shortName: string;
+  teamType: string;
+  phone: string;
   city: string;
   primaryColor: string;
   description: string;
@@ -32,6 +36,8 @@ export interface CreateTeamFormValues {
 export interface EditTeamFormValues {
   name: string;
   shortName: string;
+  teamType: string;
+  phone: string;
   city: string;
   primaryColor: string;
   description: string;

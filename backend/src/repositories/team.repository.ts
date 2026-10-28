@@ -43,6 +43,8 @@ export class TeamRepository {
     captainId: string;
     name: string;
     shortName: string;
+    teamType?: string;
+    phone?: string;
     city?: string;
     primaryColor?: string;
     description?: string;
@@ -54,6 +56,8 @@ export class TeamRepository {
         captainId: data.captainId,
         name: data.name,
         shortName: data.shortName.toUpperCase(),
+        teamType: data.teamType || 'my_team',
+        phone: data.phone || undefined,
         city: data.city || 'Karachi',
         primaryColor: data.primaryColor || '#0284c7',
         description: data.description,

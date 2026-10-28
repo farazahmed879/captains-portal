@@ -1,4 +1,10 @@
-import { playerRepository, paymentRepository, playerReturnRepository, teamRepository } from '../repositories';
+import {
+  playerRepository,
+  paymentRepository,
+  playerReturnRepository,
+  teamRepository,
+} from '../repositories';
+import { prisma } from '../config/prisma';
 import { ApiError } from '../utils/apiError';
 import { MESSAGES } from '../constants';
 
@@ -25,7 +31,15 @@ export class PlayerService {
         const teams = await Promise.all(
           p.teamIds.map(async (tId) => {
             const team = await teamRepository.findById(tId, tenantId);
-            return team ? { _id: team.id, id: team.id, name: team.name, shortName: team.shortName, primaryColor: team.primaryColor } : null;
+            return team
+              ? {
+                  _id: team.id,
+                  id: team.id,
+                  name: team.name,
+                  shortName: team.shortName,
+                  primaryColor: team.primaryColor,
+                }
+              : null;
           })
         );
 
@@ -109,6 +123,13 @@ export class PlayerService {
     if (!deleted) {
       throw ApiError.notFound(MESSAGES.PLAYER_NOT_FOUND);
     }
+
+    // Cascade delete player's payment and return records so ledger stats stay clean
+    await Promise.all([
+      prisma.matchPayment.deleteMany({ where: { tenantId, playerId: id } }),
+      prisma.playerReturn.deleteMany({ where: { tenantId, playerId: id } }),
+    ]);
+
     return {
       message: MESSAGES.PLAYER_DELETED,
     };

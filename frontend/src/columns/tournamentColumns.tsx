@@ -107,13 +107,20 @@ export const getTournamentColumns = ({
     width: '9%',
     align: 'right',
     render: (trn: any) => (
-      <div className="action-group" style={{ justifyContent: 'flex-end' }}>
+      <div
+        className="action-group"
+        style={{ justifyContent: 'flex-end' }}
+        onClick={(e) => e.stopPropagation()}
+      >
         <Button
           variant="secondary"
           size="sm"
           isIconOnly
           icon={<PencilIcon size={14} color="var(--accent-blue)" />}
-          onClick={() => onEdit(trn)}
+          onClick={(e) => {
+            e.stopPropagation();
+            onEdit(trn);
+          }}
           title="Edit Tournament"
         />
         <Button
@@ -121,7 +128,10 @@ export const getTournamentColumns = ({
           size="sm"
           isIconOnly
           icon={<TrashIcon size={14} />}
-          onClick={() => onDelete(trn._id, trn.name)}
+          onClick={(e) => {
+            e.stopPropagation();
+            onDelete(trn._id, trn.name);
+          }}
           title="Delete Tournament"
         />
       </div>

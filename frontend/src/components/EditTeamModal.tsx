@@ -2,9 +2,11 @@
 
 import React, { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
+import { useQuery } from '@tanstack/react-query';
 import { Modal } from './Modal';
-import { Input, Textarea, Button, Alert } from './ui';
+import { Input, Select, Textarea, Button, Alert } from './ui';
 import { fetchApi } from '../lib/api';
+import { queryKeys } from '../lib/queryKeys';
 import { EditTeamFormValues } from '../types';
 
 interface EditTeamModalProps {
@@ -22,6 +24,14 @@ export const EditTeamModal: React.FC<EditTeamModalProps> = ({
 }) => {
   const [serverError, setServerError] = useState<string | null>(null);
 
+  const playersQuery = useQuery({
+    queryKey: queryKeys.players(),
+    queryFn: () => fetchApi<{ success: boolean; players: any[] }>('/players'),
+    enabled: isOpen,
+  });
+
+  const playersWithPhone = (playersQuery.data?.players || []).filter((p: any) => p.phone);
+
   const {
     register,
     handleSubmit,
@@ -33,6 +43,8 @@ export const EditTeamModal: React.FC<EditTeamModalProps> = ({
     defaultValues: {
       name: '',
       shortName: '',
+      teamType: 'my_team',
+      phone: '',
       city: 'Karachi',
       primaryColor: '#0284c7',
       description: '',
@@ -46,6 +58,8 @@ export const EditTeamModal: React.FC<EditTeamModalProps> = ({
       reset({
         name: team.name || '',
         shortName: team.shortName || '',
+        teamType: team.teamType || (team.name?.toLowerCase().includes('gulzar') ? 'my_team' : 'opponent'),
+        phone: team.phone || '',
         city: team.city || 'Karachi',
         primaryColor: team.primaryColor || '#0284c7',
         description: team.description || '',
@@ -101,12 +115,22 @@ export const EditTeamModal: React.FC<EditTeamModalProps> = ({
           </Alert>
         )}
 
-        <Input
-          label="Team Name *"
-          placeholder="e.g. Gulzar Hard Ball XI"
-          {...register('name', { required: 'Team name is required' })}
-          error={errors.name?.message}
-        />
+        <div className="grid-2">
+          <Input
+            label="Team Name *"
+            placeholder="e.g. Gulzar Hard Ball XI"
+            {...register('name', { required: 'Team name is required' })}
+            error={errors.name?.message}
+          />
+          <Select
+            label="Team Category *"
+            {...register('teamType')}
+            options={[
+              { value: 'my_team', label: 'My Club Team' },
+              { value: 'opponent', label: 'Opponent Team' },
+            ]}
+          />
+        </div>
 
         <div className="grid-2">
           <Input
@@ -122,21 +146,39 @@ export const EditTeamModal: React.FC<EditTeamModalProps> = ({
           />
         </div>
 
-        <div>
-          <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, marginBottom: '6px', color: 'var(--text-secondary)' }}>
-            Primary Color Theme
-          </label>
-          <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-            <input
-              type="color"
-              value={currentColor || '#0284c7'}
-              onChange={(e) => setValue('primaryColor', e.target.value)}
-              style={{ width: '42px', height: '38px', padding: 0, cursor: 'pointer', borderRadius: '6px', border: '1px solid var(--border-color)' }}
-            />
+        <div className="grid-2">
+          <div>
             <Input
-              {...register('primaryColor')}
-              placeholder="#0284c7"
+              label="Team / Captain Phone Number"
+              placeholder="e.g. 0342-2181946"
+              list="edit-team-phone-options"
+              {...register('phone')}
             />
+            <datalist id="edit-team-phone-options">
+              {playersWithPhone.map((p: any) => (
+                <option key={p._id || p.id} value={p.phone}>
+                  {p.name} ({p.phone})
+                </option>
+              ))}
+            </datalist>
+          </div>
+
+          <div>
+            <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, marginBottom: '6px', color: 'var(--text-secondary)' }}>
+              Primary Color Theme
+            </label>
+            <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+              <input
+                type="color"
+                value={currentColor || '#0284c7'}
+                onChange={(e) => setValue('primaryColor', e.target.value)}
+                style={{ width: '42px', height: '38px', padding: 0, cursor: 'pointer', borderRadius: '6px', border: '1px solid var(--border-color)' }}
+              />
+              <Input
+                {...register('primaryColor')}
+                placeholder="#0284c7"
+              />
+            </div>
           </div>
         </div>
 

@@ -99,6 +99,8 @@ model Team {
   captainId    String   @db.ObjectId
   name         String
   shortName    String
+  teamType     String   @default("my_team") // my_team, opponent
+  phone        String?
   city         String?  @default("Karachi")
   logo         String?
   primaryColor String?  @default("#0284c7")

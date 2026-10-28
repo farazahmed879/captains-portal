@@ -244,13 +244,20 @@ export const getSponsorTransactionColumns = ({
     width: '8%',
     align: 'right',
     render: (t: any) => (
-      <div className="action-group" style={{ justifyContent: 'flex-end' }}>
+      <div
+        className="action-group"
+        style={{ justifyContent: 'flex-end' }}
+        onClick={(e) => e.stopPropagation()}
+      >
         <Button
           variant="secondary"
           size="sm"
           isIconOnly
           icon={<Pencil size={13} color="var(--accent-blue)" />}
-          onClick={() => onEdit(t)}
+          onClick={(e) => {
+            e.stopPropagation();
+            onEdit(t);
+          }}
           title="Edit Transaction"
         />
         <Button
@@ -258,7 +265,10 @@ export const getSponsorTransactionColumns = ({
           size="sm"
           isIconOnly
           icon={<Trash2 size={13} />}
-          onClick={() => onDelete(t)}
+          onClick={(e) => {
+            e.stopPropagation();
+            onDelete(t);
+          }}
           title="Delete Transaction"
         />
       </div>

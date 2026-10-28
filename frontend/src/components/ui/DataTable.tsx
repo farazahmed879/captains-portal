@@ -22,6 +22,9 @@ export interface DataTableProps<T> {
   rowClassName?: (item: T, index: number) => string;
   className?: string;
   style?: React.CSSProperties;
+  selectable?: boolean;
+  selectedIds?: string[];
+  onSelectionChange?: (ids: string[]) => void;
 }
 
 export function DataTable<T>({
@@ -35,6 +38,9 @@ export function DataTable<T>({
   rowClassName,
   className = '',
   style,
+  selectable = false,
+  selectedIds = [],
+  onSelectionChange,
 }: DataTableProps<T>) {
   const getKey = (item: T, index: number): string | number => {
     if (keyExtractor) return keyExtractor(item, index);
@@ -42,10 +48,57 @@ export function DataTable<T>({
     return anyItem?._id || anyItem?.id || index;
   };
 
+  const isSelectable = selectable || Boolean(onSelectionChange);
+  const pageKeys = data.map((item, idx) => String(getKey(item, idx)));
+  const allPageSelected =
+    isSelectable && pageKeys.length > 0 && pageKeys.every((k) => selectedIds.includes(k));
+
+  const handleToggleAllPage = (e: React.ChangeEvent<HTMLInputElement>) => {
+    e.stopPropagation();
+    if (!onSelectionChange) return;
+    if (allPageSelected) {
+      onSelectionChange(selectedIds.filter((id) => !pageKeys.includes(id)));
+    } else {
+      const merged = Array.from(new Set([...selectedIds, ...pageKeys]));
+      onSelectionChange(merged);
+    }
+  };
+
+  const handleToggleRow = (id: string) => {
+    if (!onSelectionChange) return;
+    if (selectedIds.includes(id)) {
+      onSelectionChange(selectedIds.filter((k) => k !== id));
+    } else {
+      onSelectionChange([...selectedIds, id]);
+    }
+  };
+
+  const totalColumnsCount = columns.length + (isSelectable ? 1 : 0);
+
   return (
     <Table className={className} style={style}>
       <TableHeader>
         <TableRow>
+          {isSelectable && (
+            <TableHead
+              align="center"
+              style={{ width: '42px', textAlign: 'center', padding: '10px 8px' }}
+            >
+              <input
+                type="checkbox"
+                checked={allPageSelected}
+                onChange={handleToggleAllPage}
+                disabled={loading || data.length === 0}
+                title="Select all on this page"
+                style={{
+                  width: '16px',
+                  height: '16px',
+                  cursor: 'pointer',
+                  accentColor: '#e11d48',
+                }}
+              />
+            </TableHead>
+          )}
           {columns.map((col, idx) => (
             <TableHead
               key={idx}
@@ -64,20 +117,45 @@ export function DataTable<T>({
       </TableHeader>
       <TableBody>
         {loading ? (
-          <TableSkeletonRows columnsCount={columns.length} rowsCount={6} />
+          <TableSkeletonRows columnsCount={totalColumnsCount} rowsCount={6} />
         ) : data.length === 0 ? (
-          <TableEmpty colSpan={columns.length} message={emptyMessage} icon={emptyIcon} />
+          <TableEmpty colSpan={totalColumnsCount} message={emptyMessage} icon={emptyIcon} />
         ) : (
           data.map((item, index) => {
             const rowKey = getKey(item, index);
+            const strKey = String(rowKey);
+            const isSelected = isSelectable && selectedIds.includes(strKey);
             const customClass = rowClassName ? rowClassName(item, index) : '';
             return (
               <TableRow
                 key={rowKey}
                 className={customClass}
                 onClick={onRowClick ? () => onRowClick(item, index) : undefined}
-                style={{ cursor: onRowClick ? 'pointer' : undefined }}
+                style={{
+                  cursor: onRowClick ? 'pointer' : undefined,
+                  background: isSelected ? '#fff1f2' : undefined,
+                }}
               >
+                {isSelectable && (
+                  <TableCell
+                    align="center"
+                    style={{ width: '42px', textAlign: 'center', padding: '10px 8px' }}
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={isSelected}
+                      onChange={() => handleToggleRow(strKey)}
+                      onClick={(e) => e.stopPropagation()}
+                      style={{
+                        width: '16px',
+                        height: '16px',
+                        cursor: 'pointer',
+                        accentColor: '#e11d48',
+                      }}
+                    />
+                  </TableCell>
+                )}
                 {columns.map((col, colIdx) => (
                   <TableCell
                     key={colIdx}

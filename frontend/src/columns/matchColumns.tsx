@@ -179,7 +179,7 @@ export const getMatchColumns = ({
 
 interface SquadPaymentColumnActions {
   onQuickPay: (paymentId: string, fullFee: number) => void;
-  onDelete: (paymentId: string) => void;
+  onDelete: (paymentId: string, playerName?: string) => void;
   fNum: (val: number | undefined) => string;
 }
 
@@ -250,7 +250,10 @@ export const getMatchSquadPaymentColumns = ({
           size="sm"
           isIconOnly
           icon={<Trash2 size={14} />}
-          onClick={() => onDelete(p._id)}
+          onClick={(e) => {
+            e.stopPropagation();
+            onDelete(p._id, p.playerId?.name);
+          }}
           title="Remove player from match"
         />
       </div>

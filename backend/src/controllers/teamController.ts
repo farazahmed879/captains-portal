@@ -54,3 +54,28 @@ export const deleteTeam = asyncHandler(async (req: AuthRequest, res: Response) =
     ...result,
   });
 });
+
+export const addPlayersToTeam = asyncHandler(async (req: AuthRequest, res: Response) => {
+  const { id } = req.params;
+  const { playerIds } = req.body;
+  const result = await teamService.addPlayersToTeam(String(id), req.user!.tenantId, playerIds);
+
+  res.status(HTTP_STATUS.OK).json({
+    success: true,
+    ...result,
+  });
+});
+
+export const removePlayerFromTeam = asyncHandler(async (req: AuthRequest, res: Response) => {
+  const { id, playerId } = req.params;
+  const result = await teamService.removePlayerFromTeam(
+    String(id),
+    req.user!.tenantId,
+    String(playerId)
+  );
+
+  res.status(HTTP_STATUS.OK).json({
+    success: true,
+    ...result,
+  });
+});

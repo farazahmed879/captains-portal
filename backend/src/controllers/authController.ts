@@ -4,6 +4,15 @@ import { authService } from '../services';
 import { asyncHandler } from '../utils/asyncHandler';
 import { HTTP_STATUS, MESSAGES } from '../constants';
 
+export const verifyPassword = asyncHandler(async (req: AuthRequest, res: Response) => {
+  const { password } = req.body;
+  const result = await authService.verifyPassword(req.user!.id, password);
+  res.status(HTTP_STATUS.OK).json({
+    success: true,
+    ...result,
+  });
+});
+
 export const login = asyncHandler(async (req: Request, res: Response) => {
   const { phone, email, identifier, password } = req.body;
   const rawIdentifier = (phone || identifier || email || '').trim();

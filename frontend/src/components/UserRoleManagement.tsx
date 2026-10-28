@@ -3,6 +3,8 @@
 import React, { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { fetchApi } from "../lib/api";
+import { confirmDelete, confirmBulkDelete, showToast } from "../lib/alerts";
+import { BulkActionBar } from "./ui";
 import { useAuth } from "../lib/auth";
 import { CheckCircle2, AlertCircle, X } from "lucide-react";
 import {
@@ -27,6 +29,8 @@ export const UserRoleManagement: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [isAddUserModalOpen, setIsAddUserModalOpen] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [isBulkDeleting, setIsBulkDeleting] = useState(false);
   const [actionFeedback, setActionFeedback] = useState<ActionFeedback | null>(
     null,
   );
@@ -189,13 +193,38 @@ export const UserRoleManagement: React.FC = () => {
     return filteredUsers.slice(startIndex, startIndex + pageSize);
   }, [filteredUsers, currentPage, pageSize]);
 
-  const handleDeleteUser = (u: ManagedUser) => {
-    if (
-      window.confirm(
-        `Are you sure you want to delete user account "${u.name}"?`,
-      )
-    ) {
+  const handleDeleteUser = async (u: ManagedUser) => {
+    const confirmed = await confirmDelete(
+      `user account "${u.name}"`,
+      `Are you sure you want to permanently delete user account "${u.name}" (${u.email})? This action cannot be undone.`,
+    );
+    if (confirmed) {
       deleteUserMutation.mutate(u._id);
+    }
+  };
+
+  const handleBulkDeleteUsers = async () => {
+    const deletableIds = selectedIds.filter((id) => id !== currentUser?.id);
+    if (deletableIds.length === 0) {
+      showToast.warning("Cannot delete your own active account.");
+      return;
+    }
+    const confirmed = await confirmBulkDelete(deletableIds.length, "Users");
+    if (!confirmed) return;
+    setIsBulkDeleting(true);
+    try {
+      await Promise.all(
+        deletableIds.map((id) =>
+          fetchApi(`/users/${id}`, { method: "DELETE" }),
+        ),
+      );
+      showToast.success(`${deletableIds.length} user(s) deleted successfully.`);
+      setSelectedIds([]);
+      queryClient.invalidateQueries({ queryKey: ["admin-users-list"] });
+    } catch (err) {
+      showToast.error("Failed to delete selected users.");
+    } finally {
+      setIsBulkDeleting(false);
     }
   };
 
@@ -246,8 +275,21 @@ export const UserRoleManagement: React.FC = () => {
         counts={counts}
       />
 
+      {/* Bulk Action Bar */}
+      <BulkActionBar
+        selectedIds={selectedIds}
+        pageItemIds={paginatedUsers.filter((u) => u._id !== currentUser?.id).map((u) => u._id)}
+        allItemIds={filteredUsers.filter((u) => u._id !== currentUser?.id).map((u) => u._id)}
+        itemLabel="Users"
+        onSelectChange={setSelectedIds}
+        onBulkDelete={handleBulkDeleteUsers}
+        deleting={isBulkDeleting}
+      />
+
       {/* Users Data Table with Pagination */}
       <UserRoleTable
+        selectedIds={selectedIds}
+        onSelectionChange={setSelectedIds}
         isLoading={isLoading}
         isError={isError}
         users={paginatedUsers}

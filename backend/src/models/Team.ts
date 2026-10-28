@@ -5,6 +5,8 @@ export interface ITeam extends Document {
   captainId: Types.ObjectId;
   name: string;
   shortName: string;
+  teamType?: string;
+  phone?: string;
   city?: string;
   logo?: string;
   primaryColor?: string;
@@ -20,6 +22,8 @@ const TeamSchema = new Schema<ITeam>(
     captainId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
     name: { type: String, required: true, trim: true },
     shortName: { type: String, required: true, uppercase: true, trim: true },
+    teamType: { type: String, default: 'my_team' },
+    phone: { type: String, trim: true },
     city: { type: String, default: 'Karachi' },
     logo: { type: String },
     primaryColor: { type: String, default: '#0284c7' },

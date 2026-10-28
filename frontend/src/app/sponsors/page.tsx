@@ -10,7 +10,7 @@ import { getSponsorColumns } from '../../columns';
 import { Header } from '../../components/Header';
 import { StatCard } from '../../components/StatCard';
 import { fetchApi } from '../../lib/api';
-import { confirmDelete, showToast } from '../../lib/alerts';
+import { confirmDelete, confirmBulkDelete, showToast } from '../../lib/alerts';
 import {
   Button,
   Badge,
@@ -30,6 +30,8 @@ import {
   Pagination,
   ViewSwitcher,
   CardGridSkeleton,
+  BulkActionBar,
+  GridSelectCheckbox,
 } from '../../components/ui';
 import {
   Handshake,
@@ -124,6 +126,29 @@ export default function SponsorsPage() {
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [contractFilter, setContractFilter] = useState<string>('');
   const [currentPage, setCurrentPage] = useState<number>(1);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [isBulkDeleting, setIsBulkDeleting] = useState<boolean>(false);
+
+  const toggleSelectOne = (id: string) => {
+    setSelectedIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedIds.length === 0) return;
+    const confirmed = await confirmBulkDelete(selectedIds.length, 'Sponsors');
+    if (!confirmed) return;
+    setIsBulkDeleting(true);
+    try {
+      await Promise.all(selectedIds.map((id) => fetchApi(`/sponsors/${id}`, { method: 'DELETE' })));
+      showToast.success(`${selectedIds.length} sponsor(s) deleted.`);
+      setSelectedIds([]);
+      invalidateData();
+    } catch (err) {
+      showToast.error('Failed to delete selected sponsors.');
+    } finally {
+      setIsBulkDeleting(false);
+    }
+  };
   const pageSize = 8;
 
   const filteredSponsors = sponsors.filter(
@@ -254,6 +279,16 @@ export default function SponsorsPage() {
           </div>
         </div>
 
+        <BulkActionBar
+          selectedIds={selectedIds}
+          pageItemIds={paginatedSponsors.map((s: any) => s._id)}
+          allItemIds={filteredSponsors.map((s: any) => s._id)}
+          itemLabel="Sponsors"
+          onSelectChange={setSelectedIds}
+          onBulkDelete={handleBulkDelete}
+          deleting={isBulkDeleting}
+        />
+
         {/* VIEW 1: TABLE (LIST) VIEW */}
         {viewMode === 'table' && (
           <div>
@@ -262,6 +297,9 @@ export default function SponsorsPage() {
               keyExtractor={(spons) => spons._id}
               emptyMessage="No sponsors found."
               onRowClick={(spons) => router.push(`/sponsors/${spons._id}`)}
+              selectable
+              selectedIds={selectedIds}
+              onSelectionChange={setSelectedIds}
               columns={sponsorColumns}
             />
 
@@ -295,6 +333,11 @@ export default function SponsorsPage() {
                 >
                   <div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
+                      <GridSelectCheckbox
+                        checked={selectedIds.includes(spons._id)}
+                        onChange={() => toggleSelectOne(spons._id)}
+                        title={`Select ${spons.companyName || spons.sponsorName}`}
+                      />
                       <Badge variant="purple" style={{ textTransform: 'capitalize' }}>
                         {spons.contractType.replace(/_/g, ' ')}
                       </Badge>

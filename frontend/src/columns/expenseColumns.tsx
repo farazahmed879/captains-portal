@@ -65,13 +65,20 @@ export const getExpenseColumns = ({
     header: 'Actions',
     align: 'right',
     render: (exp: any) => (
-      <div className="action-group" style={{ justifyContent: 'flex-end' }}>
+      <div
+        className="action-group"
+        style={{ justifyContent: 'flex-end' }}
+        onClick={(e) => e.stopPropagation()}
+      >
         <Button
           variant="secondary"
           size="sm"
           isIconOnly
           icon={<Pencil size={14} color="var(--accent-blue)" />}
-          onClick={() => onEdit(exp)}
+          onClick={(e) => {
+            e.stopPropagation();
+            onEdit(exp);
+          }}
           title="Edit Expense"
         />
         <Button
@@ -79,7 +86,10 @@ export const getExpenseColumns = ({
           size="sm"
           isIconOnly
           icon={<Trash2 size={14} />}
-          onClick={() => onDelete(exp._id, exp.title)}
+          onClick={(e) => {
+            e.stopPropagation();
+            onDelete(exp._id, exp.title);
+          }}
           title="Delete Expense"
         />
       </div>

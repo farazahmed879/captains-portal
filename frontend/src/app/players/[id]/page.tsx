@@ -184,8 +184,9 @@ export default function PlayerProfilePage() {
   const isCleared = pendingDue <= 0;
   const player = data?.player;
 
-  const handleDeleteReturn = async (returnId: string) => {
-    const confirmed = await confirmDelete('return record', 'Are you sure you want to delete this payout/return record?');
+  const handleDeleteReturn = async (returnId: string, amount?: number) => {
+    const label = amount ? `return record of Rs. ${fNum(amount)}` : 'return record';
+    const confirmed = await confirmDelete(label, 'Are you sure you want to delete this payout/return record?');
     if (!confirmed) return;
     try {
       const res = await fetchApi<{ success: boolean }>(`/player-returns/${returnId}`, {
@@ -1545,7 +1546,10 @@ export default function PlayerProfilePage() {
                       size="sm"
                       isIconOnly
                       icon={<TrashIcon size={12} />}
-                      onClick={() => handleDeleteReturn(ret._id)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDeleteReturn(ret._id, ret.amount);
+                      }}
                       title="Delete return record"
                     />
                   ),

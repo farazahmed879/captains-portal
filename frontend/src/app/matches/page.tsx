@@ -9,7 +9,7 @@ import { Match, MatchPayment } from '../../types';
 import { getMatchColumns, getMatchSquadPaymentColumns } from '../../columns';
 import { Header } from '../../components/Header';
 import { fetchApi } from '../../lib/api';
-import { confirmDelete, showToast } from '../../lib/alerts';
+import { confirmDelete, confirmBulkDelete, showToast } from '../../lib/alerts';
 import {
   Button,
   Badge,
@@ -23,6 +23,8 @@ import {
   Pagination,
   ViewSwitcher,
   CardGridSkeleton,
+  BulkActionBar,
+  GridSelectCheckbox,
 } from '../../components/ui';
 import {
   Swords,
@@ -52,6 +54,33 @@ export default function MatchesPage() {
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [viewMode, setViewMode] = useState<'table' | 'grid'>('table');
   const [currentPage, setCurrentPage] = useState<number>(1);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [isBulkDeleting, setIsBulkDeleting] = useState<boolean>(false);
+
+  const toggleSelectOne = (id: string) => {
+    setSelectedIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedIds.length === 0) return;
+    const confirmed = await confirmBulkDelete(
+      selectedIds.length,
+      'Matches',
+      `You are about to permanently delete ${selectedIds.length} selected match(es) and their squad payment records.`
+    );
+    if (!confirmed) return;
+    setIsBulkDeleting(true);
+    try {
+      await Promise.all(selectedIds.map((id) => fetchApi(`/matches/${id}`, { method: 'DELETE' })));
+      showToast.success(`${selectedIds.length} match(es) deleted successfully.`);
+      setSelectedIds([]);
+      invalidateData();
+    } catch (err) {
+      showToast.error('Failed to delete selected matches.');
+    } finally {
+      setIsBulkDeleting(false);
+    }
+  };
   const pageSize = 15;
 
   // Modals
@@ -170,8 +199,8 @@ export default function MatchesPage() {
     invalidateData();
   };
 
-  const handleDeletePayment = async (paymentId: string) => {
-    const confirmed = await confirmDelete('player payment record', 'Remove this player from the match squad?');
+  const handleDeletePayment = async (paymentId: string, playerName?: string) => {
+    const confirmed = await confirmDelete(playerName ? `squad payment for "${playerName}"` : 'player payment record', 'Remove this player from the match squad?');
     if (!confirmed) return;
     try {
       const res = await fetchApi<{ success: boolean }>(`/payments/${paymentId}`, {
@@ -310,6 +339,16 @@ export default function MatchesPage() {
           </div>
         </div>
 
+        <BulkActionBar
+          selectedIds={selectedIds}
+          pageItemIds={paginatedMatches.map((m: any) => m._id)}
+          allItemIds={filteredMatches.map((m: any) => m._id)}
+          itemLabel="Matches"
+          onSelectChange={setSelectedIds}
+          onBulkDelete={handleBulkDelete}
+          deleting={isBulkDeleting}
+        />
+
         {/* Matches Display: Table View */}
         {viewMode === 'table' ? (
           <div>
@@ -317,6 +356,9 @@ export default function MatchesPage() {
               data={paginatedMatches}
               keyExtractor={(m) => m._id}
               onRowClick={(m) => router.push(`/matches/${m._id}`)}
+              selectable
+              selectedIds={selectedIds}
+              onSelectionChange={setSelectedIds}
               emptyMessage="No matches found matching your filters."
               columns={matchColumns}
             />
@@ -386,6 +428,11 @@ export default function MatchesPage() {
                     </div>
 
                     <div className="action-group">
+                      <GridSelectCheckbox
+                        checked={selectedIds.includes(m._id)}
+                        onChange={() => toggleSelectOne(m._id)}
+                        title={`Select match at ${m.venue}`}
+                      />
                       <Link href={`/matches/${m._id}`} passHref legacyBehavior>
                         <Button
                           variant="secondary"

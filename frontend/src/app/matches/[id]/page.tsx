@@ -107,8 +107,8 @@ export default function MatchDetailPage() {
     }
   };
 
-  const handleDeletePayment = async (paymentId: string) => {
-    const confirmed = await confirmDelete('player payment record from match');
+  const handleDeletePayment = async (paymentId: string, playerName?: string) => {
+    const confirmed = await confirmDelete(playerName ? `squad payment for "${playerName}"` : 'player payment record from match');
     if (!confirmed) return;
     try {
       const res = await fetchApi<{ success: boolean }>(`/payments/${paymentId}`, {
@@ -691,7 +691,7 @@ export default function MatchDetailPage() {
                           size="sm"
                           isIconOnly
                           icon={<Trash2 size={14} />}
-                          onClick={() => handleDeletePayment(p._id)}
+                          onClick={(e) => { e.stopPropagation(); handleDeletePayment(p._id, p.playerId?.name); }}
                           title="Remove Player from Match"
                         />
                       </div>

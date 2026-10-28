@@ -19,7 +19,9 @@ import {
   DataTable,
 } from '../../../components/ui';
 import { EditTeamModal } from '../../../components/EditTeamModal';
+import { ManageTeamPlayersModal } from '../../../components/ManageTeamPlayersModal';
 import {
+  Plus,
   Shield,
   Users,
   Swords,
@@ -29,6 +31,7 @@ import {
   Pencil,
   Trash2,
   MapPin,
+  Phone,
   Calendar,
   ExternalLink,
 } from '../../../components/icons';
@@ -43,6 +46,8 @@ export default function TeamProfilePage() {
 
   // Edit Team Modal state
   const [isEditOpen, setIsEditOpen] = useState<boolean>(false);
+  // Add Players Modal state
+  const [isAddPlayersOpen, setIsAddPlayersOpen] = useState<boolean>(false);
 
   const teamQuery = useQuery({
     queryKey: queryKeys.team(id),
@@ -64,6 +69,7 @@ export default function TeamProfilePage() {
   const invalidateTeam = () => {
     queryClient.invalidateQueries({ queryKey: queryKeys.team(id) });
     queryClient.invalidateQueries({ queryKey: queryKeys.teams() });
+    queryClient.invalidateQueries({ queryKey: queryKeys.players() });
     queryClient.invalidateQueries({ queryKey: ['dashboard'] });
   };
 
@@ -78,6 +84,22 @@ export default function TeamProfilePage() {
       }
     } catch (err) {
       showToast.error('Failed to delete team.');
+    }
+  };
+
+  const handleRemovePlayerFromTeam = async (playerId: string, playerName: string) => {
+    const confirmed = await confirmDelete(`"${playerName}" from ${data?.team?.name} squad`);
+    if (!confirmed) return;
+    try {
+      const res = await fetchApi<{ success: boolean }>(`/teams/${id}/players/${playerId}`, {
+        method: 'DELETE',
+      });
+      if (res.success) {
+        showToast.success(`${playerName} removed from ${data?.team?.name} squad.`);
+        invalidateTeam();
+      }
+    } catch (err: any) {
+      showToast.error(err?.message || 'Failed to remove player from team.');
     }
   };
 
@@ -128,6 +150,14 @@ export default function TeamProfilePage() {
           </Link>
 
           <div className="action-group">
+            <Button
+              variant="primary"
+              size="sm"
+              icon={<Plus size={14} />}
+              onClick={() => setIsAddPlayersOpen(true)}
+            >
+              Add Players to Team
+            </Button>
             <Button
               variant="secondary"
               size="sm"
@@ -200,6 +230,7 @@ export default function TeamProfilePage() {
                   style={{
                     display: 'flex',
                     alignItems: 'center',
+                    flexWrap: 'wrap',
                     gap: '16px',
                     fontSize: '13px',
                     color: 'var(--text-secondary)',
@@ -209,9 +240,20 @@ export default function TeamProfilePage() {
                     <MapPin size={14} color="var(--accent-blue)" />
                     {team.city || 'Karachi, Pakistan'}
                   </span>
-                  {team.captainId?.name && (
+                  {(team.phone || team.captain?.phone) && (
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <Phone size={13} color="var(--accent-green)" />
+                      <strong style={{ color: 'var(--text-primary)' }}>
+                        {team.phone || team.captain?.phone}
+                      </strong>
+                    </span>
+                  )}
+                  {(team.captain?.name || team.captainId?.name) && (
                     <span>
-                      Captain: <strong style={{ color: 'var(--text-primary)' }}>{team.captainId.name}</strong>
+                      Captain:{' '}
+                      <strong style={{ color: 'var(--text-primary)' }}>
+                        {team.captain?.name || team.captainId?.name}
+                      </strong>
                     </span>
                   )}
                   <span>
@@ -329,25 +371,42 @@ export default function TeamProfilePage() {
         {/* TAB 1: SQUAD ROSTER */}
         {activeTab === 'squad' && (
           <Card>
-            <h3
+            <div
               style={{
-                fontSize: '16px',
-                fontWeight: 700,
-                color: 'var(--text-primary)',
-                marginBottom: '16px',
                 display: 'flex',
+                justifyContent: 'space-between',
                 alignItems: 'center',
-                gap: '8px',
+                marginBottom: '16px',
               }}
             >
-              <Users size={16} color="var(--accent-blue)" />
-              Registered Squad Members ({players.length})
-            </h3>
+              <h3
+                style={{
+                  fontSize: '16px',
+                  fontWeight: 700,
+                  color: 'var(--text-primary)',
+                  margin: 0,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                }}
+              >
+                <Users size={16} color="var(--accent-blue)" />
+                Registered Squad Members ({players.length})
+              </h3>
+              <Button
+                variant="primary"
+                size="sm"
+                icon={<Plus size={14} />}
+                onClick={() => setIsAddPlayersOpen(true)}
+              >
+                Add Players
+              </Button>
+            </div>
 
             <DataTable
               data={players}
               keyExtractor={(p: any) => p._id}
-              emptyMessage="No players assigned to this team roster yet."
+              emptyMessage="No players assigned to this team roster yet. Click '+ Add Players' to build your squad."
               columns={[
                 {
                   header: 'Jersey #',
@@ -360,7 +419,7 @@ export default function TeamProfilePage() {
                 },
                 {
                   header: 'Player',
-                  width: '24%',
+                  width: '22%',
                   render: (p: any) => (
                     <Link
                       href={`/players/${p._id}`}
@@ -389,13 +448,13 @@ export default function TeamProfilePage() {
                 },
                 {
                   header: 'Batting Style',
-                  width: '16%',
+                  width: '15%',
                   style: { textTransform: 'capitalize', fontSize: '12px', color: 'var(--text-secondary)' },
                   render: (p: any) => p.battingStyle?.replace('_', ' ') || 'Right Hand',
                 },
                 {
                   header: 'Bowling Style',
-                  width: '16%',
+                  width: '15%',
                   style: { textTransform: 'capitalize', fontSize: '12px', color: 'var(--text-secondary)' },
                   render: (p: any) => p.bowlingStyle?.replace('_', ' ') || 'N/A',
                 },
@@ -407,14 +466,24 @@ export default function TeamProfilePage() {
                 },
                 {
                   header: 'Action',
-                  width: '8%',
+                  width: '12%',
                   align: 'right',
                   render: (p: any) => (
-                    <Link href={`/players/${p._id}`} passHref legacyBehavior>
-                      <Button variant="secondary" size="sm">
-                        View Profile
-                      </Button>
-                    </Link>
+                    <div className="action-group" style={{ justifyContent: 'flex-end' }}>
+                      <Link href={`/players/${p._id}`} passHref legacyBehavior>
+                        <Button variant="secondary" size="sm">
+                          Profile
+                        </Button>
+                      </Link>
+                      <Button
+                        variant="danger"
+                        size="sm"
+                        isIconOnly
+                        title="Remove from Team Squad"
+                        icon={<Trash2 size={13} />}
+                        onClick={() => handleRemovePlayerFromTeam(p._id, p.name)}
+                      />
+                    </div>
                   ),
                 },
               ]}
@@ -641,6 +710,15 @@ export default function TeamProfilePage() {
         isOpen={isEditOpen}
         onClose={() => setIsEditOpen(false)}
         team={team}
+        onSuccess={invalidateTeam}
+      />
+
+      {/* Add / Manage Team Players Modal */}
+      <ManageTeamPlayersModal
+        isOpen={isAddPlayersOpen}
+        onClose={() => setIsAddPlayersOpen(false)}
+        team={team}
+        existingSquadIds={players.map((p: any) => p._id)}
         onSuccess={invalidateTeam}
       />
     </>

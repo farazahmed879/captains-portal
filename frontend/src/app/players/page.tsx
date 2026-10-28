@@ -7,7 +7,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { queryKeys } from '../../lib/queryKeys';
 import { Header } from '../../components/Header';
 import { fetchApi } from '../../lib/api';
-import { confirmDelete, showToast } from '../../lib/alerts';
+import { confirmDelete, confirmBulkDelete, showToast } from '../../lib/alerts';
 import {
   Button,
   Badge,
@@ -21,6 +21,8 @@ import {
   Avatar,
   StatBadge,
   CardGridSkeleton,
+  BulkActionBar,
+  GridSelectCheckbox,
 } from '../../components/ui';
 import {
   PLAYER_ROLE_OPTIONS,
@@ -128,6 +130,29 @@ export default function PlayersPage() {
   const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'cleared'>('all');
   const [sortBy, setSortBy] = useState<'name' | 'due' | 'matches'>('name');
   const [currentPage, setCurrentPage] = useState<number>(1);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [isBulkDeleting, setIsBulkDeleting] = useState<boolean>(false);
+
+  const toggleSelectOne = (id: string) => {
+    setSelectedIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedIds.length === 0) return;
+    const confirmed = await confirmBulkDelete(selectedIds.length, 'Players');
+    if (!confirmed) return;
+    setIsBulkDeleting(true);
+    try {
+      await Promise.all(selectedIds.map((id) => fetchApi(`/players/${id}`, { method: 'DELETE' })));
+      showToast.success(`${selectedIds.length} player(s) deleted successfully.`);
+      setSelectedIds([]);
+      invalidateData();
+    } catch (err) {
+      showToast.error('Failed to delete selected players.');
+    } finally {
+      setIsBulkDeleting(false);
+    }
+  };
   const pageSize = 12;
 
   // Computed metrics
@@ -285,6 +310,17 @@ export default function PlayersPage() {
           </div>
         </div>
 
+        {/* Bulk Selection & Multi-Delete Bar */}
+        <BulkActionBar
+          selectedIds={selectedIds}
+          pageItemIds={paginatedPlayers.map((pl: any) => pl._id)}
+          allItemIds={displayedPlayers.map((pl: any) => pl._id)}
+          itemLabel="Players"
+          onSelectChange={setSelectedIds}
+          onBulkDelete={handleBulkDelete}
+          deleting={isBulkDeleting}
+        />
+
         {/* VIEW 1: HIGH-DENSITY TABLE VIEW */}
         {viewMode === 'table' && (
           <div>
@@ -293,6 +329,9 @@ export default function PlayersPage() {
               keyExtractor={(pl: any) => pl._id}
               emptyMessage="No players match the selected filters."
               onRowClick={(pl: any) => router.push(`/players/${pl._id}`)}
+              selectable
+              selectedIds={selectedIds}
+              onSelectionChange={setSelectedIds}
               columns={playerColumns}
             />
 
@@ -330,6 +369,11 @@ export default function PlayersPage() {
                   >
                     {/* Header: Avatar, Name, Role badge */}
                     <div className="player-card-header">
+                      <GridSelectCheckbox
+                        checked={selectedIds.includes(pl._id)}
+                        onChange={() => toggleSelectOne(pl._id)}
+                        title={`Select ${pl.name}`}
+                      />
                       <Avatar
                         name={pl.name}
                         label={pl.jerseyNumber !== undefined && pl.jerseyNumber !== null && pl.jerseyNumber !== '' ? `#${pl.jerseyNumber}` : undefined}
