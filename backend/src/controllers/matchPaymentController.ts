@@ -106,6 +106,31 @@ export const deletePayment = async (req: AuthRequest, res: Response): Promise<vo
   }
 };
 
+export const markAllMatchPaymentsPaid = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const { matchId } = req.params;
+    const payments = await MatchPayment.find({ matchId, tenantId: req.user?.tenantId });
+    if (!payments.length) {
+      res.status(404).json({ success: false, message: 'No squad payment records found for this match' });
+      return;
+    }
+
+    await Promise.all(
+      payments.map((p) => {
+        p.feePaid = p.feeAssigned;
+        p.paymentStatus = 'paid';
+        p.paymentDate = new Date();
+        p.paymentMethod = p.paymentMethod || 'cash';
+        return p.save();
+      })
+    );
+
+    res.json({ success: true, count: payments.length, message: 'All squad match fees marked as paid' });
+  } catch (error: any) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
 export const bulkUpdatePayments = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const { updates } = req.body;

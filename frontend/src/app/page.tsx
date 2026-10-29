@@ -38,45 +38,38 @@ export default function DashboardPage() {
   const [isReturnModalOpen, setIsReturnModalOpen] = useState<boolean>(false);
   const [returnTargetPlayer, setReturnTargetPlayer] = useState<any>(null);
 
-  // Dynamic selected widgets: Initially empty per user request or restored from localStorage
-  const [selectedWidgets, setSelectedWidgets] = useState<WidgetKey[]>(() => {
-    if (typeof window !== 'undefined') {
-      try {
-        const saved = localStorage.getItem(WIDGET_STORAGE_KEY);
-        if (saved) {
-          const parsed = JSON.parse(saved);
-          if (Array.isArray(parsed)) return parsed;
-        }
-      } catch (e) {
-        console.error('Failed to parse saved dashboard widgets', e);
-      }
-    }
-    return [];
-  });
+  // Dynamic selected widgets: Initially empty on first render to match SSR, then restored in useEffect
+  const [selectedWidgets, setSelectedWidgets] = useState<WidgetKey[]>([]);
 
   // Individual entity selection inside widgets (Player / Tournament / Team / Sponsor)
-  const [widgetSelections, setWidgetSelections] = useState<WidgetSelections>(() => {
-    if (typeof window !== 'undefined') {
-      try {
-        const saved = localStorage.getItem(WIDGET_SELECTIONS_KEY);
-        if (saved) {
-          const parsed = JSON.parse(saved);
-          return {
-            playerId: parsed.playerId || 'all',
-            tournamentId: parsed.tournamentId || 'all',
-            teamId: parsed.teamId || 'all',
-            sponsorId: parsed.sponsorId || 'all',
-          };
-        }
-      } catch (e) {}
-    }
-    return {
-      playerId: 'all',
-      tournamentId: 'all',
-      teamId: 'all',
-      sponsorId: 'all',
-    };
+  const [widgetSelections, setWidgetSelections] = useState<WidgetSelections>({
+    playerId: 'all',
+    tournamentId: 'all',
+    teamId: 'all',
+    sponsorId: 'all',
   });
+
+  useEffect(() => {
+    try {
+      const savedWidgets = localStorage.getItem(WIDGET_STORAGE_KEY);
+      if (savedWidgets) {
+        const parsed = JSON.parse(savedWidgets);
+        if (Array.isArray(parsed)) setSelectedWidgets(parsed);
+      }
+      const savedSelections = localStorage.getItem(WIDGET_SELECTIONS_KEY);
+      if (savedSelections) {
+        const parsed = JSON.parse(savedSelections);
+        setWidgetSelections({
+          playerId: parsed.playerId || 'all',
+          tournamentId: parsed.tournamentId || 'all',
+          teamId: parsed.teamId || 'all',
+          sponsorId: parsed.sponsorId || 'all',
+        });
+      }
+    } catch (e) {
+      // Ignore parse errors
+    }
+  }, []);
 
   // Autosave status indicator
   const [autosaveStatus, setAutosaveStatus] = useState<AutosaveStatus>('idle');

@@ -9,6 +9,7 @@ export interface ModalProps {
   maxWidth?: string;
   children: React.ReactNode;
   footer?: React.ReactNode;
+  closeOnOverlayClick?: boolean;
 }
 
 export const Modal: React.FC<ModalProps> = ({
@@ -19,6 +20,7 @@ export const Modal: React.FC<ModalProps> = ({
   maxWidth = '620px',
   children,
   footer,
+  closeOnOverlayClick = false,
 }) => {
   // Close on Escape key
   useEffect(() => {
@@ -38,7 +40,7 @@ export const Modal: React.FC<ModalProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
+    <div className="modal-overlay" onClick={closeOnOverlayClick ? onClose : undefined}>
       <div
         className="modal-content"
         style={{ maxWidth }}

@@ -9,7 +9,7 @@ import React, {
   useCallback,
 } from "react";
 import { createPortal } from "react-dom";
-import { ChevronDown, Check } from "lucide-react";
+import { ChevronDown, Check, Search, X } from "lucide-react";
 import styles from "./Select.module.css";
 
 export interface SelectOption {
@@ -26,6 +26,8 @@ export interface SelectProps
   options?: SelectOption[];
   placeholder?: string;
   size?: "sm" | "md" | "lg";
+  searchable?: boolean;
+  searchPlaceholder?: string;
 }
 
 export const Select = forwardRef<HTMLSelectElement, SelectProps>(
@@ -42,6 +44,8 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
       placeholder = "Select...",
       size = "md",
       disabled = false,
+      searchable,
+      searchPlaceholder = "Search...",
       value: controlledValue,
       defaultValue,
       onChange,
@@ -55,9 +59,11 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
     const internalSelectRef = useRef<HTMLSelectElement | null>(null);
     const triggerRef = useRef<HTMLButtonElement | null>(null);
     const dropdownRef = useRef<HTMLDivElement | null>(null);
+    const searchInputRef = useRef<HTMLInputElement | null>(null);
 
     const [isOpen, setIsOpen] = useState(false);
     const [mounted, setMounted] = useState(false);
+    const [searchQuery, setSearchQuery] = useState("");
     const [internalValue, setInternalValue] = useState<string>(() => {
       if (controlledValue !== undefined) return String(controlledValue);
       if (defaultValue !== undefined) return String(defaultValue);
@@ -91,6 +97,9 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
         } else if (forwardedRef) {
           (forwardedRef as React.MutableRefObject<HTMLSelectElement | null>).current = node;
         }
+        if (node && controlledValue === undefined && node.value) {
+          setInternalValue(node.value);
+        }
       },
       [forwardedRef]
     );
@@ -119,6 +128,23 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
       return [];
     }, [propOptions, children]);
 
+    // Determine if search input should be visible (explicit flag or auto-enabled when > 7 options)
+    const isSearchActive =
+      searchable === true || (searchable !== false && parsedOptions.length > 7);
+
+    // Filtered options based on search query
+    const filteredOptions = useMemo(() => {
+      if (!isSearchActive || !searchQuery.trim()) {
+        return parsedOptions;
+      }
+      const q = searchQuery.toLowerCase().trim();
+      return parsedOptions.filter(
+        (opt) =>
+          opt.label.toLowerCase().includes(q) ||
+          String(opt.value).toLowerCase().includes(q)
+      );
+    }, [parsedOptions, isSearchActive, searchQuery]);
+
     // Active selected value
     const currentValue =
       controlledValue !== undefined ? String(controlledValue) : internalValue;
@@ -134,7 +160,7 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
     const updateCoords = useCallback(() => {
       if (!triggerRef.current) return;
       const rect = triggerRef.current.getBoundingClientRect();
-      const dropdownMaxHeight = 250;
+      const dropdownMaxHeight = isSearchActive ? 310 : 250;
       const gap = 5;
 
       const spaceBelow = window.innerHeight - rect.bottom;
@@ -154,7 +180,7 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
         width: rect.width,
         isUpward,
       });
-    }, []);
+    }, [isSearchActive]);
 
     useEffect(() => {
       if (!isOpen) return;
@@ -172,6 +198,21 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
         window.removeEventListener("resize", handleScrollOrResize);
       };
     }, [isOpen, updateCoords]);
+
+    // Auto-focus search input when opening
+    useEffect(() => {
+      if (isOpen) {
+        setSearchQuery("");
+        if (isSearchActive) {
+          const timer = setTimeout(() => {
+            searchInputRef.current?.focus();
+          }, 60);
+          return () => clearTimeout(timer);
+        }
+      } else {
+        setSearchQuery("");
+      }
+    }, [isOpen, isSearchActive]);
 
     // Click outside to close
     useEffect(() => {
@@ -211,6 +252,7 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
       const stringVal = String(opt.value);
       setInternalValue(stringVal);
       setIsOpen(false);
+      setSearchQuery("");
 
       if (internalSelectRef.current) {
         internalSelectRef.current.value = stringVal;
@@ -234,45 +276,77 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
         }}
         role="listbox"
       >
-        {parsedOptions.length === 0 ? (
-          <div
-            style={{
-              padding: "10px 12px",
-              fontSize: "12.5px",
-              color: "#94a3b8",
-              textAlign: "center",
-            }}
-          >
-            No options available
-          </div>
-        ) : (
-          parsedOptions.map((opt) => {
-            const isSelected = String(opt.value) === String(currentValue);
-
-            return (
+        {/* Sticky Search Filter */}
+        {isSearchActive && (
+          <div className={styles.searchWrapper}>
+            <Search size={14} className={styles.searchIcon} />
+            <input
+              ref={searchInputRef}
+              type="text"
+              className={styles.searchInput}
+              placeholder={searchPlaceholder}
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              onClick={(e) => e.stopPropagation()}
+              onKeyDown={(e) => {
+                e.stopPropagation();
+                if (e.key === "Escape") {
+                  setIsOpen(false);
+                }
+              }}
+            />
+            {searchQuery && (
               <button
-                key={String(opt.value)}
                 type="button"
-                className={`${styles.dropdownItem} ${
-                  isSelected ? styles.selected : ""
-                }`}
-                disabled={opt.disabled}
-                onClick={() => handleSelectOption(opt)}
-                role="option"
-                aria-selected={isSelected}
+                className={styles.searchClearBtn}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setSearchQuery("");
+                  searchInputRef.current?.focus();
+                }}
+                title="Clear search"
               >
-                <span className={styles.itemLabel}>{opt.label}</span>
-                {isSelected && (
-                  <Check
-                    size={14}
-                    strokeWidth={2.6}
-                    className={styles.checkIcon}
-                  />
-                )}
+                <X size={12} />
               </button>
-            );
-          })
+            )}
+          </div>
         )}
+
+        {/* Scrollable Options List */}
+        <div className={styles.optionsList}>
+          {filteredOptions.length === 0 ? (
+            <div className={styles.noResults}>
+              {searchQuery ? `No results for "${searchQuery}"` : "No options available"}
+            </div>
+          ) : (
+            filteredOptions.map((opt) => {
+              const isSelected = String(opt.value) === String(currentValue);
+
+              return (
+                <button
+                  key={String(opt.value)}
+                  type="button"
+                  className={`${styles.dropdownItem} ${
+                    isSelected ? styles.selected : ""
+                  }`}
+                  disabled={opt.disabled}
+                  onClick={() => handleSelectOption(opt)}
+                  role="option"
+                  aria-selected={isSelected}
+                >
+                  <span className={styles.itemLabel}>{opt.label}</span>
+                  {isSelected && (
+                    <Check
+                      size={14}
+                      strokeWidth={2.6}
+                      className={styles.checkIcon}
+                    />
+                  )}
+                </button>
+              );
+            })
+          )}
+        </div>
       </div>
     );
 
@@ -360,4 +434,3 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
 
 Select.displayName = "Select";
 export const CustomSelect = Select;
-

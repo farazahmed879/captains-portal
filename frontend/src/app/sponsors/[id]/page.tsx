@@ -7,6 +7,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { queryKeys } from '../../../lib/queryKeys';
 import { SponsorTransaction } from '../../../types';
 import { getSponsorTransactionColumns } from '../../../columns';
+import { DetailPageSkeleton } from '../../../components/ui/Skeleton';
 import { Header } from '../../../components/Header';
 import { StatCard } from '../../../components/StatCard';
 import { fetchApi } from '../../../lib/api';
@@ -20,6 +21,7 @@ import {
   Modal,
   Card,
   DataTable,
+
 } from '../../../components/ui';
 import {
   Handshake,
@@ -131,8 +133,9 @@ export default function SponsorDetailPage() {
 
   if (loading) {
     return (
-      <div style={{ padding: '60px', textAlign: 'center', color: 'var(--text-secondary)' }}>
-        Loading Sponsor Profile...
+      <div>
+        <Header title="Sponsor Profile" subtitle="Sponsorship grants, payouts & transaction ledger" />
+        <div className="content-body"><DetailPageSkeleton /></div>
       </div>
     );
   }

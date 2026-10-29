@@ -43,11 +43,17 @@ export class PlayerService {
           })
         );
 
+        const lastPayment = payments[0];
+        const lastMatchDate = lastPayment
+          ? lastPayment.paymentDate || lastPayment.createdAt || null
+          : null;
+
         return {
           ...p,
           _id: p.id,
           teamIds: teams.filter(Boolean),
           matchesPlayed: payments.length,
+          lastMatchDate,
           totalFeeAssigned,
           totalFeePaid,
           totalReturned,

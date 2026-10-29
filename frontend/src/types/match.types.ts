@@ -59,6 +59,7 @@ export interface CreateMatchFormValues {
 }
 
 export interface EditMatchFormValues {
+  tournamentId?: string;
   opponentTeam: string;
   venue: string;
   matchDate: string;

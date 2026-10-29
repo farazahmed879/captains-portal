@@ -39,7 +39,7 @@ const navItems = [
     gradient: "linear-gradient(145deg, #38bdf8, #2563eb)",
   },
   {
-    name: "My Teams",
+    name: "Teams",
     href: "/teams",
     icon: ShieldAlertIcon,
     gradient: "linear-gradient(145deg, #818cf8, #7c3aed)",
@@ -133,9 +133,9 @@ export const Dock: React.FC = () => {
   // Update layout data-attributes on <html> for zero-layout-shift responsive padding
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify({ position, autoHide }));
-    if (pathname === '/login' || pathname === '/register') {
-      document.documentElement.dataset.dock = 'none';
-      document.documentElement.dataset.dockAutohide = 'true';
+    if (pathname === "/login" || pathname === "/register") {
+      document.documentElement.dataset.dock = "none";
+      document.documentElement.dataset.dockAutohide = "true";
     } else {
       document.documentElement.dataset.dock = effectivePos;
       document.documentElement.dataset.dockAutohide = String(autoHide);

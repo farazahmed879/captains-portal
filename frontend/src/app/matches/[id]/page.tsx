@@ -19,7 +19,9 @@ import {
   Modal,
   Card,
   DataTable,
+
 } from '../../../components/ui';
+import { DetailPageSkeleton } from '../../../components/ui/Skeleton';
 import { EditMatchModal } from '../../../components/EditMatchModal';
 import { EditPaymentModal } from '../../../components/EditPaymentModal';
 import { AssignSquadFeeForm } from '../../../components/AssignSquadFeeForm';
@@ -107,6 +109,21 @@ export default function MatchDetailPage() {
     }
   };
 
+  const handleMarkAllPaid = async () => {
+    try {
+      const res = await fetchApi<{ success: boolean; message?: string }>(
+        `/payments/matches/${id}/mark-all-paid`,
+        { method: 'PUT' }
+      );
+      if (res.success) {
+        showToast.success('All squad match fees marked as paid!');
+        invalidateData();
+      }
+    } catch (err: any) {
+      showToast.error(err?.message || 'Failed to update payments.');
+    }
+  };
+
   const handleDeletePayment = async (paymentId: string, playerName?: string) => {
     const confirmed = await confirmDelete(playerName ? `squad payment for "${playerName}"` : 'player payment record from match');
     if (!confirmed) return;
@@ -138,8 +155,9 @@ export default function MatchDetailPage() {
 
   if (loading) {
     return (
-      <div style={{ padding: '60px', textAlign: 'center', color: 'var(--text-secondary)' }}>
-        Loading Match Details...
+      <div>
+        <Header title="Match Details" subtitle="Match scorecard, itemized ground expenses & squad collection ledger" />
+        <div className="content-body"><DetailPageSkeleton /></div>
       </div>
     );
   }
@@ -186,6 +204,17 @@ export default function MatchDetailPage() {
           </Link>
 
           <div className="action-group">
+            {totalPending > 0 && (
+              <Button
+                variant="success"
+                size="sm"
+                icon={<CheckCircle2 size={13} />}
+                onClick={handleMarkAllPaid}
+                title="Mark all pending squad match fees as paid"
+              >
+                Match Fee Paid
+              </Button>
+            )}
             <Button
               variant="secondary"
               size="sm"
@@ -550,6 +579,17 @@ export default function MatchDetailPage() {
               </div>
 
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                {totalPending > 0 && (
+                  <Button
+                    variant="success"
+                    size="sm"
+                    icon={<CheckCircle2 size={13} />}
+                    onClick={handleMarkAllPaid}
+                    title="Mark all pending squad match fees as paid"
+                  >
+                    <span>Match Fee Paid (Rs. {fNum(totalPending)})</span>
+                  </Button>
+                )}
                 <Button
                   variant={showAddPlayerPayment ? 'secondary' : 'primary'}
                   size="sm"
@@ -567,6 +607,7 @@ export default function MatchDetailPage() {
                 matchId={id}
                 defaultFee={matchData?.perPlayerFee || 1000}
                 players={players}
+                excludePlayerIds={payments.map((p: any) => p.playerId?._id || p.playerId).filter(Boolean)}
                 onSuccess={() => {
                   setShowAddPlayerPayment(false);
                   invalidateData();

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { LogOut, LogIn } from 'lucide-react';
 import { Button, Avatar } from '../ui';
@@ -17,8 +17,13 @@ export const TopbarUserMenu: React.FC<TopbarUserMenuProps> = ({
   onLogout,
 }) => {
   const router = useRouter();
+  const [mounted, setMounted] = useState(false);
 
-  if (!isAuthenticated) {
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!mounted || !isAuthenticated) {
     return (
       <Button
         variant="secondary"

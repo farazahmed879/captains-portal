@@ -15,5 +15,12 @@ export * from './Modal';
 export * from './ConfirmModal';
 export * from './Pagination';
 export * from './ViewSwitcher';
-export * from './Skeleton';
+export {
+  Skeleton,
+  MiniStatsSkeleton,
+  DashboardWidgetSkeleton,
+  TableSkeletonRows,
+  CardGridSkeleton,
+  DetailPageSkeleton,
+} from './Skeleton';
 export * from '../icons';

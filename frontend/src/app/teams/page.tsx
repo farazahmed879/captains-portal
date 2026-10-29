@@ -90,23 +90,53 @@ export default function TeamsPage() {
     queryFn: () => fetchApi<{ success: boolean; teams: any[] }>("/teams"),
   });
 
-  const teams = teamsQuery.data?.teams || [];
+  const matchesQuery = useQuery({
+    queryKey: queryKeys.matches(),
+    queryFn: () => fetchApi<{ success: boolean; matches: any[] }>("/matches"),
+  });
+
+  const rawTeams = teamsQuery.data?.teams || [];
+  const allMatches = matchesQuery.data?.matches || [];
   const loading = teamsQuery.isLoading;
 
   const getTeamType = (t: any): "my_team" | "opponent" => {
-    if (t.teamType === "my_team" || t.teamType === "opponent") return t.teamType;
+    if (t.teamType === "my_team" || t.teamType === "opponent")
+      return t.teamType;
     return (t.name || "").toLowerCase().includes("gulzar")
       ? "my_team"
       : "opponent";
   };
 
+  // Enrich teams with live match counts against our team so Opponent Teams tab updates immediately
+  const teams = rawTeams.map((t: any) => {
+    const type = getTeamType(t);
+    if (type === "my_team") return t;
+    const normName = (t.name || "").trim().toLowerCase();
+    const matchedList = allMatches.filter(
+      (m: any) =>
+        m.teamId === t._id ||
+        (m.opponentTeam || "").trim().toLowerCase() === normName,
+    );
+    const liveMatchCount = Math.max(t.matchCount || 0, matchedList.length);
+    return {
+      ...t,
+      matchCount: liveMatchCount,
+      hasPlayedMatch: Boolean(t.hasPlayedMatch || liveMatchCount > 0),
+    };
+  });
+
+  const hasPlayedAgainstMyTeam = (t: any): boolean => {
+    return Boolean(t.hasPlayedMatch || (t.matchCount || 0) > 0);
+  };
+
   const myTeamsCount = teams.filter((t) => getTeamType(t) === "my_team").length;
   const opponentTeamsCount = teams.filter(
-    (t) => getTeamType(t) === "opponent",
+    (t) => getTeamType(t) === "opponent" && hasPlayedAgainstMyTeam(t),
   ).length;
 
   const invalidateTeams = () => {
     queryClient.invalidateQueries({ queryKey: queryKeys.teams() });
+    queryClient.invalidateQueries({ queryKey: queryKeys.matches() });
     queryClient.invalidateQueries({ queryKey: queryKeys.players() });
     queryClient.invalidateQueries({ queryKey: ["dashboard"] });
   };
@@ -135,7 +165,12 @@ export default function TeamsPage() {
   const filteredTeams = teams.filter((t) => {
     const type = getTeamType(t);
     if (teamFilter === "my_team" && type !== "my_team") return false;
-    if (teamFilter === "opponent" && type !== "opponent") return false;
+    if (
+      teamFilter === "opponent" &&
+      (type !== "opponent" || !hasPlayedAgainstMyTeam(t))
+    ) {
+      return false;
+    }
 
     const q = searchQuery.toLowerCase().trim();
     if (!q) return true;
@@ -327,8 +362,13 @@ export default function TeamsPage() {
             <Card style={{ padding: 0, overflow: "hidden" }}>
               <DataTable
                 data={paginatedTeams}
+                loading={loading}
                 keyExtractor={(team: any) => team._id}
-                emptyMessage="No teams found matching filter."
+                emptyMessage={
+                  teamFilter === "opponent"
+                    ? "No opponent teams yet — a team appears here once your team plays or schedules at least 1 match against them. Check 'All Teams' to view all teams."
+                    : "No teams found matching filter."
+                }
                 emptyIcon={<Shield size={28} />}
                 onRowClick={(team: any) => router.push(`/teams/${team._id}`)}
                 selectable
@@ -358,6 +398,8 @@ export default function TeamsPage() {
                     width: "24%",
                     render: (team: any) => {
                       const isMyTeam = getTeamType(team) === "my_team";
+                      const isPlayedOpponent =
+                        !isMyTeam && hasPlayedAgainstMyTeam(team);
                       return (
                         <div>
                           <div
@@ -386,10 +428,20 @@ export default function TeamsPage() {
                               />
                             </Link>
                             <Badge
-                              variant={isMyTeam ? "success" : "secondary"}
+                              variant={
+                                isMyTeam
+                                  ? "success"
+                                  : isPlayedOpponent
+                                    ? "warning"
+                                    : "secondary"
+                              }
                               style={{ fontSize: "10px", padding: "1px 6px" }}
                             >
-                              {isMyTeam ? "MY TEAM" : "OPPONENT"}
+                              {isMyTeam
+                                ? "MY TEAM"
+                                : isPlayedOpponent
+                                  ? "OPPONENT"
+                                  : "TEAM"}
                             </Badge>
                           </div>
                           {team.description && (

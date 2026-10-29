@@ -43,38 +43,13 @@ const AuthContext = createContext<AuthContextType>({
 });
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<UserSession | null>(() => {
-    if (typeof window !== 'undefined') {
-      try {
-        const savedUser = localStorage.getItem('cp_user');
-        if (savedUser) {
-          const parsed = JSON.parse(savedUser);
-          return parsed;
-        }
-      } catch {}
-    }
-    return null;
-  });
-
-  const [token, setToken] = useState<string | null>(() => {
-    if (typeof window !== 'undefined') {
-      try {
-        return localStorage.getItem('token');
-      } catch {}
-    }
-    return null;
-  });
-
-  const [isLoading, setIsLoading] = useState(() => {
-    if (typeof window !== 'undefined') {
-      return !localStorage.getItem('token');
-    }
-    return false;
-  });
+  const [user, setUser] = useState<UserSession | null>(null);
+  const [token, setToken] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
 
   const router = useRouter();
 
-  // Load / verify session from localStorage on mount
+  // Load / verify session from localStorage on mount (prevents SSR hydration mismatch)
   useEffect(() => {
     try {
       const savedToken = localStorage.getItem('token');
@@ -82,7 +57,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       if (savedToken) {
         setToken(savedToken);
-        if (savedUser && !user) {
+        if (savedUser) {
           try {
             const parsed = JSON.parse(savedUser);
             setUser(parsed);

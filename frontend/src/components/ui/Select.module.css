@@ -35,7 +35,6 @@
   opacity: 0;
   pointer-events: none;
   z-index: -1;
-  tabindex: -1;
 }
 
 /* Custom Interactive Trigger */
@@ -140,15 +139,13 @@
     0 18px 40px -8px rgba(15, 23, 42, 0.18),
     0 6px 16px -4px rgba(15, 23, 42, 0.08),
     0 0 0 1px rgba(15, 23, 42, 0.04);
-  padding: 5px;
+  padding: 6px;
   z-index: 999999;
-  max-height: 250px;
-  overflow-y: auto;
-  overscroll-behavior: contain;
+  max-height: 310px;
+  overflow: hidden;
   animation: dropdownFadeIn 0.16s cubic-bezier(0.16, 1, 0.3, 1);
   display: flex;
   flex-direction: column;
-  gap: 2px;
 }
 
 @keyframes dropdownFadeIn {
@@ -162,20 +159,94 @@
   }
 }
 
-.dropdown::-webkit-scrollbar {
+/* Search input inside dropdown */
+.searchWrapper {
+  display: flex;
+  align-items: center;
+  position: relative;
+  padding: 6px 10px;
+  background: #f8fafc;
+  border-radius: 8px;
+  margin-bottom: 6px;
+  border: 1px solid #e2e8f0;
+  transition: border-color 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
+  flex-shrink: 0;
+}
+
+.searchWrapper:focus-within {
+  border-color: #0284c7;
+  background: #ffffff;
+  box-shadow: 0 0 0 2px rgba(2, 132, 199, 0.12);
+}
+
+.searchIcon {
+  color: #94a3b8;
+  margin-right: 7px;
+  flex-shrink: 0;
+}
+
+.searchInput {
+  flex: 1;
+  border: none;
+  background: transparent;
+  outline: none;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: #0f172a;
+  padding: 0;
+  min-width: 0;
+}
+
+.searchInput::placeholder {
+  color: #94a3b8;
+}
+
+.searchClearBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: none;
+  background: #e2e8f0;
+  color: #64748b;
+  cursor: pointer;
+  padding: 0;
+  margin-left: 5px;
+  flex-shrink: 0;
+  transition: all 0.14s ease;
+}
+
+.searchClearBtn:hover {
+  background: #cbd5e1;
+  color: #0f172a;
+}
+
+/* Scrollable options list */
+.optionsList {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-height: 240px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.optionsList::-webkit-scrollbar {
   width: 5px;
 }
 
-.dropdown::-webkit-scrollbar-track {
+.optionsList::-webkit-scrollbar-track {
   background: transparent;
 }
 
-.dropdown::-webkit-scrollbar-thumb {
+.optionsList::-webkit-scrollbar-thumb {
   background: #e2e8f0;
   border-radius: 999px;
 }
 
-.dropdown::-webkit-scrollbar-thumb:hover {
+.optionsList::-webkit-scrollbar-thumb:hover {
   background: #cbd5e1;
 }
 
@@ -229,6 +300,14 @@
 .checkIcon {
   color: #0284c7;
   flex-shrink: 0;
+}
+
+.noResults {
+  padding: 16px 12px;
+  font-size: 12.5px;
+  color: #94a3b8;
+  text-align: center;
+  font-weight: 500;
 }
 
 /* Helper & Error Text */

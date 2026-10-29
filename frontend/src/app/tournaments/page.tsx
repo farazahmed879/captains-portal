@@ -358,7 +358,7 @@ export default function TournamentsPage() {
                     className="r-grid-4"
                     style={{
                       display: 'grid',
-                      gridTemplateColumns: 'repeat(4, 1fr)',
+                      gridTemplateColumns: 'repeat(auto-fit, minmax(110px, 1fr))',
                       gap: '10px',
                       padding: '12px',
                       background: '#f8fafc',
@@ -368,6 +368,14 @@ export default function TournamentsPage() {
                       marginBottom: '14px',
                     }}
                   >
+                    <div>
+                      <div style={{ fontSize: '11px', color: 'var(--text-secondary)', textTransform: 'uppercase' }}>
+                        Squad Fees
+                      </div>
+                      <div style={{ fontSize: '15px', fontWeight: 800, color: 'var(--accent-green)' }}>
+                        Rs. {fNum(trn.financials?.totalFeesCollected || 0)}
+                      </div>
+                    </div>
                     <div>
                       <div style={{ fontSize: '11px', color: 'var(--text-secondary)', textTransform: 'uppercase' }}>
                         Entry Fee
@@ -388,7 +396,7 @@ export default function TournamentsPage() {
                       <div style={{ fontSize: '11px', color: 'var(--text-secondary)', textTransform: 'uppercase' }}>
                         Prize Won
                       </div>
-                      <div style={{ fontSize: '15px', fontWeight: 800, color: 'var(--accent-green)' }}>
+                      <div style={{ fontSize: '15px', fontWeight: 800, color: 'var(--accent-amber)' }}>
                         Rs. {fNum(trn.financials?.actualWinningPrizeWon || trn.actualWinningPrizeWon)}
                       </div>
                     </div>

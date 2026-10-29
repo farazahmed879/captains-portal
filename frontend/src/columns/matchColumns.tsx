@@ -39,6 +39,44 @@ export const getMatchColumns = ({
     ),
   },
   {
+    header: 'Team vs Team',
+    render: (m: any) => {
+      const myTeamName = m.teamId?.name || (typeof m.teamId === 'string' ? m.teamId : 'Our Team');
+      const oppName = m.opponentTeam || 'Opponent';
+      return (
+        <div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+            <span style={{ fontWeight: 700, fontSize: '13px', color: '#0f172a' }}>
+              {myTeamName}
+            </span>
+            <span
+              style={{
+                fontSize: '10px',
+                fontWeight: 800,
+                padding: '1px 5px',
+                borderRadius: '4px',
+                background: '#eff6ff',
+                color: '#0284c7',
+                border: '1px solid #bfdbfe',
+                letterSpacing: '0.04em',
+              }}
+            >
+              VS
+            </span>
+            <span style={{ fontWeight: 700, fontSize: '13px', color: '#0284c7' }}>
+              {oppName}
+            </span>
+          </div>
+          {m.teamId?.shortName && (
+            <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>
+              {m.teamId.shortName}
+            </div>
+          )}
+        </div>
+      );
+    },
+  },
+  {
     header: 'Date & Venue',
     render: (m: any) => (
       <div>
@@ -69,8 +107,6 @@ export const getMatchColumns = ({
         >
           <Calendar size={12} />
           <span>{new Date(m.matchDate).toLocaleDateString()}</span>
-          <span>•</span>
-          <span>{m.opponentTeam}</span>
         </div>
       </div>
     ),

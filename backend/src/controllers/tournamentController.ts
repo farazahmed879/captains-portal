@@ -26,19 +26,27 @@ export const getTournaments = async (req: AuthRequest, res: Response): Promise<v
         const expenses = await Expense.find({ tournamentId: tournament._id });
         const sponsors = await Sponsor.find({ tournamentId: tournament._id });
 
+        const matchIds = matches.map((m) => m._id);
+        const matchPayments = await MatchPayment.find({ matchId: { $in: matchIds } });
+
         const matchesPlayed = matches.length;
         const matchesWon = matches.filter((m) => m.result === 'won').length;
         const matchesLost = matches.filter((m) => m.result === 'lost').length;
 
-        // Investment: Entry fee + tournament dedicated expenses
+        // Squad Fees:
+        const totalFeesCollected = matchPayments.reduce((acc, p) => acc + (p.feePaid || 0), 0);
+        const totalFeesAssigned = matchPayments.reduce((acc, p) => acc + (p.feeAssigned || 0), 0);
+        const totalFeesPending = Math.max(0, totalFeesAssigned - totalFeesCollected);
+
+        // Investment: Entry fee + tournament dedicated expenses + match ground costs
         const tournamentExpensesSum = expenses.reduce((acc, e) => acc + (e.amount || 0), 0);
         const matchExpensesSum = matches.reduce((acc, m) => acc + (m.totalMatchExpense || 0), 0);
         const totalInvested = (tournament.entryFee || 0) + tournamentExpensesSum + matchExpensesSum;
 
-        // Returns: Winning prizes won + Sponsor funds
+        // Returns: Winning prizes won + Sponsor funds + Squad fees collected
         const sponsorFunds = sponsors.reduce((acc, s) => acc + (s.amountInvested || 0), 0);
         const matchPrizeWon = matches.reduce((acc, m) => acc + (m.winningPrizeMoney || 0), 0);
-        const totalReturns = (tournament.actualWinningPrizeWon || 0) + sponsorFunds + matchPrizeWon;
+        const totalReturns = (tournament.actualWinningPrizeWon || 0) + sponsorFunds + matchPrizeWon + totalFeesCollected;
 
         const netPnl = totalReturns - totalInvested;
 
@@ -53,6 +61,9 @@ export const getTournaments = async (req: AuthRequest, res: Response): Promise<v
             matchExpenses: matchExpensesSum,
             totalInvested,
             sponsorFunds,
+            totalFeesCollected,
+            totalFeesAssigned,
+            totalFeesPending,
             actualWinningPrizeWon: tournament.actualWinningPrizeWon || 0,
             matchPrizeWon,
             totalReturns,
@@ -78,17 +89,49 @@ export const getTournamentById = async (req: AuthRequest, res: Response): Promis
     }
 
     const matches = await Match.find({ tournamentId: tournament._id })
+      .populate('teamId', 'name shortName primaryColor')
       .populate('momPlayerId', 'name')
       .sort({ matchDate: 1 });
     const expenses = await Expense.find({ tournamentId: tournament._id }).sort({ expenseDate: -1 });
     const sponsors = await Sponsor.find({ tournamentId: tournament._id }).sort({ investmentDate: -1 });
 
+    const matchIds = matches.map((m) => m._id);
+    const payments = await MatchPayment.find({ matchId: { $in: matchIds } })
+      .populate('playerId', 'name phone jerseyNumber role');
+
+    const enrichedMatches = matches.map((m) => {
+      const mPayments = payments.filter((p) => String(p.matchId) === String(m._id));
+      const totalCollected = mPayments.reduce((sum, p) => sum + (p.feePaid || 0), 0);
+      const totalAssigned = mPayments.reduce((sum, p) => sum + (p.feeAssigned || 0), 0);
+      const pendingFee = Math.max(0, totalAssigned - totalCollected);
+      const paidPlayersCount = mPayments.filter((p) => p.paymentStatus === 'paid').length;
+
+      return {
+        ...m.toObject(),
+        totalCollected,
+        totalAssigned,
+        pendingFee,
+        paidPlayersCount,
+        totalPlayers: mPayments.length,
+        payments: mPayments,
+      };
+    });
+
+    const totalFeesCollected = payments.reduce((acc, p) => acc + (p.feePaid || 0), 0);
+    const totalFeesAssigned = payments.reduce((acc, p) => acc + (p.feeAssigned || 0), 0);
+    const totalFeesPending = Math.max(0, totalFeesAssigned - totalFeesCollected);
+
     res.json({
       success: true,
       tournament,
-      matches,
+      matches: enrichedMatches,
       expenses,
       sponsors,
+      financials: {
+        totalFeesCollected,
+        totalFeesAssigned,
+        totalFeesPending,
+      },
     });
   } catch (error: any) {
     res.status(500).json({ success: false, message: error.message });

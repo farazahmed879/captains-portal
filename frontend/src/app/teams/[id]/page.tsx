@@ -18,6 +18,7 @@ import {
   Card,
   DataTable,
 } from '../../../components/ui';
+import { DetailPageSkeleton } from '../../../components/ui/Skeleton';
 import { EditTeamModal } from '../../../components/EditTeamModal';
 import { ManageTeamPlayersModal } from '../../../components/ManageTeamPlayersModal';
 import {
@@ -107,9 +108,15 @@ export default function TeamProfilePage() {
 
   if (loading) {
     return (
-      <div style={{ padding: '60px', textAlign: 'center', color: 'var(--text-secondary)' }}>
-        Loading Team Profile...
-      </div>
+      <>
+        <Header
+          title="Team Profile"
+          subtitle="Complete Team Franchise Details, Squad Roster, Match Record & Tournaments"
+        />
+        <div className="content-body">
+          <DetailPageSkeleton />
+        </div>
+      </>
     );
   }
 

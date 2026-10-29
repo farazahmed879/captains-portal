@@ -1,3 +1,5 @@
+'use client';
+
 import React from 'react';
 import { createRoot } from 'react-dom/client';
 import Swal, { SweetAlertIcon, SweetAlertOptions } from 'sweetalert2';
@@ -28,48 +30,60 @@ const modalBaseOptions: SweetAlertOptions = {
 
 /**
  * Toast / Snackbar Notification Configuration
- * Automatically auto-dismisses after 3 seconds at top-right
+ * Lazy-initialized in browser only to prevent SSR bundle crashes
  */
-const ToastMixin = Swal.mixin({
-  toast: true,
-  position: 'top-end',
-  showConfirmButton: false,
-  timer: 3200,
-  timerProgressBar: true,
-  customClass: {
-    popup: 'cp-toast-popup',
-    title: 'cp-toast-title',
-  },
-  didOpen: (toast) => {
-    toast.addEventListener('mouseenter', Swal.stopTimer);
-    toast.addEventListener('mouseleave', Swal.resumeTimer);
-  },
-});
+let toastMixinInstance: any = null;
+
+const getToastMixin = () => {
+  if (typeof window === 'undefined') return null;
+  if (!toastMixinInstance) {
+    toastMixinInstance = Swal.mixin({
+      toast: true,
+      position: 'top-end',
+      showConfirmButton: false,
+      timer: 3200,
+      timerProgressBar: true,
+      customClass: {
+        popup: 'cp-toast-popup',
+        title: 'cp-toast-title',
+      },
+      didOpen: (toast) => {
+        toast.addEventListener('mouseenter', Swal.stopTimer);
+        toast.addEventListener('mouseleave', Swal.resumeTimer);
+      },
+    });
+  }
+  return toastMixinInstance;
+};
 
 export const showToast = {
   success: (message: string, title?: string) => {
-    return ToastMixin.fire({
+    if (typeof window === 'undefined') return Promise.resolve(null);
+    return getToastMixin()?.fire({
       icon: 'success',
       title: title || message,
       text: title ? message : undefined,
     });
   },
   error: (message: string, title?: string) => {
-    return ToastMixin.fire({
+    if (typeof window === 'undefined') return Promise.resolve(null);
+    return getToastMixin()?.fire({
       icon: 'error',
       title: title || message,
       text: title ? message : undefined,
     });
   },
   warning: (message: string, title?: string) => {
-    return ToastMixin.fire({
+    if (typeof window === 'undefined') return Promise.resolve(null);
+    return getToastMixin()?.fire({
       icon: 'warning',
       title: title || message,
       text: title ? message : undefined,
     });
   },
   info: (message: string, title?: string) => {
-    return ToastMixin.fire({
+    if (typeof window === 'undefined') return Promise.resolve(null);
+    return getToastMixin()?.fire({
       icon: 'info',
       title: title || message,
       text: title ? message : undefined,
@@ -214,6 +228,7 @@ export async function confirmDuesClear(
  */
 export const showAlert = {
   success: (title: string, text?: string) => {
+    if (typeof window === 'undefined') return Promise.resolve(null);
     return Swal.fire({
       ...modalBaseOptions,
       icon: 'success',
@@ -229,6 +244,7 @@ export const showAlert = {
     });
   },
   error: (title: string, text?: string) => {
+    if (typeof window === 'undefined') return Promise.resolve(null);
     return Swal.fire({
       ...modalBaseOptions,
       icon: 'error',
@@ -244,6 +260,7 @@ export const showAlert = {
     });
   },
   warning: (title: string, text?: string) => {
+    if (typeof window === 'undefined') return Promise.resolve(null);
     return Swal.fire({
       ...modalBaseOptions,
       icon: 'warning',
@@ -259,6 +276,7 @@ export const showAlert = {
     });
   },
   info: (title: string, text?: string) => {
+    if (typeof window === 'undefined') return Promise.resolve(null);
     return Swal.fire({
       ...modalBaseOptions,
       icon: 'info',

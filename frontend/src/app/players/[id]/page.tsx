@@ -44,6 +44,7 @@ import {
   Clock,
   Sparkles,
 } from '../../../components/icons';
+import { DetailPageSkeleton } from '../../../components/ui/Skeleton';
 import { PlayerReturnModal } from '../../../components/PlayerReturnModal';
 import { EditPlayerModal } from '../../../components/EditPlayerModal';
 import { EditPaymentModal } from '../../../components/EditPaymentModal';
@@ -386,9 +387,15 @@ export default function PlayerProfilePage() {
 
   if (loading) {
     return (
-      <div style={{ padding: '60px', textAlign: 'center', color: 'var(--text-secondary)' }}>
-        Loading Player Profile...
-      </div>
+      <>
+        <Header
+          title="Player Profile & Ledger"
+          subtitle="Match fee history, dues collection, and performance records"
+        />
+        <div className="content-body">
+          <DetailPageSkeleton />
+        </div>
+      </>
     );
   }
 

@@ -112,9 +112,6 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
     <div
       className="modal-overlay"
       style={{ zIndex: 1200 }}
-      onClick={() => {
-        if (!isBusy) onClose();
-      }}
     >
       <div
         className="modal-content"
