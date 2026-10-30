@@ -154,7 +154,6 @@ export const updateSponsor = async (req: AuthRequest, res: Response): Promise<vo
   try {
     const { id } = req.params;
 
-    // Money fields are owned by the ledger – use the /transactions endpoints to change them.
     const {
       amountInvested,
       returnsPaid,
@@ -166,16 +165,54 @@ export const updateSponsor = async (req: AuthRequest, res: Response): Promise<vo
       ...profileUpdates
     } = req.body;
 
-    const sponsor = await Sponsor.findOneAndUpdate(
-      { _id: id, tenantId: req.user?.tenantId },
-      profileUpdates,
-      { new: true, runValidators: true }
-    );
+    // Sanitize tournamentId: empty string -> null
+    if (profileUpdates.tournamentId === '' || profileUpdates.tournamentId === 'null') {
+      profileUpdates.tournamentId = null;
+    }
+
+    // Fallback sponsorName to companyName if left blank
+    if (!profileUpdates.sponsorName && profileUpdates.companyName) {
+      profileUpdates.sponsorName = profileUpdates.companyName;
+    }
+
+    let sponsor = await Sponsor.findOne({ _id: id, tenantId: req.user?.tenantId });
     if (!sponsor) {
       res.status(404).json({ success: false, message: 'Sponsor not found' });
       return;
     }
-    res.json({ success: true, sponsor });
+
+    if (sponsor.transactions.length === 0) {
+      await ensureLedger(sponsor);
+      sponsor = (await Sponsor.findOne({ _id: id, tenantId: req.user?.tenantId }))!;
+    }
+
+    // Apply profile updates
+    sponsor.set(profileUpdates);
+
+    // If amountInvested was updated via edit form, synchronize the primary investment in ledger
+    if (req.body.amountInvested !== undefined && req.body.amountInvested !== '') {
+      const newAmount = Number(req.body.amountInvested);
+      if (!isNaN(newAmount) && newAmount >= 0) {
+        const initialTx = sponsor.transactions.find((t: any) => t.type === 'investment');
+        if (initialTx) {
+          initialTx.amount = newAmount;
+        } else if (newAmount > 0) {
+          sponsor.transactions.push({
+            type: 'investment',
+            amount: newAmount,
+            date: sponsor.investmentDate || new Date(),
+            method: 'cash',
+            tournamentId: sponsor.tournamentId,
+            notes: 'Initial sponsorship investment',
+          } as any);
+        }
+        sponsor.recalculateTotals();
+      }
+    }
+
+    await sponsor.save();
+    const populated = await populateSponsor(id, req.user?.tenantId);
+    res.json({ success: true, sponsor: populated });
   } catch (error: any) {
     res.status(500).json({ success: false, message: error.message });
   }
@@ -276,10 +313,15 @@ export const updateSponsorTransaction = async (req: AuthRequest, res: Response):
       return;
     }
 
-    const sponsor = await Sponsor.findOne({ _id: id, tenantId: req.user?.tenantId });
+    let sponsor = await Sponsor.findOne({ _id: id, tenantId: req.user?.tenantId });
     if (!sponsor) {
       res.status(404).json({ success: false, message: 'Sponsor not found' });
       return;
+    }
+
+    if (sponsor.transactions.length === 0) {
+      await ensureLedger(sponsor);
+      sponsor = (await Sponsor.findOne({ _id: id, tenantId: req.user?.tenantId }))!;
     }
 
     const tx = sponsor.transactions.id(String(txId));
@@ -302,10 +344,15 @@ export const updateSponsorTransaction = async (req: AuthRequest, res: Response):
 export const deleteSponsorTransaction = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const { id, txId } = req.params;
-    const sponsor = await Sponsor.findOne({ _id: id, tenantId: req.user?.tenantId });
+    let sponsor = await Sponsor.findOne({ _id: id, tenantId: req.user?.tenantId });
     if (!sponsor) {
       res.status(404).json({ success: false, message: 'Sponsor not found' });
       return;
+    }
+
+    if (sponsor.transactions.length === 0) {
+      await ensureLedger(sponsor);
+      sponsor = (await Sponsor.findOne({ _id: id, tenantId: req.user?.tenantId }))!;
     }
 
     const tx = sponsor.transactions.id(String(txId));

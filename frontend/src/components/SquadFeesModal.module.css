@@ -1,0 +1,879 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* Two-column responsive layout */
+.twoColGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.8fr) minmax(310px, 1.1fr);
+  gap: 20px;
+  align-items: start;
+}
+
+/* LEFT COLUMN: Players List */
+.leftCol {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+
+/* Toolbar & Filters */
+.toolbarRow {
+  display: grid;
+  grid-template-columns: minmax(200px, 1.6fr) minmax(130px, 1fr) minmax(130px, 1fr);
+  gap: 10px;
+  align-items: end;
+}
+
+.searchClearBtn {
+  border: none;
+  background: transparent;
+  color: #94a3b8;
+  cursor: pointer;
+  padding: 0;
+  display: flex;
+  align-items: center;
+}
+
+.searchClearBtn:hover {
+  color: #475569;
+}
+
+.filterPillsBar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+  scrollbar-width: thin;
+}
+
+.filterPill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border-radius: 9999px;
+  font-size: 11.5px;
+  font-weight: 600;
+  border: 1px solid #cbd5e1;
+  background: #ffffff;
+  color: #475569;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+}
+
+.filterPill:hover {
+  background: #f1f5f9;
+  border-color: #94a3b8;
+}
+
+.filterPillActive {
+  background: #eff6ff !important;
+  border-color: #0284c7 !important;
+  color: #0284c7 !important;
+  font-weight: 700 !important;
+  box-shadow: 0 1px 3px rgba(2, 132, 199, 0.15);
+}
+
+.filterCountBadge {
+  padding: 1px 6px;
+  border-radius: 10px;
+  font-size: 10px;
+  background: rgba(0, 0, 0, 0.06);
+}
+
+/* Batch Action Bar */
+.batchBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 6px 10px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+}
+
+.batchLeft {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.btnFreeSelected {
+  border-color: #86efac !important;
+  color: #15803d !important;
+  background: #f0fdf4 !important;
+}
+
+.btnDeselect {
+  color: #0284c7 !important;
+  font-weight: 700 !important;
+  font-size: 12px !important;
+}
+
+/* Table Card */
+.tableCard {
+  background: #ffffff;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.03);
+}
+
+.tableHeader {
+  display: grid;
+  grid-template-columns: 36px minmax(150px, 1.4fr) 205px 105px 105px 75px;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  background: #f8fafc;
+  border-bottom: 1.5px solid #e2e8f0;
+  font-size: 11px;
+  font-weight: 800;
+  color: #475569;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.thCenter {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.thLeft {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.thRight {
+  text-align: right;
+}
+
+.tableBody {
+  max-height: 480px;
+  overflow-y: auto;
+}
+
+.emptyState {
+  padding: 36px 16px;
+  text-align: center;
+  font-size: 13px;
+  color: #94a3b8;
+}
+
+/* Table Row */
+.tableRow {
+  display: grid;
+  grid-template-columns: 36px minmax(150px, 1.4fr) 205px 105px 105px 75px;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-bottom: 1px solid #f1f5f9;
+  background: #ffffff;
+  transition: all 0.12s ease;
+}
+
+.tableRow:hover {
+  background: #f8fafc;
+}
+
+.rowInSquad {
+  background: #ffffff;
+}
+
+.rowPaid {
+  background: #f0fdf4;
+}
+
+.rowPaid:hover {
+  background: #dcfce7;
+}
+
+.rowTopi {
+  background: #fff1f2;
+}
+
+.rowTopi:hover {
+  background: #ffe4e6;
+}
+
+.rowFree {
+  background: #f0fdf4;
+}
+
+.rowFree:hover {
+  background: #dcfce7;
+}
+
+.rowPartial {
+  background: #fffbeb;
+}
+
+.rowPartial:hover {
+  background: #fef3c7;
+}
+
+.rowNotInSquad {
+  background: #fafafa;
+  opacity: 0.85;
+}
+
+.rowDirty {
+  border-left: 3.5px solid #0284c7 !important;
+}
+
+/* Player Info Cell */
+.playerInfoCell {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  flex-wrap: wrap;
+  cursor: pointer;
+}
+
+.playerName {
+  font-size: 13px;
+  font-weight: 700;
+  color: #0f172a;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.playerJersey {
+  color: #64748b;
+  font-weight: 500;
+  font-size: 11.5px;
+}
+
+.playerRoleBadge {
+  font-size: 10px !important;
+  padding: 1px 5px !important;
+  text-transform: capitalize;
+}
+
+.badgeMom {
+  font-size: 10px !important;
+  padding: 1px 6px !important;
+}
+
+.badgeStatus {
+  font-size: 9.5px !important;
+  padding: 1px 5px !important;
+  font-weight: 700 !important;
+}
+
+/* Quick Action Button Group */
+.quickActionGroup {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  background: #f1f5f9;
+  padding: 2px 3px;
+  border-radius: 6px;
+  border: 1px solid #e2e8f0;
+}
+
+.pillBtn {
+  padding: 2.5px 6px;
+  font-size: 10.5px;
+  font-weight: 600;
+  border-radius: 4px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: #475569;
+  cursor: pointer;
+  transition: all 0.12s ease;
+  line-height: 1.2;
+}
+
+.pillBtn:disabled {
+  cursor: not-allowed;
+  opacity: 0.35;
+}
+
+.pillBtnDefaultActive {
+  border-color: #0284c7;
+  background: #eff6ff;
+  color: #0284c7;
+  font-weight: 700;
+}
+
+.pillBtnFreeActive {
+  border-color: #16a34a;
+  background: #f0fdf4;
+  color: #15803d;
+  font-weight: 700;
+}
+
+.pillBtnTopiActive {
+  border-color: #e11d48;
+  background: #fff1f2;
+  color: #e11d48;
+  font-weight: 700;
+}
+
+.pillBtnMom {
+  color: #64748b;
+  font-weight: 700;
+}
+
+.pillBtnMomActive {
+  border-color: #d97706;
+  background: #fef3c7;
+  color: #b45309;
+  font-weight: 700;
+}
+
+/* Number Inputs */
+.feeInput {
+  width: 100%;
+  height: 32px;
+  font-size: 13px;
+  font-weight: 700;
+  text-align: right;
+  padding: 0 8px;
+  border-radius: 6px;
+  outline: none;
+  border: 1.5px solid #cbd5e1;
+  background: #ffffff;
+  color: #0f172a;
+  transition: all 0.15s ease;
+}
+
+.feeInput:focus {
+  border-color: #0284c7;
+  box-shadow: 0 0 0 2px rgba(2, 132, 199, 0.15);
+}
+
+.feeInputDisabled {
+  border: 1px dashed #cbd5e1 !important;
+  background: #f8fafc !important;
+  color: #94a3b8 !important;
+}
+
+.feeInputPaidSuccess {
+  color: #16a34a !important;
+  font-weight: 800 !important;
+}
+
+/* Row Action Buttons */
+.rowActions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px;
+}
+
+.btnRowAdd {
+  padding: 3px 8px !important;
+  font-size: 11px !important;
+  height: 28px !important;
+}
+
+.btnRowSave {
+  padding: 3px 8px !important;
+  font-size: 11px !important;
+  height: 28px !important;
+  background: #0284c7 !important;
+  color: #ffffff !important;
+  border-radius: 5px !important;
+}
+
+.btnRowDelete {
+  color: #94a3b8;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+}
+
+.btnRowDelete:hover {
+  color: #e11d48;
+  background: #fff1f2;
+}
+
+/* Table Footer Row */
+.tableFooter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  background: #f8fafc;
+  border-top: 1.5px solid #e2e8f0;
+  font-size: 12px;
+  color: #64748b;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* RIGHT COLUMN: Stats & Match Financials Sidebar */
+.rightCol {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  position: sticky;
+  top: 10px;
+}
+
+.sidebarCard {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 16px;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+/* Match Meta Banner */
+.matchMetaBanner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #f1f5f9;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.matchMetaTitle {
+  font-size: 14px;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.matchMetaSubtitle {
+  font-size: 11.5px;
+  color: #64748b;
+  margin-top: 2px;
+}
+
+/* Stat Box Grid (2x2) */
+.statBoxesGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.statBox {
+  padding: 12px 14px;
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.statBoxCost {
+  background: #fff1f2;
+  border: 1px solid #ffe4e6;
+}
+
+.statBoxCost .statLabel {
+  color: #9f1239;
+}
+
+.statBoxCost .statVal {
+  color: #e11d48;
+}
+
+.statBoxCollected {
+  background: #f0fdf4;
+  border: 1px solid #dcfce7;
+}
+
+.statBoxCollected .statLabel {
+  color: #166534;
+}
+
+.statBoxCollected .statVal {
+  color: #16a34a;
+}
+
+.statBoxPending {
+  background: #fffbeb;
+  border: 1px solid #fef3c7;
+}
+
+.statBoxPending .statLabel {
+  color: #92400e;
+}
+
+.statBoxPending .statVal {
+  color: #d97706;
+}
+
+.statBoxBalance {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+}
+
+.statBoxBalanceDeficit {
+  background: #fff7ed;
+  border: 1px solid #ffedd5;
+}
+
+.statBoxBalanceDeficit .statLabel {
+  color: #9a3412;
+}
+
+.statBoxBalanceDeficit .statVal {
+  color: #ea580c;
+}
+
+.statBoxBalanceRecovered {
+  background: #f0fdf4;
+  border: 1px solid #dcfce7;
+}
+
+.statBoxBalanceRecovered .statLabel {
+  color: #166534;
+}
+
+.statBoxBalanceRecovered .statVal {
+  color: #16a34a;
+}
+
+.statLabel {
+  font-size: 10.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.statVal {
+  font-size: 17px;
+  font-weight: 800;
+}
+
+/* Recovery Progress Bar */
+.progressSection {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 12px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 9px;
+}
+
+.progressLabelRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #475569;
+}
+
+.progressBarTrack {
+  width: 100%;
+  height: 8px;
+  background: #e2e8f0;
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.progressBarFill {
+  height: 100%;
+  border-radius: 999px;
+  transition: width 0.3s ease;
+}
+
+/* Squad Count Breakdown */
+.squadBreakdownList {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 12px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 9px;
+  font-size: 12px;
+}
+
+.squadBreakdownItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: #475569;
+}
+
+.squadBreakdownItem strong {
+  color: #0f172a;
+}
+
+/* MOM Award Card in Sidebar */
+.momSidebarCard {
+  border: 1px dashed #cbd5e1;
+  background: #fafafa;
+  border-radius: 10px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  transition: all 0.15s ease;
+}
+
+.momSidebarCardActive {
+  background: #fffdf5;
+  border: 1.5px solid #fde68a;
+}
+
+.momSidebarHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+}
+
+.momSidebarTitle {
+  font-size: 12px;
+  font-weight: 700;
+  color: #92400e;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.momSidebarFields {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 6px;
+  padding-top: 8px;
+  border-top: 1px solid #fef3c7;
+}
+
+/* Sidebar Action Buttons */
+.sidebarActions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.btnSaveAll {
+  width: 100% !important;
+  font-weight: 700 !important;
+  padding: 10px 16px !important;
+}
+
+.btnClearDues {
+  width: 100% !important;
+}
+
+/* Unsaved Changes Banner */
+.unsavedBanner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  border-radius: 8px;
+  font-size: 12px;
+  color: #1e40af;
+  font-weight: 600;
+}
+
+/* Responsive */
+@media (max-width: 960px) {
+  .twoColGrid {
+    grid-template-columns: 1fr;
+  }
+  .rightCol {
+    position: static;
+  }
+  .tableCard {
+    overflow-x: auto;
+  }
+  .tableHeader,
+  .tableRow {
+    min-width: 680px;
+  }
+}
+
+
+/* ---------- Extracted from former inline styles ---------- */
+.modalFooter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.modalFooterStatus {
+  font-size: 12.5px;
+  color: #64748b;
+}
+
+.modalFooterDirty {
+  color: #0284c7;
+  font-weight: 700;
+}
+
+.modalFooterActions {
+  display: flex;
+  gap: 8px;
+}
+
+.btnBatch {
+  font-size: 11.5px !important;
+  padding: 3px 8px !important;
+}
+
+.thCenterText {
+  text-align: center;
+}
+
+.textBlue {
+  color: #0284c7;
+}
+
+.textGreen {
+  color: #16a34a !important;
+}
+
+.textRose {
+  color: #e11d48 !important;
+}
+
+.selectedCount {
+  font-weight: 600;
+  color: #0284c7;
+}
+
+/* Native <progress> styled as recovery bar (no inline width needed) */
+.progressBarNative {
+  display: block;
+  width: 100%;
+  height: 8px;
+  border: none;
+  border-radius: 999px;
+  overflow: hidden;
+  background: #e2e8f0;
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+.progressBarNative::-webkit-progress-bar {
+  background: #e2e8f0;
+  border-radius: 999px;
+}
+
+.progressBarNative::-webkit-progress-value {
+  border-radius: 999px;
+  transition: width 0.3s ease;
+}
+
+.progressGreen::-webkit-progress-value { background: #16a34a; }
+.progressGreen::-moz-progress-bar { background: #16a34a; }
+.progressBlue::-webkit-progress-value { background: #0284c7; }
+.progressBlue::-moz-progress-bar { background: #0284c7; }
+.progressOrange::-webkit-progress-value { background: #ea580c; }
+.progressOrange::-moz-progress-bar { background: #ea580c; }
+
+.momToggleText {
+  font-size: 11px;
+  color: #b45309;
+  font-weight: 700;
+}
+
+.momSummaryBadge {
+  font-size: 11px !important;
+  padding: 2px 8px !important;
+  align-self: flex-start;
+}
+
+.btnFullWidth {
+  width: 100% !important;
+}
+
+/* Itemized Ground Expenses Card (for Match Detail Page) */
+.expenseHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.expenseTitle {
+  font-size: 13px;
+  font-weight: 800;
+  color: #0f172a;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+}
+
+.expenseList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 12px;
+}
+
+.expenseRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: #475569;
+  padding-bottom: 6px;
+  border-bottom: 1px dashed #f1f5f9;
+}
+
+.expenseRow strong {
+  color: #0f172a;
+  font-weight: 700;
+}
+
+.expenseTotalRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 4px;
+  font-size: 13.5px;
+  font-weight: 800;
+  color: #0284c7;
+}
+
+.leftColCard {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 16px;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
+}
+
+.ledgerBottomBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  gap: 12px;
+  flex-wrap: wrap;
+}

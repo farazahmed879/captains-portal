@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { Button } from './Button';
+import { Checkbox } from './Checkbox';
 import { Trash2, CloseIcon } from '../icons';
 
 export interface BulkActionBarProps {
@@ -29,6 +30,8 @@ export const BulkActionBar: React.FC<BulkActionBarProps> = ({
 
   const allPageSelected =
     pageItemIds.length > 0 && pageItemIds.every((id) => selectedIds.includes(id));
+  const somePageSelected =
+    !allPageSelected && pageItemIds.some((id) => selectedIds.includes(id));
 
   const toggleSelectPage = () => {
     if (allPageSelected) {
@@ -69,34 +72,15 @@ export const BulkActionBar: React.FC<BulkActionBarProps> = ({
       }}
     >
       <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
-        <label
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '8px',
-            cursor: 'pointer',
-            fontSize: '13px',
-            fontWeight: 600,
-            color: 'var(--text-primary)',
-            userSelect: 'none',
-          }}
-        >
-          <input
-            type="checkbox"
-            checked={allPageSelected}
-            onChange={toggleSelectPage}
-            disabled={deleting || pageItemIds.length === 0}
-            style={{
-              width: '16px',
-              height: '16px',
-              cursor: 'pointer',
-              accentColor: '#e11d48',
-            }}
-          />
-          <span>
-            {allPageSelected ? 'Deselect Page' : `Select All on Page (${pageItemIds.length})`}
-          </span>
-        </label>
+        <Checkbox
+          size="md"
+          variant="danger"
+          checked={allPageSelected}
+          indeterminate={somePageSelected}
+          onChange={toggleSelectPage}
+          disabled={deleting || pageItemIds.length === 0}
+          label={allPageSelected ? 'Deselect Page' : `Select All on Page (${pageItemIds.length})`}
+        />
 
         {allItemIds &&
           allItemIds.length > pageItemIds.length &&
@@ -185,32 +169,24 @@ export const GridSelectCheckbox: React.FC<GridSelectCheckboxProps> = ({
   title = 'Select item',
 }) => {
   return (
-    <label
+    <div
       onClick={(e) => e.stopPropagation()}
       title={title}
       style={{
         display: 'inline-flex',
         alignItems: 'center',
         justifyContent: 'center',
-        cursor: 'pointer',
         padding: '2px',
         flexShrink: 0,
       }}
     >
-      <input
-        type="checkbox"
+      <Checkbox
+        size="md"
+        variant="danger"
         checked={checked}
-        onChange={(e) => {
-          e.stopPropagation();
-          onChange();
-        }}
-        style={{
-          width: '16px',
-          height: '16px',
-          cursor: 'pointer',
-          accentColor: '#e11d48',
-        }}
+        onChange={onChange}
+        aria-label={title}
       />
-    </label>
+    </div>
   );
 };

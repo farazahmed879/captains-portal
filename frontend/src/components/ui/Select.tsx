@@ -81,8 +81,28 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
     useEffect(() => {
       if (controlledValue !== undefined) {
         setInternalValue(String(controlledValue));
+      } else if (defaultValue !== undefined) {
+        setInternalValue(String(defaultValue));
+      } else if (internalSelectRef.current?.value) {
+        setInternalValue(internalSelectRef.current.value);
       }
-    }, [controlledValue]);
+    }, [controlledValue, defaultValue]);
+
+    // Keep internalValue synced if native select changes
+    useEffect(() => {
+      const selectNode = internalSelectRef.current;
+      if (!selectNode) return;
+
+      const handleNativeChange = (e: Event) => {
+        const val = (e.target as HTMLSelectElement).value;
+        setInternalValue(val);
+      };
+
+      selectNode.addEventListener("change", handleNativeChange);
+      return () => {
+        selectNode.removeEventListener("change", handleNativeChange);
+      };
+    }, []);
 
     useEffect(() => {
       setMounted(true);

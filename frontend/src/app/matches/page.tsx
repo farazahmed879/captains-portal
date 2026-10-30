@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { queryKeys } from '../../lib/queryKeys';
 import { Match, MatchPayment } from '../../types';
-import { getMatchColumns, getMatchSquadPaymentColumns } from '../../columns';
+import { getMatchColumns } from '../../columns';
 import { Header } from '../../components/Header';
 import { fetchApi } from '../../lib/api';
 import { confirmDelete, confirmBulkDelete, showToast } from '../../lib/alerts';
@@ -43,7 +43,7 @@ import {
 } from '../../components/icons';
 import { CreateMatchModal } from '../../components/CreateMatchModal';
 import { EditMatchModal } from '../../components/EditMatchModal';
-import { AssignSquadFeeForm } from '../../components/AssignSquadFeeForm';
+import { SquadFeesModal } from '../../components/SquadFeesModal';
 
 export default function MatchesPage() {
   const router = useRouter();
@@ -267,16 +267,6 @@ export default function MatchesPage() {
         onEdit: handleEditOpen,
         onDelete: handleDeleteMatch,
         getResultBadgeVariant,
-        fNum,
-      }),
-    [fNum]
-  );
-
-  const squadPaymentColumns = useMemo(
-    () =>
-      getMatchSquadPaymentColumns({
-        onQuickPay: handleQuickPay,
-        onDelete: handleDeletePayment,
         fNum,
       }),
     [fNum]
@@ -582,196 +572,18 @@ export default function MatchesPage() {
           onSuccess={invalidateData}
         />
 
-        {/* Modal: Match Squad Fees Collection Drawer */}
-        <Modal
+        {/* Unified 2-Column Squad Fees Ledger Modal */}
+        <SquadFeesModal
           isOpen={isPaymentsOpen}
-          maxWidth="920px"
-          onClose={() => {
-            setIsPaymentsOpen(false);
-            setShowAddPlayerPayment(false);
+          onClose={() => setIsPaymentsOpen(false)}
+          match={selectedMatch}
+          initialPayments={matchPayments}
+          players={players}
+          onSuccess={() => {
+            if (selectedMatch) refreshMatchPayments(selectedMatch._id);
+            invalidateData();
           }}
-          title={selectedMatch ? `Squad Fees — ${selectedMatch.opponentTeam || selectedMatch.venue || 'Match'}` : 'Squad Fees'}
-          subtitle="Manage player fee collection, record payments & clear dues"
-          footer={
-            <Button
-              variant="secondary"
-              onClick={() => {
-                setIsPaymentsOpen(false);
-                setShowAddPlayerPayment(false);
-              }}
-            >
-              Close
-            </Button>
-          }
-        >
-          {selectedMatch && (() => {
-            const totalCost = selectedMatch.totalMatchExpense || 0;
-            const totalCollected = matchPayments.reduce((acc, p) => acc + (p.feePaid || 0), 0);
-            const totalAssigned = matchPayments.reduce((acc, p) => acc + (p.feeAssigned || 0), 0);
-            const remaining = totalCost > totalCollected ? totalCost - totalCollected : 0;
-            const pendingDues = Math.max(0, totalAssigned - totalCollected);
-
-            return (
-              <div>
-                {/* Match Summary Cards Grid */}
-                <div
-                  style={{
-                    display: 'grid',
-                    gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
-                    gap: '12px',
-                    marginBottom: '16px',
-                  }}
-                >
-                  <div
-                    style={{
-                      padding: '12px 14px',
-                      background: '#fff1f2',
-                      border: '1px solid #ffe4e6',
-                      borderRadius: '10px',
-                    }}
-                  >
-                    <div style={{ fontSize: '11px', fontWeight: 700, color: '#9f1239', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                      Ground Cost
-                    </div>
-                    <div style={{ fontSize: '18px', fontWeight: 800, color: '#e11d48', marginTop: '2px' }}>
-                      Rs. {fNum(totalCost)}
-                    </div>
-                  </div>
-
-                  <div
-                    style={{
-                      padding: '12px 14px',
-                      background: '#f0fdf4',
-                      border: '1px solid #dcfce7',
-                      borderRadius: '10px',
-                    }}
-                  >
-                    <div style={{ fontSize: '11px', fontWeight: 700, color: '#166534', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                      Fees Collected
-                    </div>
-                    <div style={{ fontSize: '18px', fontWeight: 800, color: '#16a34a', marginTop: '2px' }}>
-                      Rs. {fNum(totalCollected)}
-                    </div>
-                  </div>
-
-                  <div
-                    style={{
-                      padding: '12px 14px',
-                      background: '#fffbeb',
-                      border: '1px solid #fef3c7',
-                      borderRadius: '10px',
-                    }}
-                  >
-                    <div style={{ fontSize: '11px', fontWeight: 700, color: '#92400e', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                      Pending Dues
-                    </div>
-                    <div style={{ fontSize: '18px', fontWeight: 800, color: '#d97706', marginTop: '2px' }}>
-                      Rs. {fNum(pendingDues)}
-                    </div>
-                  </div>
-
-                  <div
-                    style={{
-                      padding: '12px 14px',
-                      background: remaining === 0 ? '#f0fdf4' : '#fff7ed',
-                      border: remaining === 0 ? '1px solid #dcfce7' : '1px solid #ffedd5',
-                      borderRadius: '10px',
-                    }}
-                  >
-                    <div style={{ fontSize: '11px', fontWeight: 700, color: remaining === 0 ? '#166534' : '#9a3412', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                      Net Balance
-                    </div>
-                    <div
-                      style={{
-                        fontSize: '18px',
-                        fontWeight: 800,
-                        color: remaining === 0 ? '#16a34a' : '#ea580c',
-                        marginTop: '2px',
-                      }}
-                    >
-                      {remaining === 0 ? 'Recovered' : `Rs. ${fNum(remaining)} Deficit`}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Match Details & Add Player Action Toolbar */}
-                <div
-                  style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    marginBottom: '14px',
-                    flexWrap: 'wrap',
-                    gap: '10px',
-                  }}
-                >
-                  <div style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>
-                    <span>
-                      Venue: <strong>{selectedMatch.venue || 'N/A'}</strong>
-                    </span>
-                    {selectedMatch.tournamentStage && (
-                      <span style={{ marginLeft: '10px' }}>
-                        Stage:{' '}
-                        <strong style={{ textTransform: 'capitalize' }}>
-                          {selectedMatch.tournamentStage.replace(/_/g, ' ')}
-                        </strong>
-                      </span>
-                    )}
-                  </div>
-
-                  <div className="action-group">
-                    {matchPayments.some((p) => p.paymentStatus !== 'paid') && (
-                      <Button
-                        variant="success"
-                        size="sm"
-                        icon={<CheckCircle2 size={12} />}
-                        onClick={() => handleMarkAllPaid(selectedMatch._id)}
-                        title="Mark all pending squad match fees as paid"
-                      >
-                        Match Fee Paid
-                      </Button>
-                    )}
-                    <Button
-                      variant={showAddPlayerPayment ? 'secondary' : 'primary'}
-                      size="sm"
-                      icon={<Plus size={12} />}
-                      onClick={() => setShowAddPlayerPayment(!showAddPlayerPayment)}
-                    >
-                      {showAddPlayerPayment ? 'Cancel' : '+ Add Player Fee'}
-                    </Button>
-                    <Link href={`/matches/${selectedMatch._id}`} passHref legacyBehavior>
-                      <Button variant="secondary" size="sm" icon={<ExternalLink size={12} />}>
-                        Full Details
-                      </Button>
-                    </Link>
-                  </div>
-                </div>
-
-                {/* Inline Add Player Fee Form */}
-                {showAddPlayerPayment && selectedMatch && (
-                  <AssignSquadFeeForm
-                    matchId={selectedMatch._id}
-                    defaultFee={selectedMatch.perPlayerFee || 1000}
-                    players={players}
-                    onSuccess={() => {
-                      setShowAddPlayerPayment(false);
-                      refreshMatchPayments(selectedMatch._id);
-                    }}
-                    onCancel={() => setShowAddPlayerPayment(false)}
-                  />
-                )}
-
-                {/* Squad Payments Table */}
-                <DataTable<MatchPayment>
-                  data={matchPayments}
-                  keyExtractor={(p) => p._id}
-                  emptyMessage="No squad payments recorded for this match yet. Click '+ Add Player Fee' above to record players."
-                  columns={squadPaymentColumns}
-                />
-              </div>
-            );
-          })()}
-        </Modal>
+        />
       </div>
     </>
   );

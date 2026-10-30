@@ -1,5 +1,6 @@
 export * from './Button';
 export * from './Badge';
+export * from './Checkbox';
 export * from './StatBadge';
 export * from './Avatar';
 export * from './Alert';

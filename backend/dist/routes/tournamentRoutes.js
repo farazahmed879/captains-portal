@@ -1,0 +1,13 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = require("express");
+const tournamentController_1 = require("../controllers/tournamentController");
+const auth_1 = require("../middlewares/auth");
+const router = (0, express_1.Router)();
+router.use(auth_1.authenticate);
+router.get('/', tournamentController_1.getTournaments);
+router.get('/:id', tournamentController_1.getTournamentById);
+router.post('/', tournamentController_1.createTournament);
+router.put('/:id', tournamentController_1.updateTournament);
+router.delete('/:id', tournamentController_1.deleteTournament);
+exports.default = router;

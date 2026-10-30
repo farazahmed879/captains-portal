@@ -186,9 +186,9 @@ export const getMatchColumns = ({
           size="sm"
           icon={<Users size={14} />}
           onClick={() => onPayments(m._id)}
-          title="Track Squad Payments"
+          title="Track Squad Player Fees"
         >
-          Fees
+          Player Fee
         </Button>
         <Button
           variant="secondary"

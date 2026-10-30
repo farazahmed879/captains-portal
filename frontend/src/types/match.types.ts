@@ -59,6 +59,7 @@ export interface CreateMatchFormValues {
 }
 
 export interface EditMatchFormValues {
+  teamId?: string;
   tournamentId?: string;
   opponentTeam: string;
   venue: string;
@@ -67,6 +68,7 @@ export interface EditMatchFormValues {
   stage: string;
   perPlayerFee: number | '';
   totalMatchExpense: number | '';
+  overs?: number | '';
   result: string;
   notes: string;
 }

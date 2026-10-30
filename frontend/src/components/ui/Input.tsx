@@ -57,6 +57,12 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
               borderColor: error ? 'var(--accent-rose)' : undefined,
               ...style,
             }}
+            onWheel={(e) => {
+              if (props.type === 'number') {
+                e.currentTarget.blur();
+              }
+              props.onWheel?.(e);
+            }}
             {...props}
           />
 

@@ -135,7 +135,8 @@ export class DashboardService {
       allowedTeamIds.length > 0 ? await expenseRepository.findMany(tenantId, teamFilter) : [];
     const totalExpenses = expenses.reduce((acc, e) => acc + (e.amount || 0), 0);
     const totalEntryFees = tournaments.reduce((acc, t) => acc + (t.entryFee || 0), 0);
-    const totalInvested = totalExpenses + totalEntryFees;
+    const totalMatchExpenses = matches.reduce((acc, m) => acc + (m.totalMatchExpense || 0), 0);
+    const totalInvested = totalExpenses + totalEntryFees + totalMatchExpenses;
 
     const sponsors =
       allowedTeamIds.length > 0 ? await sponsorRepository.findMany(tenantId, teamFilter) : [];
@@ -147,11 +148,11 @@ export class DashboardService {
       (acc, t) => acc + (t.actualWinningPrizeWon || 0),
       0
     );
-    const matchPrizesWon = matches.reduce((acc, m) => acc + (m.winningPrizeMoney || 0), 0);
+    const matchPrizesWon = matches.reduce(
+      (acc, m) => acc + (m.winningPrizeMoney || 0) + (m.momPrizeMoney || 0),
+      0
+    );
     const totalPrizeMoney = tournamentPrizesWon + matchPrizesWon;
-
-    const totalReturns = netSponsorship + totalPrizeMoney;
-    const netProfitLoss = totalReturns - totalInvested;
 
     // 4. Player Ledger Fees & Dues
     const payments =
@@ -165,6 +166,10 @@ export class DashboardService {
       totalPlayerFeeAssigned > 0
         ? Math.round((totalPlayerFeeCollected / totalPlayerFeeAssigned) * 100)
         : 0;
+
+    // Total Inflow / Returns: Net Sponsors + Winning Prizes + Player Fees Collected
+    const totalReturns = netSponsorship + totalPrizeMoney + totalPlayerFeeCollected;
+    const netProfitLoss = totalReturns - totalInvested;
 
     // 5. Recent Matches & Top Debtors
     const recentMatches = matches.slice(0, 5).map((m) => ({ ...m, _id: m.id }));
@@ -219,6 +224,9 @@ export class DashboardService {
         totalFeeCollected: totalPlayerFeeCollected,
         totalPendingDues,
         collectionRate,
+        totalEntryFees,
+        totalExpenses,
+        totalMatchExpenses,
       },
       recentMatches,
       topDebtors,

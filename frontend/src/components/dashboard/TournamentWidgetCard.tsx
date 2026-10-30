@@ -131,7 +131,11 @@ export const TournamentWidgetCard: React.FC<TournamentWidgetCardProps> = ({
             />
             <KpiCell
               label="Match Costs"
-              value={`Rs. ${formatCurrency(selectedTournament.financials?.totalMatchExpenses || 0)}`}
+              value={`Rs. ${formatCurrency(
+                selectedTournament.financials?.matchExpenses ??
+                  selectedTournament.financials?.totalMatchExpenses ??
+                  0
+              )}`}
             />
             <KpiCell
               label="Prize Won"

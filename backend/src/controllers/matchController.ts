@@ -169,24 +169,54 @@ export const updateMatch = async (req: AuthRequest, res: Response): Promise<void
     const { id } = req.params;
     
     // Recalculate total expense if costs changed
-    if (req.body.groundCost !== undefined || req.body.umpireCost !== undefined || req.body.ballCost !== undefined) {
+    const hasAnyCostField =
+      req.body.groundCost !== undefined ||
+      req.body.umpireCost !== undefined ||
+      req.body.ballCost !== undefined ||
+      req.body.refreshmentCost !== undefined ||
+      req.body.otherCosts !== undefined;
+
+    if (hasAnyCostField) {
       const ground = Number(req.body.groundCost) || 0;
       const umpire = Number(req.body.umpireCost) || 0;
       const ball = Number(req.body.ballCost) || 0;
       const refresh = Number(req.body.refreshmentCost) || 0;
       const other = Number(req.body.otherCosts) || 0;
       req.body.totalMatchExpense = ground + umpire + ball + refresh + other;
+      req.body.groundCost = ground;
+      req.body.umpireCost = umpire;
+      req.body.ballCost = ball;
+      req.body.refreshmentCost = refresh;
+      req.body.otherCosts = other;
+    } else if (req.body.totalMatchExpense !== undefined && req.body.groundCost === undefined) {
+      req.body.groundCost = Number(req.body.totalMatchExpense) || 0;
+    }
+
+    if (req.body.momPlayerId === '' || req.body.momPlayerId === 'none') {
+      req.body.momPlayerId = null;
+    }
+    if (req.body.momPrizeMoney !== undefined) {
+      req.body.momPrizeMoney = Number(req.body.momPrizeMoney) || 0;
     }
 
     const match = await Match.findOneAndUpdate(
       { _id: id, tenantId: req.user?.tenantId },
       req.body,
       { new: true }
-    );
+    )
+      .populate('teamId')
+      .populate('momPlayerId', 'name role jerseyNumber');
 
     if (!match) {
       res.status(404).json({ success: false, message: 'Match not found' });
       return;
+    }
+
+    if (req.body.teamId) {
+      await MatchPayment.updateMany(
+        { matchId: id, tenantId: req.user?.tenantId },
+        { teamId: req.body.teamId }
+      );
     }
 
     res.json({ success: true, match });

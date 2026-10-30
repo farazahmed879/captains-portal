@@ -379,7 +379,7 @@ export const Dock: React.FC = () => {
                   aria-current={isActive ? "page" : undefined}
                   onClick={() => !isActive && triggerBounce(item.href)}
                 >
-                  <Icon size={22} />
+                  <Icon size={35} strokeWidth={2.1} />
                 </Link>
                 <span className="dock-tooltip">{item.name}</span>
               </div>
@@ -406,7 +406,7 @@ export const Dock: React.FC = () => {
                   aria-expanded={menuOpen}
                   onClick={() => setMenuOpen((o) => !o)}
                 >
-                  <Settings2 size={22} />
+                  <Settings2 size={35} strokeWidth={2.1} />
                 </button>
                 {!menuOpen && (
                   <span className="dock-tooltip">Dock Settings</span>

@@ -1,6 +1,7 @@
 import React from 'react';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell, TableEmpty } from './Table';
 import { TableSkeletonRows } from './Skeleton';
+import { Checkbox } from './Checkbox';
 
 export interface Column<T> {
   header: React.ReactNode;
@@ -52,9 +53,10 @@ export function DataTable<T>({
   const pageKeys = data.map((item, idx) => String(getKey(item, idx)));
   const allPageSelected =
     isSelectable && pageKeys.length > 0 && pageKeys.every((k) => selectedIds.includes(k));
+  const somePageSelected =
+    isSelectable && !allPageSelected && pageKeys.some((k) => selectedIds.includes(k));
 
-  const handleToggleAllPage = (e: React.ChangeEvent<HTMLInputElement>) => {
-    e.stopPropagation();
+  const handleToggleAllPage = () => {
     if (!onSelectionChange) return;
     if (allPageSelected) {
       onSelectionChange(selectedIds.filter((id) => !pageKeys.includes(id)));
@@ -84,19 +86,17 @@ export function DataTable<T>({
               align="center"
               style={{ width: '42px', textAlign: 'center', padding: '10px 8px' }}
             >
-              <input
-                type="checkbox"
-                checked={allPageSelected}
-                onChange={handleToggleAllPage}
-                disabled={loading || data.length === 0}
-                title="Select all on this page"
-                style={{
-                  width: '16px',
-                  height: '16px',
-                  cursor: 'pointer',
-                  accentColor: '#e11d48',
-                }}
-              />
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Checkbox
+                  size="md"
+                  checked={allPageSelected}
+                  indeterminate={somePageSelected}
+                  onChange={handleToggleAllPage}
+                  disabled={loading || data.length === 0}
+                  aria-label="Select all on this page"
+                  variant="danger"
+                />
+              </div>
             </TableHead>
           )}
           {columns.map((col, idx) => (
@@ -142,18 +142,15 @@ export function DataTable<T>({
                     style={{ width: '42px', textAlign: 'center', padding: '10px 8px' }}
                     onClick={(e) => e.stopPropagation()}
                   >
-                    <input
-                      type="checkbox"
-                      checked={isSelected}
-                      onChange={() => handleToggleRow(strKey)}
-                      onClick={(e) => e.stopPropagation()}
-                      style={{
-                        width: '16px',
-                        height: '16px',
-                        cursor: 'pointer',
-                        accentColor: '#e11d48',
-                      }}
-                    />
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <Checkbox
+                        size="md"
+                        checked={isSelected}
+                        onChange={() => handleToggleRow(strKey)}
+                        aria-label={`Select row ${strKey}`}
+                        variant="danger"
+                      />
+                    </div>
                   </TableCell>
                 )}
                 {columns.map((col, colIdx) => (

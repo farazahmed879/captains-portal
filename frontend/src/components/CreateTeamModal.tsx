@@ -4,7 +4,7 @@ import React, { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Modal } from "./Modal";
-import { Input, Select, Textarea, Button, Alert, Badge } from "./ui";
+import { Input, Select, Textarea, Button, Alert, Badge, Checkbox } from "./ui";
 import { fetchApi } from "../lib/api";
 import { queryKeys } from "../lib/queryKeys";
 import { CreateTeamFormValues } from "../types";
@@ -348,18 +348,15 @@ export const CreateTeamModal: React.FC<CreateTeamModalProps> = ({
                           gap: "8px",
                         }}
                       >
-                        <input
-                          type="checkbox"
-                          checked={checked}
-                          onChange={() => togglePlayer(pid)}
-                          onClick={(e) => e.stopPropagation()}
-                          style={{
-                            width: "15px",
-                            height: "15px",
-                            cursor: "pointer",
-                            accentColor: "#0284c7",
-                          }}
-                        />
+                        <div onClick={(e) => e.stopPropagation()}>
+                          <Checkbox
+                            size="sm"
+                            variant="primary"
+                            checked={checked}
+                            onChange={() => togglePlayer(pid)}
+                            aria-label={`Select ${p.name}`}
+                          />
+                        </div>
                         <span
                           style={{
                             fontWeight: 600,

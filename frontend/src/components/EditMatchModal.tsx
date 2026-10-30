@@ -62,6 +62,7 @@ export const EditMatchModal: React.FC<EditMatchModalProps> = ({
     formState: { errors, isSubmitting },
   } = useForm<EditMatchFormValues>({
     defaultValues: {
+      teamId: "",
       tournamentId: "",
       opponentTeam: "",
       venue: "",
@@ -70,12 +71,14 @@ export const EditMatchModal: React.FC<EditMatchModalProps> = ({
       stage: MatchStage.GROUP,
       perPlayerFee: 1000,
       totalMatchExpense: 11000,
+      overs: 20,
       result: MatchResult.UPCOMING,
       notes: "",
     },
   });
 
   const currentDate = watch("matchDate");
+  const selectedTeamId = watch("teamId");
   const selectedTournamentId = watch("tournamentId");
   const selectedOpponentTeam = watch("opponentTeam");
   const selectedMatchType = watch("matchType");
@@ -92,10 +95,42 @@ export const EditMatchModal: React.FC<EditMatchModalProps> = ({
     ];
   }, [tournaments]);
 
+  // Options for Team 1 (Club / My Team)
+  const clubTeamOptions = useMemo(() => {
+    const ownTeams = teams.filter(
+      (t) =>
+        t.teamType === "my_team" ||
+        (!t.teamType && (t.name || "").toLowerCase().includes("gulzar")),
+    );
+    const otherTeams = teams.filter((t) => !ownTeams.some((ot) => ot._id === t._id));
+
+    const opts = [
+      ...ownTeams.map((t) => ({
+        value: t._id,
+        label: `${t.name}${t.shortName ? ` (${t.shortName})` : ""} — Club Team`,
+      })),
+      ...(otherTeams.length > 0
+        ? otherTeams.map((t) => ({
+            value: t._id,
+            label: `${t.name}${t.shortName ? ` (${t.shortName})` : ""}`,
+          }))
+        : []),
+    ];
+
+    const currentTeamId = match?.teamId?._id || match?.teamId;
+    if (currentTeamId && !opts.some((o) => o.value === currentTeamId)) {
+      const name = match.teamId?.name || "Current Team";
+      opts.unshift({ value: currentTeamId, label: name });
+    }
+
+    return opts;
+  }, [teams, match]);
+
+  // Options for Team 2 (Opponent Team)
   const opponentTeamOptions = useMemo(() => {
-    const matchTeamId = match?.teamId?._id || match?.teamId;
+    const activeTeamId = selectedTeamId || match?.teamId?._id || match?.teamId;
     const available = teams
-      .filter((t) => t._id !== matchTeamId)
+      .filter((t) => t._id !== activeTeamId)
       .sort((a, b) => {
         const aIsOpp = a.teamType === "opponent" ? 0 : 1;
         const bIsOpp = b.teamType === "opponent" ? 0 : 1;
@@ -122,7 +157,7 @@ export const EditMatchModal: React.FC<EditMatchModalProps> = ({
     }
 
     return opts;
-  }, [teams, match]);
+  }, [teams, match, selectedTeamId]);
 
   useEffect(() => {
     if (match && isOpen) {
@@ -130,9 +165,11 @@ export const EditMatchModal: React.FC<EditMatchModalProps> = ({
         ? new Date(match.matchDate).toISOString().split("T")[0]
         : new Date().toISOString().split("T")[0];
 
+      const initialTeamId = match.teamId?._id || match.teamId || "";
       const tourneyId = match.tournamentId?._id || match.tournamentId || "";
 
       reset({
+        teamId: String(initialTeamId),
         tournamentId: tourneyId,
         opponentTeam: match.opponentTeam || "",
         venue: match.venue || "",
@@ -145,6 +182,7 @@ export const EditMatchModal: React.FC<EditMatchModalProps> = ({
           match.totalMatchExpense !== undefined
             ? match.totalMatchExpense
             : 11000,
+        overs: match.overs !== undefined ? match.overs : 20,
         result: match.result || MatchResult.UPCOMING,
         notes: match.notes || "",
       });
@@ -158,11 +196,14 @@ export const EditMatchModal: React.FC<EditMatchModalProps> = ({
     try {
       const payload = {
         ...values,
+        teamId: values.teamId,
         tournamentId: values.tournamentId ? values.tournamentId : null,
         tournamentStage: values.stage,
         matchType: values.tournamentId ? "tournament" : values.matchType,
         perPlayerFee: Number(values.perPlayerFee) || 0,
         totalMatchExpense: Number(values.totalMatchExpense) || 0,
+        groundCost: Number(values.totalMatchExpense) || 0,
+        overs: Number(values.overs) || 20,
       };
 
       const res = await fetchApi<{ success: boolean }>(
@@ -182,6 +223,18 @@ export const EditMatchModal: React.FC<EditMatchModalProps> = ({
             queryKey: queryKeys.match(match._id),
           });
         }
+        if (match.tournamentId) {
+          const tId = match.tournamentId._id || match.tournamentId;
+          queryClient.invalidateQueries({ queryKey: queryKeys.tournament(tId) });
+        }
+        if (
+          values.tournamentId &&
+          values.tournamentId !== (match.tournamentId?._id || match.tournamentId)
+        ) {
+          queryClient.invalidateQueries({
+            queryKey: queryKeys.tournament(values.tournamentId),
+          });
+        }
         onSuccess();
         onClose();
       } else {
@@ -192,15 +245,21 @@ export const EditMatchModal: React.FC<EditMatchModalProps> = ({
     }
   };
 
+  const selectedTeamName =
+    teams.find((t) => t._id === selectedTeamId)?.name ||
+    match?.teamId?.name ||
+    "Team 1";
+
   return (
     <Modal
       isOpen={isOpen}
       onClose={onClose}
       title={
         match
-          ? `Edit Match vs ${match.opponentTeam || "Opponent"}`
+          ? `Edit Match — ${selectedTeamName} vs ${selectedOpponentTeam || match.opponentTeam || "Opponent"}`
           : "Edit Match"
       }
+      subtitle="Modify club team, opponent team, venue ground, fee assignment, and result"
       footer={
         <>
           <Button variant="secondary" onClick={onClose} disabled={isSubmitting}>
@@ -223,6 +282,30 @@ export const EditMatchModal: React.FC<EditMatchModalProps> = ({
           </Alert>
         )}
 
+        {/* Row 1: Team 1 (Club Team) & Team 2 (Opponent Team) */}
+        <div className="grid-2" style={{ alignItems: "end" }}>
+          <Select
+            label="My Team / Club Team (Team 1) *"
+            value={selectedTeamId}
+            options={clubTeamOptions}
+            {...register("teamId", { required: "Club team is required" })}
+            error={errors.teamId?.message}
+          />
+
+          <Select
+            label="Opponent Team (Team 2) *"
+            searchable
+            searchPlaceholder="Search opponent team..."
+            value={selectedOpponentTeam}
+            options={opponentTeamOptions}
+            {...register("opponentTeam", {
+              required: "Opponent team is required",
+            })}
+            error={errors.opponentTeam?.message}
+          />
+        </div>
+
+        {/* Row 2: Tournament / League & Venue / Ground */}
         <div className="grid-2" style={{ alignItems: "end" }}>
           <Select
             label="Tournament / League"
@@ -237,35 +320,22 @@ export const EditMatchModal: React.FC<EditMatchModalProps> = ({
             })}
           />
 
-          <Select
-            label="Opponent Team *"
-            searchable
-            searchPlaceholder="Search opponent team..."
-            value={selectedOpponentTeam}
-            options={opponentTeamOptions}
-            {...register("opponentTeam", {
-              required: "Opponent team is required",
-            })}
-            error={errors.opponentTeam?.message}
-          />
-        </div>
-
-        <div className="grid-2" style={{ alignItems: "end" }}>
           <Input
             label="Venue / Ground *"
-            placeholder="e.g. Asghar Ali Shah Stadium"
+            placeholder="e.g. Behria Karsaz / Asghar Ali Shah"
             {...register("venue", { required: "Venue is required" })}
             error={errors.venue?.message}
           />
+        </div>
 
+        {/* Row 3: Match Date, Match Type, Stage */}
+        <div className="grid-3" style={{ alignItems: "end" }}>
           <DatePicker
             label="Match Date *"
             value={currentDate}
             onChange={(e) => setValue("matchDate", e.target.value)}
           />
-        </div>
 
-        <div className="grid-3" style={{ alignItems: "end" }}>
           <Select
             label="Match Type"
             value={selectedMatchType}
@@ -279,16 +349,17 @@ export const EditMatchModal: React.FC<EditMatchModalProps> = ({
             options={MATCH_STAGE_OPTIONS}
             {...register("stage")}
           />
+        </div>
 
+        {/* Row 4: Match Result, Fee per Player, Ground Cost */}
+        <div className="grid-3" style={{ alignItems: "end" }}>
           <Select
             label="Match Result"
             value={selectedResult}
             options={MATCH_RESULT_OPTIONS}
             {...register("result")}
           />
-        </div>
 
-        <div className="grid-2" style={{ alignItems: "end" }}>
           <Input
             label="Fee per Player (Rs.) *"
             type="number"
@@ -308,12 +379,22 @@ export const EditMatchModal: React.FC<EditMatchModalProps> = ({
           />
         </div>
 
-        <Textarea
-          label="Match Notes / Remarks"
-          rows={2}
-          placeholder="Kit color, meeting time, score summary..."
-          {...register("notes")}
-        />
+        {/* Row 5: Overs & Match Notes */}
+        <div className="grid-2" style={{ alignItems: "end" }}>
+          <Input
+            label="Overs per Innings"
+            type="number"
+            placeholder="20"
+            {...register("overs")}
+          />
+
+          <Textarea
+            label="Match Notes / Remarks"
+            rows={2}
+            placeholder="Kit color, meeting time, score summary..."
+            {...register("notes")}
+          />
+        </div>
       </form>
     </Modal>
   );

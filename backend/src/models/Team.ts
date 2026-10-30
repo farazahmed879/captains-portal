@@ -2,7 +2,7 @@ import { Schema, model, Document, Types } from 'mongoose';
 
 export interface ITeam extends Document {
   tenantId: Types.ObjectId;
-  captainId: Types.ObjectId;
+  captainId?: Types.ObjectId;
   name: string;
   shortName: string;
   teamType?: string;
@@ -19,7 +19,7 @@ export interface ITeam extends Document {
 const TeamSchema = new Schema<ITeam>(
   {
     tenantId: { type: Schema.Types.ObjectId, ref: 'Tenant', required: true, index: true },
-    captainId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+    captainId: { type: Schema.Types.ObjectId, ref: 'User', required: false },
     name: { type: String, required: true, trim: true },
     shortName: { type: String, required: true, uppercase: true, trim: true },
     teamType: { type: String, default: 'my_team' },

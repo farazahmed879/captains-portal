@@ -1,10 +1,11 @@
 'use client';
 
 import React, { useMemo, useState } from 'react';
-import { Button, Alert } from './ui';
-import { Search, X, Users, CheckCircle2, Sparkles } from 'lucide-react';
+import { Button, Alert, Input, Select, Badge, Checkbox } from './ui';
+import { Search, X, Users, CheckCircle2, Sparkles, Award } from 'lucide-react';
 import { fetchApi } from '../lib/api';
 import { PaymentMethod } from '../constants';
+import styles from './AssignSquadFeeForm.module.css';
 
 interface AssignSquadFeeFormProps {
   matchId: string;
@@ -12,121 +13,146 @@ interface AssignSquadFeeFormProps {
   players: any[];
   /** Player IDs that already have a fee record for this match (hidden from the list). */
   excludePlayerIds?: string[];
+  currentMomPlayerId?: string;
+  currentMomPrizeMoney?: number;
+  currentMomAwardDetails?: string;
   onSuccess: () => void;
   onCancel: () => void;
 }
 
-type RowState = { feeAssigned: number; feePaid: number };
+type RowState = { feeAssigned: number; feePaid: number; notes?: string };
 
 export const AssignSquadFeeForm: React.FC<AssignSquadFeeFormProps> = ({
   matchId,
   defaultFee = 1000,
   players,
   excludePlayerIds = [],
+  currentMomPlayerId,
+  currentMomPrizeMoney,
+  currentMomAwardDetails,
   onSuccess,
   onCancel,
 }) => {
-  const [serverError, setServerError] = useState<string | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [search, setSearch] = useState('');
   const [bulkAssigned, setBulkAssigned] = useState<number>(defaultFee);
   const [bulkPaid, setBulkPaid] = useState<number>(defaultFee);
   const [selected, setSelected] = useState<Record<string, RowState>>({});
 
+  // Man of the Match state
+  const [momPlayerId, setMomPlayerId] = useState<string>(currentMomPlayerId || '');
+  const [momPrizeMoney, setMomPrizeMoney] = useState<number | ''>(
+    currentMomPrizeMoney !== undefined && currentMomPrizeMoney !== null && currentMomPrizeMoney > 0
+      ? currentMomPrizeMoney
+      : ''
+  );
+  const [momAwardDetails, setMomAwardDetails] = useState<string>(currentMomAwardDetails || '');
+  const [showMomSection, setShowMomSection] = useState<boolean>(!!currentMomPlayerId);
+
+  const setPlayerAsMom = (playerId: string) => {
+    if (momPlayerId === playerId) {
+      setMomPlayerId('');
+    } else {
+      setMomPlayerId(playerId);
+      setShowMomSection(true);
+      if (!momPrizeMoney) {
+        setMomPrizeMoney(1000);
+      }
+      // If player not already selected in squad, select them automatically
+      if (!selected[playerId]) {
+        setSelected((prev) => ({
+          ...prev,
+          [playerId]: { feeAssigned: bulkAssigned, feePaid: bulkPaid },
+        }));
+      }
+    }
+  };
+
   const availablePlayers = useMemo(() => {
     const excluded = new Set(excludePlayerIds);
     return players
-      .filter((p) => !excluded.has(p._id) && p.isActive !== false)
-      .sort((a, b) => {
-        const matchesA = Number(a.matchesPlayed) || 0;
-        const matchesB = Number(b.matchesPlayed) || 0;
-
-        const dateA = a.lastMatchDate ? new Date(a.lastMatchDate).getTime() : 0;
-        const dateB = b.lastMatchDate ? new Date(b.lastMatchDate).getTime() : 0;
-
-        // 1. Players who played matches come before those who never played
-        if (matchesA > 0 && matchesB === 0) return -1;
-        if (matchesB > 0 && matchesA === 0) return 1;
-
-        // 2. Sort by total matches played descending (most matches played on top)
-        if (matchesB !== matchesA) {
-          return matchesB - matchesA;
-        }
-
-        // 3. For players with same match count, sort by most recent match date (latest match on top)
-        if (dateB !== dateA) {
-          return dateB - dateA;
-        }
-
-        // 4. Regular squad members first
-        if (a.isRegular && !b.isRegular) return -1;
-        if (!a.isRegular && b.isRegular) return 1;
-
-        // 5. Fallback alphabetically by name
-        return (a.name || '').localeCompare(b.name || '');
-      });
+      .filter((p) => !excluded.has(p._id))
+      .sort((a, b) => (a.name || '').localeCompare(b.name || ''));
   }, [players, excludePlayerIds]);
 
   const visiblePlayers = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    if (!q) return availablePlayers;
-    return availablePlayers.filter(
-      (p) =>
-        (p.name || '').toLowerCase().includes(q) ||
-        String(p.jerseyNumber || '').includes(q) ||
-        (p.phone || '').includes(q),
-    );
+    if (!search.trim()) return availablePlayers;
+    const q = search.toLowerCase();
+    return availablePlayers.filter((p) => {
+      const name = (p.name || '').toLowerCase();
+      const phone = (p.phone || '').toLowerCase();
+      const jersey = p.jerseyNumber ? String(p.jerseyNumber) : '';
+      return name.includes(q) || phone.includes(q) || jersey.includes(q);
+    });
   }, [availablePlayers, search]);
 
   const selectedIds = Object.keys(selected);
+  const isSomeSelected = visiblePlayers.some((p) => selected[p._id]);
   const allVisibleSelected =
     visiblePlayers.length > 0 && visiblePlayers.every((p) => selected[p._id]);
 
-  // Initially selected players have fees = 0
+  const toggleAllVisible = () => {
+    if (allVisibleSelected) {
+      setSelected((prev) => {
+        const next = { ...prev };
+        visiblePlayers.forEach((p) => delete next[p._id]);
+        return next;
+      });
+    } else {
+      setSelected((prev) => {
+        const next = { ...prev };
+        visiblePlayers.forEach((p) => {
+          if (!next[p._id]) {
+            next[p._id] = { feeAssigned: bulkAssigned, feePaid: bulkPaid };
+          }
+        });
+        return next;
+      });
+    }
+  };
+
   const togglePlayer = (id: string) => {
     setSelected((prev) => {
-      const next = { ...prev };
-      if (next[id]) delete next[id];
-      else next[id] = { feeAssigned: 0, feePaid: 0 };
-      return next;
-    });
-  };
-
-  const toggleAllVisible = () => {
-    setSelected((prev) => {
-      const next = { ...prev };
-      if (allVisibleSelected) {
-        visiblePlayers.forEach((p) => delete next[p._id]);
-      } else {
-        visiblePlayers.forEach((p) => {
-          if (!next[p._id]) next[p._id] = { feeAssigned: 0, feePaid: 0 };
-        });
+      if (prev[id]) {
+        const { [id]: _, ...rest } = prev;
+        return rest;
       }
-      return next;
-    });
-  };
-
-  const updateRow = (id: string, field: keyof RowState, value: number) => {
-    setSelected((prev) => {
-      const currentRow = prev[id] || { feeAssigned: 0, feePaid: 0 };
       return {
         ...prev,
-        [id]: { ...currentRow, [field]: value },
+        [id]: { feeAssigned: bulkAssigned, feePaid: bulkPaid },
       };
     });
+  };
+
+  const updateRow = (id: string, field: 'feeAssigned' | 'feePaid', val: number) => {
+    const safeVal = isNaN(val) ? 0 : Math.max(0, val);
+    setSelected((prev) => ({
+      ...prev,
+      [id]: {
+        ...(prev[id] || { feeAssigned: bulkAssigned, feePaid: bulkPaid }),
+        [field]: safeVal,
+      },
+    }));
   };
 
   const setRowDefault = (id: string) => {
     setSelected((prev) => ({
       ...prev,
-      [id]: { feeAssigned: bulkAssigned, feePaid: bulkPaid },
+      [id]: { feeAssigned: bulkAssigned, feePaid: bulkPaid, notes: undefined },
     }));
   };
 
   const setRowFree = (id: string) => {
     setSelected((prev) => ({
       ...prev,
-      [id]: { feeAssigned: 0, feePaid: 0 },
+      [id]: { feeAssigned: 0, feePaid: 0, notes: undefined },
+    }));
+  };
+
+  const setRowTopi = (id: string) => {
+    const fee = bulkAssigned > 0 ? bulkAssigned : defaultFee;
+    setSelected((prev) => ({
+      ...prev,
+      [id]: { feeAssigned: fee, feePaid: 0, notes: 'Topi / Defaulter' },
     }));
   };
 
@@ -134,7 +160,7 @@ export const AssignSquadFeeForm: React.FC<AssignSquadFeeFormProps> = ({
     setSelected((prev) => {
       const next: Record<string, RowState> = {};
       Object.keys(prev).forEach((id) => {
-        next[id] = { feeAssigned: bulkAssigned, feePaid: bulkPaid };
+        next[id] = { feeAssigned: bulkAssigned, feePaid: bulkPaid, notes: undefined };
       });
       return next;
     });
@@ -144,18 +170,62 @@ export const AssignSquadFeeForm: React.FC<AssignSquadFeeFormProps> = ({
     setSelected((prev) => {
       const next: Record<string, RowState> = {};
       Object.keys(prev).forEach((id) => {
-        next[id] = { feeAssigned: 0, feePaid: 0 };
+        next[id] = { feeAssigned: 0, feePaid: 0, notes: undefined };
       });
       return next;
     });
   };
 
+  const setAllSelectedTopi = () => {
+    const fee = bulkAssigned > 0 ? bulkAssigned : defaultFee;
+    setSelected((prev) => {
+      const next: Record<string, RowState> = {};
+      Object.keys(prev).forEach((id) => {
+        next[id] = { feeAssigned: fee, feePaid: 0, notes: 'Topi / Defaulter' };
+      });
+      return next;
+    });
+  };
+
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [serverError, setServerError] = useState<string | null>(null);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!matchId || selectedIds.length === 0) {
-      setServerError('Please select at least one player.');
-      return;
+    if (!matchId) return;
+
+    const momChanged =
+      momPlayerId !== (currentMomPlayerId || '') ||
+      (Number(momPrizeMoney) || 0) !== (currentMomPrizeMoney || 0) ||
+      momAwardDetails !== (currentMomAwardDetails || '');
+
+    if (selectedIds.length === 0) {
+      if (momChanged) {
+        setIsSubmitting(true);
+        setServerError(null);
+        try {
+          await fetchApi(`/matches/${matchId}`, {
+            method: 'PUT',
+            body: JSON.stringify({
+              momPlayerId: momPlayerId || null,
+              momPrizeMoney: Number(momPrizeMoney) || 0,
+              momAwardDetails,
+            }),
+          });
+          onSuccess();
+          return;
+        } catch (err: any) {
+          setServerError(err?.message || 'Failed to update Man of the Match.');
+          return;
+        } finally {
+          setIsSubmitting(false);
+        }
+      } else {
+        setServerError('Please select at least one player or set Man of the Match.');
+        return;
+      }
     }
+
     setServerError(null);
     setIsSubmitting(true);
 
@@ -170,6 +240,7 @@ export const AssignSquadFeeForm: React.FC<AssignSquadFeeFormProps> = ({
               feeAssigned: Number(selected[playerId].feeAssigned) || 0,
               feePaid: Number(selected[playerId].feePaid) || 0,
               paymentMethod: PaymentMethod.CASH,
+              notes: selected[playerId].notes || undefined,
             }),
           }),
         ),
@@ -182,6 +253,16 @@ export const AssignSquadFeeForm: React.FC<AssignSquadFeeFormProps> = ({
       );
 
       if (failedIds.length === 0) {
+        if (momChanged) {
+          await fetchApi(`/matches/${matchId}`, {
+            method: 'PUT',
+            body: JSON.stringify({
+              momPlayerId: momPlayerId || null,
+              momPrizeMoney: Number(momPrizeMoney) || 0,
+              momAwardDetails,
+            }),
+          }).catch((e) => console.error('Failed to sync MOM', e));
+        }
         setSelected({});
         onSuccess();
       } else {
@@ -207,395 +288,247 @@ export const AssignSquadFeeForm: React.FC<AssignSquadFeeFormProps> = ({
   const totalPending = Math.max(0, totalAssigned - totalPaid);
 
   return (
-    <form
-      onSubmit={handleSubmit}
-      style={{
-        padding: '20px',
-        background: '#ffffff',
-        border: '1px solid #e2e8f0',
-        borderRadius: '12px',
-        boxShadow: '0 4px 16px -2px rgba(15, 23, 42, 0.06)',
-        marginBottom: '20px',
-      }}
-    >
+    <form onSubmit={handleSubmit} className={styles.form}>
       {/* Header bar */}
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          marginBottom: '16px',
-          paddingBottom: '12px',
-          borderBottom: '1px solid #f1f5f9',
-          flexWrap: 'wrap',
-          gap: '8px',
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <div
-            style={{
-              width: '32px',
-              height: '32px',
-              borderRadius: '8px',
-              background: '#eff6ff',
-              color: '#0284c7',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            <Users size={18} />
+      <div className={styles.headerBar}>
+        <div className={styles.headerLeft}>
+          <div className={styles.headerIconBox}>
+            <Users size={19} />
           </div>
           <div>
-            <h3 style={{ fontSize: '15px', fontWeight: 800, color: '#0f172a', margin: 0 }}>
+            <h3 className={styles.headerTitle}>
               Assign Match Fee to Players
             </h3>
-            <p style={{ fontSize: '12px', color: '#64748b', margin: '2px 0 0 0' }}>
-              Select players, set fee amounts, or mark players as free
+            <p className={styles.headerSubtitle}>
+              Select players, set customized or default fees, and record cleared dues
             </p>
           </div>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <span
-            style={{
-              fontSize: '12px',
-              fontWeight: 700,
-              padding: '4px 10px',
-              borderRadius: '20px',
-              background: selectedIds.length > 0 ? '#f0fdf4' : '#f1f5f9',
-              color: selectedIds.length > 0 ? '#166534' : '#64748b',
-              border: selectedIds.length > 0 ? '1px solid #bbf7d0' : '1px solid #e2e8f0',
-            }}
+        <div>
+          <Badge
+            variant={selectedIds.length > 0 ? 'success' : 'secondary'}
+            className={styles.headerBadge}
           >
             {selectedIds.length} Player{selectedIds.length === 1 ? '' : 's'} Selected
-          </span>
+          </Badge>
         </div>
       </div>
 
       {serverError && (
-        <div style={{ marginBottom: '14px' }}>
+        <div className={styles.errorContainer}>
           <Alert variant="danger" title="Error">
             {serverError}
           </Alert>
         </div>
       )}
 
-      {/* Top Filter & Default Settings Bar */}
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'minmax(220px, 1.4fr) minmax(140px, 1fr) minmax(140px, 1fr)',
-          gap: '12px',
-          marginBottom: '12px',
-          alignItems: 'end',
-        }}
-      >
-        <div>
-          <label
-            style={{
-              display: 'block',
-              fontSize: '12px',
-              fontWeight: 700,
-              color: '#475569',
-              marginBottom: '6px',
+      {/* Organizer Man of the Match (MOM) Prize Section */}
+      <div className={`${styles.momCard} ${momPlayerId ? styles.momCardActive : ''}`}>
+        <div
+          className={styles.momHeader}
+          onClick={() => setShowMomSection(!showMomSection)}
+        >
+          <div className={styles.momHeaderLeft}>
+            <div className={styles.momIconBox}>
+              <Award size={17} color="#d97706" />
+            </div>
+            <div>
+              <span className={styles.momTitle}>
+                Organizer Man of the Match (MOM) Cash Award
+              </span>
+              {momPlayerId ? (
+                <Badge variant="warning" className={styles.momBadge}>
+                  🏆 {players.find((p) => p._id === momPlayerId)?.name || 'Player'} (+Rs. {momPrizeMoney || 0})
+                </Badge>
+              ) : (
+                <span className={styles.momSubtitle}>
+                  (Optional cash prize paid by organizer)
+                </span>
+              )}
+            </div>
+          </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              setShowMomSection(!showMomSection);
             }}
+            className={styles.momToggleBtn}
           >
-            Search Players
-          </label>
-          <div style={{ position: 'relative' }}>
-            <Search
-              size={15}
-              style={{
-                position: 'absolute',
-                left: '11px',
-                top: '50%',
-                transform: 'translateY(-50%)',
-                color: '#94a3b8',
-                pointerEvents: 'none',
+            {showMomSection ? 'Hide' : momPlayerId ? 'Edit MOM' : '+ Add MOM Award'}
+          </Button>
+        </div>
+
+        {showMomSection && (
+          <div className={styles.momGrid}>
+            <Select
+              label="MOM Player"
+              value={momPlayerId}
+              options={[
+                { value: '', label: 'None (No MOM Awarded)' },
+                ...players.map((p) => ({
+                  value: p._id,
+                  label: `${p.name}${p.jerseyNumber ? ` (#${p.jerseyNumber})` : ''} — ${p.role?.replace('_', ' ') || 'Player'}`,
+                })),
+              ]}
+              onChange={(e) => {
+                setMomPlayerId(e.target.value);
+                if (e.target.value && !momPrizeMoney) setMomPrizeMoney(1000);
               }}
             />
-            <input
+
+            <Input
+              label="Organizer Cash Prize (Rs.)"
+              type="number"
+              min="0"
+              value={momPrizeMoney}
+              onChange={(e) => setMomPrizeMoney(e.target.value === '' ? '' : Number(e.target.value))}
+              placeholder="0"
+              onWheel={(e) => e.currentTarget.blur()}
+            />
+
+            <Input
+              label="Performance Note / Details"
               type="text"
-              placeholder="Search name, jersey #, phone..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              style={{
-                width: '100%',
-                height: '38px',
-                padding: '0 32px 0 34px',
-                fontSize: '13px',
-                border: '1px solid #cbd5e1',
-                borderRadius: '8px',
-                outline: 'none',
-                background: '#ffffff',
-                color: '#0f172a',
-              }}
+              value={momAwardDetails}
+              onChange={(e) => setMomAwardDetails(e.target.value)}
+              placeholder="e.g. 54*(28) & 3/18 (4 ov)"
             />
-            {search && (
+          </div>
+        )}
+      </div>
+
+      {/* Top Filter & Default Settings Bar */}
+      <div className={styles.toolbarGrid}>
+        <Input
+          label="Search Players"
+          placeholder="Search name, jersey #, phone..."
+          icon={<Search size={15} />}
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          iconRight={
+            search ? (
               <button
                 type="button"
                 onClick={() => setSearch('')}
-                style={{
-                  position: 'absolute',
-                  right: '10px',
-                  top: '50%',
-                  transform: 'translateY(-50%)',
-                  border: 'none',
-                  background: 'transparent',
-                  color: '#94a3b8',
-                  cursor: 'pointer',
-                  padding: 0,
-                  display: 'flex',
-                }}
+                className={styles.searchClearBtn}
+                aria-label="Clear search"
               >
                 <X size={14} />
               </button>
-            )}
-          </div>
-        </div>
+            ) : undefined
+          }
+        />
 
-        <div>
-          <label
-            style={{
-              display: 'block',
-              fontSize: '12px',
-              fontWeight: 700,
-              color: '#475569',
-              marginBottom: '6px',
-            }}
-          >
-            Default Fee Assigned (Rs.)
-          </label>
-          <input
-            type="number"
-            value={bulkAssigned}
-            onChange={(e) => setBulkAssigned(Number(e.target.value))}
-            style={{
-              width: '100%',
-              height: '38px',
-              padding: '0 12px',
-              fontSize: '13.5px',
-              fontWeight: 600,
-              border: '1px solid #cbd5e1',
-              borderRadius: '8px',
-              outline: 'none',
-              background: '#ffffff',
-              color: '#0f172a',
-            }}
-          />
-        </div>
+        <Input
+          label="Default Fee Assigned (Rs.)"
+          type="number"
+          value={bulkAssigned}
+          onWheel={(e) => e.currentTarget.blur()}
+          onChange={(e) => setBulkAssigned(Number(e.target.value))}
+        />
 
-        <div>
-          <label
-            style={{
-              display: 'block',
-              fontSize: '12px',
-              fontWeight: 700,
-              color: '#475569',
-              marginBottom: '6px',
-            }}
-          >
-            Default Fee Paid (Rs.)
-          </label>
-          <input
-            type="number"
-            value={bulkPaid}
-            onChange={(e) => setBulkPaid(Number(e.target.value))}
-            style={{
-              width: '100%',
-              height: '38px',
-              padding: '0 12px',
-              fontSize: '13.5px',
-              fontWeight: 600,
-              border: '1px solid #cbd5e1',
-              borderRadius: '8px',
-              outline: 'none',
-              background: '#ffffff',
-              color: '#0f172a',
-            }}
-          />
-        </div>
+        <Input
+          label="Default Fee Paid (Rs.)"
+          type="number"
+          value={bulkPaid}
+          onWheel={(e) => e.currentTarget.blur()}
+          onChange={(e) => setBulkPaid(Number(e.target.value))}
+        />
       </div>
 
       {/* Batch Action Toolbar */}
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          marginBottom: '10px',
-          flexWrap: 'wrap',
-          gap: '8px',
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-          <button
+      <div className={styles.batchToolbar}>
+        <div className={styles.batchActionsLeft}>
+          <Button
             type="button"
+            variant="outline"
+            size="sm"
+            icon={<Sparkles size={13} />}
             onClick={applyBulkToSelected}
             disabled={selectedIds.length === 0}
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '6px',
-              padding: '6px 12px',
-              borderRadius: '6px',
-              border: selectedIds.length > 0 ? '1px solid #93c5fd' : '1px solid #e2e8f0',
-              background: selectedIds.length > 0 ? '#eff6ff' : '#f8fafc',
-              color: selectedIds.length > 0 ? '#0284c7' : '#94a3b8',
-              fontSize: '12px',
-              fontWeight: 600,
-              cursor: selectedIds.length > 0 ? 'pointer' : 'not-allowed',
-              transition: 'all 0.15s ease',
-            }}
-            title="Fill fee assigned and paid for all checked players with default amount"
           >
-            <Sparkles size={13} />
-            <span>Fill Selected with Default (Rs. {bulkAssigned})</span>
-          </button>
+            Fill Selected with Default (Rs. {bulkAssigned})
+          </Button>
 
-          <button
+          <Button
             type="button"
+            variant="secondary"
+            size="sm"
             onClick={setAllSelectedFree}
             disabled={selectedIds.length === 0}
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '6px',
-              padding: '6px 12px',
-              borderRadius: '6px',
-              border: selectedIds.length > 0 ? '1px solid #86efac' : '1px solid #e2e8f0',
-              background: selectedIds.length > 0 ? '#f0fdf4' : '#f8fafc',
-              color: selectedIds.length > 0 ? '#15803d' : '#94a3b8',
-              fontSize: '12px',
-              fontWeight: 600,
-              cursor: selectedIds.length > 0 ? 'pointer' : 'not-allowed',
-              transition: 'all 0.15s ease',
-            }}
-            title="Set fee to Rs. 0 for all selected players"
+            className={selectedIds.length > 0 ? styles.btnFreeSelected : undefined}
           >
-            <span>Free Selected Players (Rs. 0)</span>
-          </button>
+            Free Selected Players (Rs. 0)
+          </Button>
+
+          <Button
+            type="button"
+            variant="danger"
+            size="sm"
+            onClick={setAllSelectedTopi}
+            disabled={selectedIds.length === 0}
+          >
+            🧢 Topi Selected (Rs. 0 Paid)
+          </Button>
         </div>
 
-        <button
+        <Button
           type="button"
+          variant="ghost"
+          size="sm"
           onClick={toggleAllVisible}
           disabled={visiblePlayers.length === 0}
-          style={{
-            background: 'transparent',
-            border: 'none',
-            color: '#0284c7',
-            fontSize: '12px',
-            fontWeight: 700,
-            cursor: 'pointer',
-            padding: '4px 6px',
-          }}
+          className={styles.btnDeselect}
         >
           {allVisibleSelected ? 'Deselect All on Page' : 'Select All Available'}
-        </button>
+        </Button>
       </div>
 
       {/* Modern Player Checklist Table */}
-      <div
-        style={{
-          background: '#ffffff',
-          border: '1px solid #e2e8f0',
-          borderRadius: '10px',
-          overflow: 'hidden',
-          marginBottom: '14px',
-        }}
-      >
+      <div className={styles.tableContainer}>
         {/* Table Header */}
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: '32px 1fr 130px 120px 120px',
-            alignItems: 'center',
-            gap: '12px',
-            padding: '10px 14px',
-            background: '#f8fafc',
-            borderBottom: '1px solid #e2e8f0',
-          }}
-        >
-          <input
-            type="checkbox"
-            checked={allVisibleSelected}
-            onChange={toggleAllVisible}
-            disabled={visiblePlayers.length === 0}
-            style={{ cursor: 'pointer', width: '15px', height: '15px' }}
-          />
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span
-              style={{
-                fontSize: '11px',
-                fontWeight: 800,
-                color: '#475569',
-                letterSpacing: '0.04em',
-                textTransform: 'uppercase',
-              }}
-            >
+        <div className={styles.tableHeaderRow}>
+          <div className={styles.headerColCenter}>
+            <Checkbox
+              size="md"
+              checked={allVisibleSelected}
+              indeterminate={isSomeSelected && !allVisibleSelected}
+              onChange={toggleAllVisible}
+              disabled={visiblePlayers.length === 0}
+              aria-label="Select all visible players"
+            />
+          </div>
+
+          <div className={styles.headerColLeft}>
+            <span className={styles.headerColText}>
               Player
             </span>
-            <span
-              style={{
-                fontSize: '11px',
-                fontWeight: 600,
-                color: '#64748b',
-              }}
-            >
+            <span className={styles.headerCount}>
               ({selectedIds.length} / {availablePlayers.length} selected)
             </span>
           </div>
-          <div
-            style={{
-              textAlign: 'center',
-              fontSize: '11px',
-              fontWeight: 800,
-              color: '#475569',
-              letterSpacing: '0.04em',
-              textTransform: 'uppercase',
-            }}
-          >
+
+          <div className={styles.headerColTextCenter}>
             Quick Action
           </div>
-          <div
-            style={{
-              textAlign: 'right',
-              fontSize: '11px',
-              fontWeight: 800,
-              color: '#475569',
-              letterSpacing: '0.04em',
-              textTransform: 'uppercase',
-            }}
-          >
+
+          <div className={styles.headerColTextRight}>
             Fee Assigned
           </div>
-          <div
-            style={{
-              textAlign: 'right',
-              fontSize: '11px',
-              fontWeight: 800,
-              color: '#475569',
-              letterSpacing: '0.04em',
-              textTransform: 'uppercase',
-            }}
-          >
+
+          <div className={styles.headerColTextRight}>
             Fee Paid
           </div>
         </div>
 
         {/* Scrollable Player Rows */}
-        <div style={{ maxHeight: '340px', overflowY: 'auto' }}>
+        <div className={styles.tableScrollArea}>
           {visiblePlayers.length === 0 ? (
-            <div
-              style={{
-                padding: '24px 16px',
-                textAlign: 'center',
-                fontSize: '13px',
-                color: '#94a3b8',
-              }}
-            >
+            <div className={styles.emptyState}>
               {availablePlayers.length === 0
                 ? 'All players already have a fee record for this match.'
                 : 'No players match your search filter.'}
@@ -605,108 +538,99 @@ export const AssignSquadFeeForm: React.FC<AssignSquadFeeFormProps> = ({
               const row = selected[p._id];
               const isChecked = !!row;
               const isFree = isChecked && row.feeAssigned === 0 && row.feePaid === 0;
+              const isTopi = isChecked && row.feeAssigned > 0 && row.feePaid === 0;
               const isDefault =
                 isChecked && row.feeAssigned === bulkAssigned && row.feePaid === bulkPaid && bulkAssigned > 0;
+
+              const rowClass = !isChecked
+                ? styles.tableRow
+                : isTopi
+                ? `${styles.tableRow} ${styles.tableRowTopi}`
+                : isFree
+                ? `${styles.tableRow} ${styles.tableRowFree}`
+                : `${styles.tableRow} ${styles.tableRowChecked}`;
 
               return (
                 <div
                   key={p._id}
-                  onClick={() => togglePlayer(p._id)}
-                  style={{
-                    display: 'grid',
-                    gridTemplateColumns: '32px 1fr 130px 120px 120px',
-                    alignItems: 'center',
-                    gap: '12px',
-                    padding: '8px 14px',
-                    borderBottom: '1px solid #f1f5f9',
-                    background: isChecked ? (isFree ? '#f0fdf4' : '#f0f9ff') : 'transparent',
-                    cursor: 'pointer',
-                    transition: 'background-color 0.12s ease',
+                  onClick={(e) => {
+                    // Prevent toggling if user was selecting/dragging text
+                    const selection = window.getSelection();
+                    if (selection && selection.toString().trim().length > 0) {
+                      return;
+                    }
+                    // Only toggle if the click target is within the checkbox or player info area
+                    const target = e.target as HTMLElement;
+                    if (target.closest('[data-player-select]')) {
+                      togglePlayer(p._id);
+                    }
                   }}
+                  className={rowClass}
                 >
-                  <input
-                    type="checkbox"
-                    checked={isChecked}
-                    onChange={() => togglePlayer(p._id)}
-                    onClick={(e) => e.stopPropagation()}
-                    style={{ cursor: 'pointer', width: '15px', height: '15px' }}
-                  />
+                  <div
+                    data-player-select="true"
+                    className={styles.rowCheckCell}
+                  >
+                    <Checkbox
+                      size="md"
+                      checked={isChecked}
+                      onChange={() => togglePlayer(p._id)}
+                      variant={isTopi ? 'danger' : isFree ? 'success' : 'primary'}
+                      aria-label={`Select ${p.name}`}
+                    />
+                  </div>
 
                   {/* Player Name, Jersey & Matches Badge */}
                   <div
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '8px',
-                      minWidth: 0,
-                      flexWrap: 'wrap',
-                    }}
+                    data-player-select="true"
+                    className={styles.playerInfoCell}
                   >
-                    <span style={{ fontSize: '13.5px', fontWeight: 600, color: '#0f172a' }}>
+                    <span className={styles.playerName}>
                       {p.name}
                       {p.jerseyNumber ? (
-                        <span style={{ color: '#64748b', fontWeight: 500 }}> (#{p.jerseyNumber})</span>
+                        <span className={styles.playerJersey}> (#{p.jerseyNumber})</span>
                       ) : null}
                     </span>
 
+                    {momPlayerId === p._id && (
+                      <Badge variant="warning" className={styles.badgeMom}>
+                        🏆 MOM {momPrizeMoney ? `(Rs. ${momPrizeMoney})` : ''}
+                      </Badge>
+                    )}
+
                     {Number(p.matchesPlayed) > 0 && (
-                      <span
-                        style={{
-                          fontSize: '11px',
-                          fontWeight: 600,
-                          padding: '1px 6px',
-                          borderRadius: '4px',
-                          background: '#f1f5f9',
-                          color: '#475569',
-                        }}
-                      >
+                      <Badge variant="secondary" className={styles.badgeMatches}>
                         {p.matchesPlayed} {p.matchesPlayed === 1 ? 'match' : 'matches'}
-                      </span>
+                      </Badge>
                     )}
 
                     {isChecked && isFree && (
-                      <span
-                        style={{
-                          fontSize: '10px',
-                          fontWeight: 800,
-                          padding: '1px 6px',
-                          borderRadius: '4px',
-                          background: '#dcfce7',
-                          color: '#15803d',
-                          border: '1px solid #bbf7d0',
-                        }}
-                      >
+                      <Badge variant="success" className={styles.badgeStatus}>
                         FREE
-                      </span>
+                      </Badge>
+                    )}
+
+                    {isChecked && isTopi && (
+                      <Badge variant="danger" className={styles.badgeStatus}>
+                        🧢 TOPI (Rs. {row.feeAssigned} DUE)
+                      </Badge>
                     )}
                   </div>
 
-                  {/* Quick Action Buttons (Default & Free) */}
+                  {/* Quick Action Button Group */}
                   <div
-                    style={{
-                      display: 'flex',
-                      gap: '6px',
-                      justifyContent: 'center',
-                    }}
+                    data-no-toggle="true"
+                    className={styles.quickActionGroup}
                     onClick={(e) => e.stopPropagation()}
+                    onMouseDown={(e) => e.stopPropagation()}
+                    onMouseUp={(e) => e.stopPropagation()}
                   >
                     <button
                       type="button"
                       disabled={!isChecked}
                       onClick={() => setRowDefault(p._id)}
                       title={`Fill with default fee (Rs. ${bulkAssigned})`}
-                      style={{
-                        padding: '3px 9px',
-                        fontSize: '11px',
-                        fontWeight: 600,
-                        borderRadius: '5px',
-                        border: isDefault ? '1px solid #0284c7' : '1px solid #cbd5e1',
-                        background: isDefault ? '#eff6ff' : '#ffffff',
-                        color: isDefault ? '#0284c7' : '#475569',
-                        cursor: isChecked ? 'pointer' : 'not-allowed',
-                        opacity: isChecked ? 1 : 0.35,
-                        transition: 'all 0.12s ease',
-                      }}
+                      className={`${styles.pillBtn} ${isDefault ? styles.pillBtnDefaultActive : ''}`}
                     >
                       Default
                     </button>
@@ -715,68 +639,78 @@ export const AssignSquadFeeForm: React.FC<AssignSquadFeeFormProps> = ({
                       disabled={!isChecked}
                       onClick={() => setRowFree(p._id)}
                       title="Set fee to Rs. 0 (Free Player)"
-                      style={{
-                        padding: '3px 9px',
-                        fontSize: '11px',
-                        fontWeight: 600,
-                        borderRadius: '5px',
-                        border: isFree ? '1px solid #16a34a' : '1px solid #cbd5e1',
-                        background: isFree ? '#f0fdf4' : '#ffffff',
-                        color: isFree ? '#15803d' : '#475569',
-                        cursor: isChecked ? 'pointer' : 'not-allowed',
-                        opacity: isChecked ? 1 : 0.35,
-                        transition: 'all 0.12s ease',
-                      }}
+                      className={`${styles.pillBtn} ${isFree ? styles.pillBtnFreeActive : ''}`}
                     >
                       Free
                     </button>
+                    <button
+                      type="button"
+                      disabled={!isChecked}
+                      onClick={() => setRowTopi(p._id)}
+                      title={`Mark as Topi: Fee assigned Rs. ${bulkAssigned || defaultFee}, but Paid Rs. 0 (Defaulter)`}
+                      className={`${styles.pillBtn} ${styles.pillBtnTopi} ${
+                        isTopi ? styles.pillBtnTopiActive : ''
+                      }`}
+                    >
+                      Topi 🧢
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setPlayerAsMom(p._id)}
+                      title={`Toggle ${p.name} as Man of the Match`}
+                      className={`${styles.pillBtn} ${styles.pillBtnMom} ${
+                        momPlayerId === p._id ? styles.pillBtnMomActive : ''
+                      }`}
+                    >
+                      🏆 MOM
+                    </button>
                   </div>
 
-                  {/* Fee Assigned Input */}
-                  <div onClick={(e) => e.stopPropagation()}>
+                  {/* Fee Assigned Input (no spinner arrows, no scroll change) */}
+                  <div
+                    data-no-toggle="true"
+                    onClick={(e) => e.stopPropagation()}
+                    onMouseDown={(e) => e.stopPropagation()}
+                    onMouseUp={(e) => e.stopPropagation()}
+                  >
                     <input
                       type="number"
                       disabled={!isChecked}
                       value={isChecked ? row.feeAssigned : ''}
                       placeholder="—"
+                      onClick={(e) => e.stopPropagation()}
+                      onMouseDown={(e) => e.stopPropagation()}
+                      onMouseUp={(e) => e.stopPropagation()}
+                      onFocus={(e) => e.target.select()}
+                      onWheel={(e) => e.currentTarget.blur()}
                       onChange={(e) => updateRow(p._id, 'feeAssigned', Number(e.target.value))}
-                      style={{
-                        width: '100%',
-                        height: '32px',
-                        fontSize: '13px',
-                        fontWeight: 600,
-                        textAlign: 'right',
-                        padding: '0 8px',
-                        borderRadius: '6px',
-                        outline: 'none',
-                        border: isChecked ? '1px solid #94a3b8' : '1px dashed #cbd5e1',
-                        background: isChecked ? '#ffffff' : '#f8fafc',
-                        color: isChecked ? '#0f172a' : '#94a3b8',
-                      }}
+                      className={`form-input ${styles.feeInput} ${
+                        isChecked ? styles.feeInputActive : ''
+                      }`}
                     />
                   </div>
 
-                  {/* Fee Paid Input */}
-                  <div onClick={(e) => e.stopPropagation()}>
+                  {/* Fee Paid Input (no spinner arrows, no scroll change) */}
+                  <div
+                    data-no-toggle="true"
+                    onClick={(e) => e.stopPropagation()}
+                    onMouseDown={(e) => e.stopPropagation()}
+                    onMouseUp={(e) => e.stopPropagation()}
+                  >
                     <input
                       type="number"
                       disabled={!isChecked}
                       value={isChecked ? row.feePaid : ''}
                       placeholder="—"
+                      onClick={(e) => e.stopPropagation()}
+                      onMouseDown={(e) => e.stopPropagation()}
+                      onMouseUp={(e) => e.stopPropagation()}
+                      onFocus={(e) => e.target.select()}
+                      onWheel={(e) => e.currentTarget.blur()}
                       onChange={(e) => updateRow(p._id, 'feePaid', Number(e.target.value))}
-                      style={{
-                        width: '100%',
-                        height: '32px',
-                        fontSize: '13px',
-                        fontWeight: 600,
-                        textAlign: 'right',
-                        padding: '0 8px',
-                        borderRadius: '6px',
-                        outline: 'none',
-                        border: isChecked ? '1px solid #94a3b8' : '1px dashed #cbd5e1',
-                        background: isChecked ? '#ffffff' : '#f8fafc',
-                        color: isChecked ? (row.feePaid > 0 ? '#16a34a' : '#0f172a') : '#94a3b8',
-                      }}
+                      className={`form-input ${styles.feeInput} ${
+                        isChecked ? styles.feeInputActive : ''
+                      } ${isChecked && row.feePaid > 0 ? styles.feeInputPaidSuccess : ''}`}
                     />
                   </div>
                 </div>
@@ -787,38 +721,26 @@ export const AssignSquadFeeForm: React.FC<AssignSquadFeeFormProps> = ({
       </div>
 
       {/* Footer Bar */}
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          gap: '12px',
-          padding: '12px 16px',
-          background: '#f8fafc',
-          border: '1px solid #e2e8f0',
-          borderRadius: '8px',
-          flexWrap: 'wrap',
-        }}
-      >
-        <div style={{ fontSize: '13px', color: '#475569', display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+      <div className={styles.footerBar}>
+        <div className={styles.footerStats}>
           <span>
-            Assigned: <strong style={{ color: '#0f172a' }}>Rs. {totalAssigned.toLocaleString()}</strong>
+            Assigned: <strong className={styles.statValAssigned}>Rs. {totalAssigned.toLocaleString()}</strong>
           </span>
-          <span>•</span>
+          <span className={styles.footerDot}>•</span>
           <span>
-            Paid: <strong style={{ color: '#16a34a' }}>Rs. {totalPaid.toLocaleString()}</strong>
+            Paid: <strong className={styles.statValPaid}>Rs. {totalPaid.toLocaleString()}</strong>
           </span>
           {totalPending > 0 && (
             <>
-              <span>•</span>
+              <span className={styles.footerDot}>•</span>
               <span>
-                Pending: <strong style={{ color: '#d97706' }}>Rs. {totalPending.toLocaleString()}</strong>
+                Pending: <strong className={styles.statValPending}>Rs. {totalPending.toLocaleString()}</strong>
               </span>
             </>
           )}
         </div>
 
-        <div style={{ display: 'flex', gap: '8px' }}>
+        <div className={styles.footerActions}>
           <Button variant="secondary" size="sm" type="button" onClick={onCancel} disabled={isSubmitting}>
             Cancel
           </Button>

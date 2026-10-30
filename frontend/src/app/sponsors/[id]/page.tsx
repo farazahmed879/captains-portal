@@ -131,6 +131,16 @@ export default function SponsorDetailPage() {
 
   const fNum = (val: number | undefined) => (val || 0).toLocaleString('en-US');
 
+  const transactionColumns = useMemo(
+    () =>
+      getSponsorTransactionColumns({
+        onEdit: (t: SponsorTransaction) => openTxModal(t.type as any, t),
+        onDelete: handleDeleteTx,
+        fNum,
+      }),
+    [id]
+  );
+
   if (loading) {
     return (
       <div>
@@ -167,16 +177,6 @@ export default function SponsorDetailPage() {
     .reverse();
   const investmentCount = txs.filter((t) => t.type === 'investment').length;
   const payoutCount = txs.length - investmentCount;
-
-  const transactionColumns = useMemo(
-    () =>
-      getSponsorTransactionColumns({
-        onEdit: (t: SponsorTransaction) => openTxModal(t.type as any, t),
-        onDelete: handleDeleteTx,
-        fNum,
-      }),
-    [fNum]
-  );
 
   return (
     <>

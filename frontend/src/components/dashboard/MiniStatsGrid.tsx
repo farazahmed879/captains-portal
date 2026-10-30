@@ -42,7 +42,7 @@ export const MiniStatsGrid: React.FC<MiniStatsGridProps> = ({ stats, isLoading =
         <div className="mini-stat-info">
           <span className="mini-stat-label">Total Invested</span>
           <span className="mini-stat-val">Rs. {formatCurrency(finances?.totalInvested)}</span>
-          <span className="mini-stat-sub">Entry Fees + Expenses</span>
+          <span className="mini-stat-sub">Entry Fees + Match Costs + Expenses</span>
         </div>
       </div>
 
@@ -56,7 +56,7 @@ export const MiniStatsGrid: React.FC<MiniStatsGridProps> = ({ stats, isLoading =
           <span className={`mini-stat-val ${styles.greenValue}`}>
             Rs. {formatCurrency(finances?.totalReturns)}
           </span>
-          <span className="mini-stat-sub">Sponsors + Winning Prizes</span>
+          <span className="mini-stat-sub">Sponsors + Prizes + Player Fees</span>
         </div>
       </div>
 

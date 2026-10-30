@@ -107,7 +107,7 @@ export class TeamService {
           ? "my_team"
           : "opponent";
 
-    const captain = await userRepository.findById(team.captainId);
+    const captain = team.captainId ? await userRepository.findById(team.captainId) : null;
     const players = await playerRepository.findByTeam(tenantId, team.id);
 
     const allTenantMatches = await matchRepository.findMany(tenantId);

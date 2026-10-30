@@ -3,7 +3,7 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Modal } from './Modal';
-import { Button, Badge, Input, Select, Alert } from './ui';
+import { Button, Badge, Input, Select, Alert, Checkbox } from './ui';
 import { Users, Search, Plus, CheckCircle2 } from './icons';
 import { fetchApi } from '../lib/api';
 import { showToast } from '../lib/alerts';
@@ -97,6 +97,8 @@ export const ManageTeamPlayersModal: React.FC<ManageTeamPlayersModalProps> = ({
   const allAvailableSelected =
     availableFilteredIds.length > 0 &&
     availableFilteredIds.every((id) => selectedPlayerIds.includes(id));
+  const someAvailableSelected =
+    !allAvailableSelected && availableFilteredIds.some((id) => selectedPlayerIds.includes(id));
 
   const togglePlayer = (playerId: string) => {
     if (enrolledSet.has(playerId)) return;
@@ -314,31 +316,19 @@ export const ManageTeamPlayersModal: React.FC<ManageTeamPlayersModalProps> = ({
             border: '1px solid var(--border-color)',
           }}
         >
-          <label
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '8px',
-              fontSize: '12.5px',
-              fontWeight: 700,
-              color: 'var(--text-primary)',
-              cursor: availableFilteredIds.length > 0 ? 'pointer' : 'default',
-              userSelect: 'none',
-            }}
-          >
-            <input
-              type="checkbox"
-              checked={allAvailableSelected}
-              onChange={toggleSelectAllAvailable}
-              disabled={availableFilteredIds.length === 0}
-              style={{ width: '15px', height: '15px', cursor: 'pointer', accentColor: '#0284c7' }}
-            />
-            <span>
-              {allAvailableSelected
+          <Checkbox
+            size="md"
+            variant="primary"
+            checked={allAvailableSelected}
+            indeterminate={someAvailableSelected}
+            onChange={toggleSelectAllAvailable}
+            disabled={availableFilteredIds.length === 0}
+            label={
+              allAvailableSelected
                 ? 'Deselect Available Players'
-                : `Select All Available (${availableFilteredIds.length})`}
-            </span>
-          </label>
+                : `Select All Available (${availableFilteredIds.length})`
+            }
+          />
           <span style={{ fontSize: '11.5px', color: 'var(--text-muted)' }}>
             Total Club Players: {allPlayers.length}
           </span>
@@ -389,19 +379,16 @@ export const ManageTeamPlayersModal: React.FC<ManageTeamPlayersModalProps> = ({
                   }}
                 >
                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <input
-                      type="checkbox"
-                      checked={isAlreadyInTeam || isSelected}
-                      disabled={isAlreadyInTeam}
-                      onChange={() => togglePlayer(pid)}
-                      onClick={(e) => e.stopPropagation()}
-                      style={{
-                        width: '16px',
-                        height: '16px',
-                        cursor: isAlreadyInTeam ? 'default' : 'pointer',
-                        accentColor: '#0284c7',
-                      }}
-                    />
+                    <div onClick={(e) => e.stopPropagation()}>
+                      <Checkbox
+                        size="md"
+                        variant="primary"
+                        checked={isAlreadyInTeam || isSelected}
+                        disabled={isAlreadyInTeam}
+                        onChange={() => togglePlayer(pid)}
+                        aria-label={`Select ${p.name}`}
+                      />
+                    </div>
                     <div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                         <span style={{ fontWeight: 700, fontSize: '13.5px', color: 'var(--text-primary)' }}>

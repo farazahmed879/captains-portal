@@ -45,7 +45,10 @@ export const getTournaments = async (req: AuthRequest, res: Response): Promise<v
 
         // Returns: Winning prizes won + Sponsor funds + Squad fees collected
         const sponsorFunds = sponsors.reduce((acc, s) => acc + (s.amountInvested || 0), 0);
-        const matchPrizeWon = matches.reduce((acc, m) => acc + (m.winningPrizeMoney || 0), 0);
+        const matchPrizeWon = matches.reduce(
+          (acc, m) => acc + (m.winningPrizeMoney || 0) + (m.momPrizeMoney || 0),
+          0
+        );
         const totalReturns = (tournament.actualWinningPrizeWon || 0) + sponsorFunds + matchPrizeWon + totalFeesCollected;
 
         const netPnl = totalReturns - totalInvested;
@@ -59,6 +62,7 @@ export const getTournaments = async (req: AuthRequest, res: Response): Promise<v
             entryFee: tournament.entryFee || 0,
             tournamentExpenses: tournamentExpensesSum,
             matchExpenses: matchExpensesSum,
+            totalMatchExpenses: matchExpensesSum,
             totalInvested,
             sponsorFunds,
             totalFeesCollected,
@@ -93,7 +97,62 @@ export const getTournamentById = async (req: AuthRequest, res: Response): Promis
       .populate('momPlayerId', 'name')
       .sort({ matchDate: 1 });
     const expenses = await Expense.find({ tournamentId: tournament._id }).sort({ expenseDate: -1 });
-    const sponsors = await Sponsor.find({ tournamentId: tournament._id }).sort({ investmentDate: -1 });
+
+    // Sponsors linked to this tournament: either dedicated to it, or with ledger entries tagged to it
+    const sponsorDocs = await Sponsor.find({
+      tenantId: req.user?.tenantId,
+      $or: [{ tournamentId: tournament._id }, { 'transactions.tournamentId': tournament._id }],
+    }).sort({ investmentDate: -1 });
+
+    const tournamentIdStr = String(tournament._id);
+    const sponsorLedger: any[] = [];
+    let sponsorFundsReceived = 0;
+    let sponsorPayouts = 0;
+
+    const sponsors = sponsorDocs.map((s) => {
+      const isDedicated = String(s.tournamentId || '') === tournamentIdStr;
+      // A ledger entry counts for this tournament if explicitly tagged to it,
+      // or if it is untagged and the sponsor itself is dedicated to this tournament.
+      const txs = (s.transactions || []).filter((t: any) => {
+        const txTournament = t.tournamentId ? String(t.tournamentId) : '';
+        return txTournament === tournamentIdStr || (!txTournament && isDedicated);
+      });
+
+      const tournamentInvested = txs
+        .filter((t: any) => t.type === 'investment')
+        .reduce((acc: number, t: any) => acc + (t.amount || 0), 0);
+      const tournamentPaidOut = txs
+        .filter((t: any) => t.type === 'payout')
+        .reduce((acc: number, t: any) => acc + (t.amount || 0), 0);
+
+      sponsorFundsReceived += tournamentInvested;
+      sponsorPayouts += tournamentPaidOut;
+
+      txs.forEach((t: any) => {
+        sponsorLedger.push({
+          _id: t._id,
+          sponsorId: s._id,
+          sponsorName: s.sponsorName,
+          companyName: s.companyName,
+          type: t.type,
+          amount: t.amount,
+          date: t.date,
+          method: t.method,
+          reference: t.reference,
+          notes: t.notes,
+        });
+      });
+
+      return {
+        ...s.toObject(),
+        isDedicated,
+        tournamentInvested,
+        tournamentPaidOut,
+        tournamentNet: tournamentInvested - tournamentPaidOut,
+      };
+    });
+
+    sponsorLedger.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
     const matchIds = matches.map((m) => m._id);
     const payments = await MatchPayment.find({ matchId: { $in: matchIds } })
@@ -127,10 +186,14 @@ export const getTournamentById = async (req: AuthRequest, res: Response): Promis
       matches: enrichedMatches,
       expenses,
       sponsors,
+      sponsorLedger,
       financials: {
         totalFeesCollected,
         totalFeesAssigned,
         totalFeesPending,
+        sponsorFundsReceived,
+        sponsorPayouts,
+        sponsorNet: sponsorFundsReceived - sponsorPayouts,
       },
     });
   } catch (error: any) {

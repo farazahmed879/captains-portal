@@ -1,11 +1,11 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { Modal } from './Modal';
 import { Input, Select, Textarea, Button, Alert } from './ui';
 import { fetchApi } from '../lib/api';
-import { SPONSOR_CONTRACT_OPTIONS } from '../constants';
+import { SPONSOR_CONTRACT_OPTIONS, PAYMENT_METHOD_OPTIONS } from '../constants';
 import { CreateSponsorFormValues } from '../types';
 
 interface CreateSponsorModalProps {
@@ -13,6 +13,8 @@ interface CreateSponsorModalProps {
   onClose: () => void;
   teams: any[];
   onSuccess: () => void;
+  /** When provided, the new sponsor is dedicated to this tournament */
+  tournament?: { _id: string; name: string; teamId?: any } | null;
 }
 
 export const CreateSponsorModal: React.FC<CreateSponsorModalProps> = ({
@@ -20,24 +22,35 @@ export const CreateSponsorModal: React.FC<CreateSponsorModalProps> = ({
   onClose,
   teams,
   onSuccess,
+  tournament = null,
 }) => {
   const [serverError, setServerError] = useState<string | null>(null);
+  const tournamentTeamId = tournament?.teamId?._id || tournament?.teamId || '';
 
   const {
     register,
     handleSubmit,
     reset,
+    setValue,
     formState: { errors, isSubmitting },
-  } = useForm<CreateSponsorFormValues>({
+  } = useForm<CreateSponsorFormValues & { paymentMethod: string }>({
     defaultValues: {
-      teamId: teams[0]?._id || '',
-      contractType: 'jersey_front',
+      teamId: tournamentTeamId || teams[0]?._id || '',
+      contractType: tournament ? 'tournament_banner' : 'jersey_front',
       companyName: '',
       sponsorName: '',
       amountInvested: '',
       deliverablesAgreed: '',
+      paymentMethod: 'cash',
     },
   });
+
+  // Keep team in sync when teams load asynchronously
+  useEffect(() => {
+    if (isOpen) {
+      setValue('teamId', tournamentTeamId || teams[0]?._id || '');
+    }
+  }, [isOpen, tournamentTeamId, teams, setValue]);
 
   const handleClose = () => {
     reset();
@@ -45,11 +58,12 @@ export const CreateSponsorModal: React.FC<CreateSponsorModalProps> = ({
     onClose();
   };
 
-  const onSubmit = async (values: CreateSponsorFormValues) => {
+  const onSubmit = async (values: CreateSponsorFormValues & { paymentMethod: string }) => {
     setServerError(null);
     try {
       const payload = {
         ...values,
+        tournamentId: tournament?._id || undefined,
         amountInvested: Number(values.amountInvested) || 0,
         investmentDate: new Date().toISOString(),
       };
@@ -75,7 +89,8 @@ export const CreateSponsorModal: React.FC<CreateSponsorModalProps> = ({
     <Modal
       isOpen={isOpen}
       onClose={handleClose}
-      title="Register Brand Sponsor"
+      title={tournament ? `New Sponsor — ${tournament.name}` : 'Register Brand Sponsor'}
+      subtitle={tournament ? 'This sponsor will be dedicated to this tournament' : undefined}
       footer={
         <div className="form-actions" style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', width: '100%' }}>
           <Button variant="secondary" onClick={handleClose} disabled={isSubmitting}>
@@ -129,16 +144,24 @@ export const CreateSponsorModal: React.FC<CreateSponsorModalProps> = ({
           />
         </div>
 
-        <Input
-          label="Amount Invested (Rs.) *"
-          type="number"
-          placeholder="50000"
-          {...register('amountInvested', {
-            required: 'Amount invested is required',
-            min: { value: 1, message: 'Amount must be greater than 0' },
-          })}
-          error={errors.amountInvested?.message}
-        />
+        <div className="grid-2">
+          <Input
+            label="Amount Invested (Rs.) *"
+            type="number"
+            placeholder="50000"
+            {...register('amountInvested', {
+              required: 'Amount invested is required',
+              min: { value: 1, message: 'Amount must be greater than 0' },
+            })}
+            error={errors.amountInvested?.message}
+          />
+
+          <Select
+            label="Payment Method"
+            options={PAYMENT_METHOD_OPTIONS}
+            {...register('paymentMethod')}
+          />
+        </div>
 
         <Textarea
           label="Deliverables Agreed"

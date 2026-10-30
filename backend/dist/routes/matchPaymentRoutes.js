@@ -1,0 +1,13 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = require("express");
+const matchPaymentController_1 = require("../controllers/matchPaymentController");
+const auth_1 = require("../middlewares/auth");
+const router = (0, express_1.Router)();
+router.use(auth_1.authenticate);
+router.post('/', matchPaymentController_1.createPayment);
+router.put('/bulk', matchPaymentController_1.bulkUpdatePayments);
+router.put('/matches/:matchId/mark-all-paid', matchPaymentController_1.markAllMatchPaymentsPaid);
+router.put('/:id', matchPaymentController_1.updatePayment);
+router.delete('/:id', matchPaymentController_1.deletePayment);
+exports.default = router;

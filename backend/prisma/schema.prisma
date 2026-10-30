@@ -96,7 +96,7 @@ model Player {
 model Team {
   id           String   @id @default(auto()) @map("_id") @db.ObjectId
   tenantId     String   @db.ObjectId
-  captainId    String   @db.ObjectId
+  captainId    String?  @db.ObjectId
   name         String
   shortName    String
   teamType     String   @default("my_team") // my_team, opponent

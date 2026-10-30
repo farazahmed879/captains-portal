@@ -25,6 +25,8 @@ interface SponsorTransactionModalProps {
   /** Pass an existing ledger entry to edit it */
   transaction?: any | null;
   tournaments?: any[];
+  /** Tournament pre-selected for new ledger entries (e.g. when opened from a tournament page) */
+  defaultTournamentId?: string;
   onSaved: (sponsor: any) => void;
 }
 
@@ -34,7 +36,11 @@ export type { SponsorTransactionFormValues };
 
 const today = () => new Date().toISOString().split('T')[0];
 
-const getFormDefaults = (transaction: any | null, defaultType: SponsorTxType): SponsorTransactionFormValues => {
+const getFormDefaults = (
+  transaction: any | null,
+  defaultType: SponsorTxType,
+  defaultTournamentId = ''
+): SponsorTransactionFormValues => {
   if (transaction) {
     return {
       type: (transaction.type as SponsorTxType) || defaultType,
@@ -52,7 +58,7 @@ const getFormDefaults = (transaction: any | null, defaultType: SponsorTxType): S
     date: today(),
     method: 'cash',
     reference: '',
-    tournamentId: '',
+    tournamentId: defaultTournamentId,
     notes: '',
   };
 };
@@ -64,6 +70,7 @@ export const SponsorTransactionModal: React.FC<SponsorTransactionModalProps> = (
   defaultType = 'investment',
   transaction,
   tournaments = [],
+  defaultTournamentId = '',
   onSaved,
 }) => {
   const isEdit = !!transaction;
@@ -78,17 +85,19 @@ export const SponsorTransactionModal: React.FC<SponsorTransactionModalProps> = (
     clearErrors,
     formState: { errors, isSubmitting },
   } = useForm<SponsorTransactionFormValues>({
-    defaultValues: getFormDefaults(transaction, defaultType),
+    defaultValues: getFormDefaults(transaction, defaultType, defaultTournamentId),
   });
 
   const selectedType = watch('type');
   const watchedAmount = watch('amount');
+  const watchedMethod = watch('method');
+  const watchedTournamentId = watch('tournamentId');
 
   useEffect(() => {
     if (isOpen) {
-      reset(getFormDefaults(transaction, defaultType));
+      reset(getFormDefaults(transaction, defaultType, defaultTournamentId));
     }
-  }, [isOpen, transaction, defaultType, reset]);
+  }, [isOpen, transaction, defaultType, defaultTournamentId, reset]);
 
   if (!sponsor) return null;
 
@@ -230,6 +239,7 @@ export const SponsorTransactionModal: React.FC<SponsorTransactionModalProps> = (
           <Select
             id="sponsor-tx-method"
             label="Payment Method"
+            value={watchedMethod}
             error={errors.method?.message}
             options={PAYMENT_METHOD_OPTIONS}
             {...register('method')}
@@ -246,6 +256,7 @@ export const SponsorTransactionModal: React.FC<SponsorTransactionModalProps> = (
           <Select
             id="sponsor-tx-tournament"
             label="Linked Tournament (optional)"
+            value={watchedTournamentId}
             options={[{ value: '', label: '— Not linked —' }, ...tournaments.map((t) => ({ value: t._id, label: t.name }))]}
             {...register('tournamentId')}
           />

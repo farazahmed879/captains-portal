@@ -6,7 +6,6 @@ import Link from 'next/link';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { queryKeys } from '../../../lib/queryKeys';
 import { Header } from '../../../components/Header';
-import { StatCard } from '../../../components/StatCard';
 import { fetchApi } from '../../../lib/api';
 import { confirmDelete, showToast } from '../../../lib/alerts';
 import {
@@ -23,8 +22,10 @@ import {
 } from '../../../components/ui';
 import { DetailPageSkeleton } from '../../../components/ui/Skeleton';
 import { EditMatchModal } from '../../../components/EditMatchModal';
+import { MatchExpenseModal } from '../../../components/MatchExpenseModal';
+import { EditMomModal } from '../../../components/EditMomModal';
 import { EditPaymentModal } from '../../../components/EditPaymentModal';
-import { AssignSquadFeeForm } from '../../../components/AssignSquadFeeForm';
+import { SquadFeesModal } from '../../../components/SquadFeesModal';
 import {
   Calendar,
   MapPin,
@@ -50,6 +51,8 @@ export default function MatchDetailPage() {
 
   const [showAddPlayerPayment, setShowAddPlayerPayment] = useState<boolean>(false);
   const [isEditOpen, setIsEditOpen] = useState<boolean>(false);
+  const [isExpenseOpen, setIsExpenseOpen] = useState<boolean>(false);
+  const [isMomOpen, setIsMomOpen] = useState<boolean>(false);
   const [editingPayment, setEditingPayment] = useState<any>(null);
 
   // React Queries
@@ -210,11 +213,29 @@ export default function MatchDetailPage() {
                 size="sm"
                 icon={<CheckCircle2 size={13} />}
                 onClick={handleMarkAllPaid}
-                title="Mark all pending squad match fees as paid"
+                title="Mark all pending squad player fees as paid"
               >
-                Match Fee Paid
+                Clear Player Dues
               </Button>
             )}
+            <Button
+              variant="secondary"
+              size="sm"
+              icon={<Receipt size={13} color="var(--accent-rose)" />}
+              onClick={() => setIsExpenseOpen(true)}
+              title="Record or update ground fee / match fee paid to organizer"
+            >
+              Match Fee
+            </Button>
+            <Button
+              variant="secondary"
+              size="sm"
+              icon={<Award size={13} color="#d97706" />}
+              onClick={() => setIsMomOpen(true)}
+              title="Record or update Man of the Match and organizer cash prize"
+            >
+              MOM Award {matchData?.momPrizeMoney ? `(Rs. ${fNum(matchData.momPrizeMoney)})` : ''}
+            </Button>
             <Button
               variant="secondary"
               size="sm"
@@ -365,31 +386,106 @@ export default function MatchDetailPage() {
             </div>
           </div>
 
-          {/* Man of the match banner */}
-          {matchData.momPlayerId && (
+          {/* Man of the match card */}
+          {matchData.momPlayerId ? (
             <div
               style={{
                 marginTop: '16px',
-                padding: '10px 16px',
-                background: '#fef3c7',
+                padding: '12px 16px',
+                background: 'linear-gradient(135deg, #fef3c7 0%, #fffbeb 100%)',
                 border: '1px solid #fde68a',
+                borderRadius: '10px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                flexWrap: 'wrap',
+                gap: '12px',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div
+                  style={{
+                    width: '36px',
+                    height: '36px',
+                    borderRadius: '8px',
+                    background: '#fde68a',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <Award size={20} color="#b45309" />
+                </div>
+                <div>
+                  <div style={{ fontSize: '13px', fontWeight: 800, color: '#92400e' }}>
+                    Man of the Match:
+                    <Link
+                      href={`/players/${matchData.momPlayerId._id || matchData.momPlayerId}`}
+                      style={{ color: '#b45309', fontWeight: 800, marginLeft: '6px', textDecoration: 'underline' }}
+                    >
+                      {matchData.momPlayerId.name || 'Player'}
+                    </Link>
+                    {matchData.momPlayerId.role && (
+                      <span style={{ fontSize: '12px', color: '#b45309', fontWeight: 500, marginLeft: '4px' }}>
+                        ({matchData.momPlayerId.role.replace('_', ' ')})
+                      </span>
+                    )}
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '3px' }}>
+                    <span style={{ fontSize: '12px', fontWeight: 700, color: '#15803d' }}>
+                      Organizer Cash Prize: Rs. {fNum(matchData.momPrizeMoney || 0)}
+                    </span>
+                    {matchData.momAwardDetails && (
+                      <span style={{ fontSize: '12px', color: '#78350f', fontWeight: 500 }}>
+                        • {matchData.momAwardDetails}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <Button
+                variant="secondary"
+                size="sm"
+                icon={<Pencil size={11} color="#b45309" />}
+                onClick={() => setIsMomOpen(true)}
+                style={{
+                  height: '28px',
+                  fontSize: '11px',
+                  padding: '0 10px',
+                  borderColor: '#fcd34d',
+                  background: '#ffffff',
+                  color: '#92400e',
+                }}
+              >
+                Edit MOM
+              </Button>
+            </div>
+          ) : (
+            <div
+              style={{
+                marginTop: '14px',
+                padding: '8px 14px',
+                background: '#fafafa',
+                border: '1px dashed #cbd5e1',
                 borderRadius: '8px',
                 display: 'flex',
                 alignItems: 'center',
-                gap: '10px',
+                justifyContent: 'space-between',
               }}
             >
-              <Award size={18} color="#d97706" />
-              <span style={{ fontSize: '13px', color: '#92400e' }}>
-                <strong>Man of the Match:</strong>{' '}
-                <Link
-                  href={`/players/${matchData.momPlayerId._id}`}
-                  style={{ color: '#b45309', fontWeight: 700, textDecoration: 'underline' }}
-                >
-                  {matchData.momPlayerId.name}
-                </Link>{' '}
-                ({matchData.momPlayerId.role?.replace('_', ' ') || 'Player'})
-              </span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', color: '#64748b' }}>
+                <Award size={15} color="#94a3b8" />
+                <span>Won this match? Record organizer Man of the Match (MOM) cash prize.</span>
+              </div>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => setIsMomOpen(true)}
+                style={{ height: '24px', fontSize: '11px', padding: '0 8px' }}
+              >
+                + Add MOM Award
+              </Button>
             </div>
           )}
 
@@ -410,340 +506,33 @@ export default function MatchDetailPage() {
           )}
         </Card>
 
-        {/* 4 KPI Summary Cards */}
-        <div className="grid-4" style={{ marginBottom: '24px' }}>
-          <StatCard
-            variant="rose"
-            title="Total Ground Cost"
-            value={`Rs. ${fNum(matchExpenses)}`}
-            subtitle="Pitch, balls, umpires, water"
-            icon={<Receipt size={20} color="var(--accent-rose)" />}
-          />
-          <StatCard
-            variant="emerald"
-            title="Squad Fees Collected"
-            value={`Rs. ${fNum(totalCollected)}`}
-            subtitle={`${paidCount} players cleared`}
-            icon={<DollarSign size={20} color="var(--accent-green)" />}
-          />
-          <StatCard
-            variant="amber"
-            title="Squad Fees Pending"
-            value={`Rs. ${fNum(totalPending)}`}
-            subtitle={`${pendingCount} players pending`}
-            icon={<AlertCircle size={20} color="var(--accent-amber)" />}
-          />
-          <StatCard
-            variant="blue"
-            title="Squad Size"
-            value={`${payments.length} Players`}
-            subtitle={`Rs. ${fNum(matchData.perPlayerFee)} / player fee`}
-            icon={<Users size={20} color="var(--accent-blue)" />}
-          />
-        </div>
-
-        {/* 2-Columns: Ground Cost Breakdown & Squad Ledger */}
-        <div className="r-split" style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '20px' }}>
-          {/* Ground Cost Itemized Breakdown */}
-          <Card>
-            <h3
-              style={{
-                fontSize: '16px',
-                fontWeight: 700,
-                marginBottom: '16px',
-                color: 'var(--text-primary)',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-              }}
-            >
-              <Receipt size={16} color="var(--accent-blue)" />
-              Itemized Ground Expenses
-            </h3>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              <div
-                style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  paddingBottom: '10px',
-                  borderBottom: '1px solid var(--border-color)',
-                }}
-              >
-                <span style={{ color: 'var(--text-secondary)', fontSize: '13px' }}>Pitch / Ground Rent</span>
-                <strong style={{ color: 'var(--text-primary)' }}>Rs. {fNum(matchData.groundCost)}</strong>
-              </div>
-              <div
-                style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  paddingBottom: '10px',
-                  borderBottom: '1px solid var(--border-color)',
-                }}
-              >
-                <span style={{ color: 'var(--text-secondary)', fontSize: '13px' }}>Umpire Charges</span>
-                <strong style={{ color: 'var(--text-primary)' }}>Rs. {fNum(matchData.umpireCost)}</strong>
-              </div>
-              <div
-                style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  paddingBottom: '10px',
-                  borderBottom: '1px solid var(--border-color)',
-                }}
-              >
-                <span style={{ color: 'var(--text-secondary)', fontSize: '13px' }}>Match Balls</span>
-                <strong style={{ color: 'var(--text-primary)' }}>Rs. {fNum(matchData.ballCost)}</strong>
-              </div>
-              <div
-                style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  paddingBottom: '10px',
-                  borderBottom: '1px solid var(--border-color)',
-                }}
-              >
-                <span style={{ color: 'var(--text-secondary)', fontSize: '13px' }}>Refreshments & Water</span>
-                <strong style={{ color: 'var(--text-primary)' }}>Rs. {fNum(matchData.refreshmentCost)}</strong>
-              </div>
-              <div
-                style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  paddingBottom: '10px',
-                  borderBottom: '1px solid var(--border-color)',
-                }}
-              >
-                <span style={{ color: 'var(--text-secondary)', fontSize: '13px' }}>Other Miscellaneous</span>
-                <strong style={{ color: 'var(--text-primary)' }}>Rs. {fNum(matchData.otherCosts)}</strong>
-              </div>
-              <div
-                style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  paddingTop: '6px',
-                  fontSize: '15px',
-                  fontWeight: 800,
-                  color: 'var(--accent-blue)',
-                }}
-              >
-                <span>Total Ground Expense</span>
-                <span>Rs. {fNum(matchExpenses)}</span>
-              </div>
-            </div>
-
-            <div
-              style={{
-                marginTop: '20px',
-                padding: '12px',
-                background: '#f8fafc',
-                border: '1px solid var(--border-color)',
-                borderRadius: '8px',
-                fontSize: '12px',
-                color: 'var(--text-muted)',
-              }}
-            >
-              Per-player collection target is set at <strong>Rs. {fNum(matchData.perPlayerFee)}</strong>.
-            </div>
-          </Card>
-
-          {/* Squad Player Collections Ledger */}
-          <Card>
-            <div
-              style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                marginBottom: '16px',
-                flexWrap: 'wrap',
-                gap: '12px',
-              }}
-            >
-              <div>
-                <h3
-                  style={{
-                    fontSize: '16px',
-                    fontWeight: 700,
-                    color: 'var(--text-primary)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '8px',
-                  }}
-                >
-                  <Users size={16} color="var(--accent-blue)" />
-                  Squad Payment Ledger ({payments.length} Players)
-                </h3>
-                <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '2px' }}>
-                  Collected: <strong style={{ color: 'var(--accent-green)' }}>Rs. {fNum(totalCollected)}</strong> / Rs. {fNum(totalAssigned)}
-                </div>
-              </div>
-
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                {totalPending > 0 && (
-                  <Button
-                    variant="success"
-                    size="sm"
-                    icon={<CheckCircle2 size={13} />}
-                    onClick={handleMarkAllPaid}
-                    title="Mark all pending squad match fees as paid"
-                  >
-                    <span>Match Fee Paid (Rs. {fNum(totalPending)})</span>
-                  </Button>
-                )}
-                <Button
-                  variant={showAddPlayerPayment ? 'secondary' : 'primary'}
-                  size="sm"
-                  icon={<Plus size={14} />}
-                  onClick={() => setShowAddPlayerPayment(!showAddPlayerPayment)}
-                >
-                  {showAddPlayerPayment ? 'Cancel' : '+ Add Player Fee'}
-                </Button>
-              </div>
-            </div>
-
-            {/* Inline Add Player Fee Form */}
-            {showAddPlayerPayment && (
-              <AssignSquadFeeForm
-                matchId={id}
-                defaultFee={matchData?.perPlayerFee || 1000}
-                players={players}
-                excludePlayerIds={payments.map((p: any) => p.playerId?._id || p.playerId).filter(Boolean)}
-                onSuccess={() => {
-                  setShowAddPlayerPayment(false);
-                  invalidateData();
-                }}
-                onCancel={() => setShowAddPlayerPayment(false)}
-              />
-            )}
-
-            <DataTable<any>
-              data={payments}
-              keyExtractor={(p) => p._id}
-              emptyMessage="No squad players registered for this match yet."
-              columns={[
-                {
-                  header: 'Player',
-                  render: (p) => {
-                    const player = p.playerId;
-                    return (
-                      <div>
-                        <Link
-                          href={`/players/${player?._id || ''}`}
-                          style={{
-                            textDecoration: 'none',
-                            color: 'var(--text-primary)',
-                            fontWeight: 600,
-                          }}
-                        >
-                          {player?.name || 'Unknown Player'}
-                        </Link>
-                        {player?.role && (
-                          <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-                            {player.role.replace('_', ' ')}
-                          </div>
-                        )}
-                      </div>
-                    );
-                  },
-                },
-                {
-                  header: 'Fee Assigned',
-                  render: (p) => <>Rs. {fNum(p.feeAssigned)}</>,
-                },
-                {
-                  header: 'Fee Paid',
-                  render: (p) => {
-                    const isPaid = p.paymentStatus === 'paid';
-                    return (
-                      <span
-                        style={{
-                          fontWeight: 600,
-                          color: isPaid ? 'var(--accent-green)' : 'var(--accent-rose)',
-                        }}
-                      >
-                        Rs. {fNum(p.feePaid)}
-                      </span>
-                    );
-                  },
-                },
-                {
-                  header: 'Status',
-                  render: (p) => {
-                    const isPaid = p.paymentStatus === 'paid';
-                    return (
-                      <Badge
-                        variant={
-                          isPaid
-                            ? 'success'
-                            : p.paymentStatus === 'partial'
-                            ? 'warning'
-                            : 'danger'
-                        }
-                      >
-                        {p.paymentStatus.toUpperCase()}
-                      </Badge>
-                    );
-                  },
-                },
-                {
-                  header: 'Method',
-                  render: (p) => (
-                    <span
-                      style={{
-                        textTransform: 'capitalize',
-                        fontSize: '12px',
-                        color: 'var(--text-secondary)',
-                      }}
-                    >
-                      {p.paymentMethod?.replace('_', ' ') || 'Cash'}
-                    </span>
-                  ),
-                },
-                {
-                  header: 'Actions',
-                  align: 'right',
-                  render: (p) => {
-                    const isPaid = p.paymentStatus === 'paid';
-                    return (
-                      <div className="action-group" style={{ justifyContent: 'flex-end' }}>
-                        {!isPaid && (
-                          <Button
-                            variant="success"
-                            size="sm"
-                            icon={<CheckCircle2 size={14} />}
-                            onClick={() => handleQuickMarkPaid(p)}
-                            title="1-Click Mark Fully Paid"
-                          >
-                            Paid
-                          </Button>
-                        )}
-                        <Button
-                          variant="secondary"
-                          size="sm"
-                          isIconOnly
-                          icon={<Pencil size={14} color="var(--accent-blue)" />}
-                          onClick={() => {
-                            setEditingPayment(p);
-                          }}
-                          title="Edit Payment"
-                        />
-                        <Button
-                          variant="danger"
-                          size="sm"
-                          isIconOnly
-                          icon={<Trash2 size={14} />}
-                          onClick={(e) => { e.stopPropagation(); handleDeletePayment(p._id, p.playerId?.name); }}
-                          title="Remove Player from Match"
-                        />
-                      </div>
-                    );
-                  },
-                },
-              ]}
-            />
-          </Card>
-        </div>
+        {/* Unified 2-Column Squad Payment Ledger & Stats */}
+        <SquadFeesModal
+          inline
+          match={matchData}
+          initialPayments={payments}
+          players={players}
+          onSuccess={invalidateData}
+          onEditExpenses={() => setIsExpenseOpen(true)}
+        />
       </div>
+
+      {/* Match Fee & Ground Expenses Modal */}
+      <MatchExpenseModal
+        isOpen={isExpenseOpen}
+        onClose={() => setIsExpenseOpen(false)}
+        match={matchData}
+        onSuccess={invalidateData}
+      />
+
+      {/* Edit Man of the Match Modal */}
+      <EditMomModal
+        isOpen={isMomOpen}
+        onClose={() => setIsMomOpen(false)}
+        match={matchData}
+        players={players}
+        onSuccess={invalidateData}
+      />
 
       {/* Edit Match Modal */}
       <EditMatchModal

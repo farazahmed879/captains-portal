@@ -1,0 +1,196 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.dashboardService = exports.DashboardService = void 0;
+const repositories_1 = require("../repositories");
+const prisma_1 = require("../config/prisma");
+const enums_1 = require("../enums");
+class DashboardService {
+    async getStats(tenantId, user, teamIdQuery) {
+        const isSuperAdmin = user.role === enums_1.UserRole.SUPER_ADMIN;
+        // 0. Fetch all existing valid teams for this tenant and clean up any orphaned records
+        // left over from previously deleted teams or players
+        const allTenantTeams = await repositories_1.teamRepository.findMany(tenantId);
+        const validTenantTeamIds = allTenantTeams.map((t) => t.id);
+        if (validTenantTeamIds.length === 0) {
+            // No teams exist at all in this tenant — purge any orphaned team-dependent records
+            await Promise.all([
+                prisma_1.prisma.matchPayment.deleteMany({ where: { tenantId } }),
+                prisma_1.prisma.match.deleteMany({ where: { tenantId } }),
+                prisma_1.prisma.tournament.deleteMany({ where: { tenantId } }),
+                prisma_1.prisma.expense.deleteMany({ where: { tenantId } }),
+                prisma_1.prisma.sponsor.deleteMany({ where: { tenantId } }),
+                prisma_1.prisma.playerReturn.deleteMany({ where: { tenantId } }),
+            ]);
+        }
+        else {
+            // Purge records referencing deleted teamIds
+            await Promise.all([
+                prisma_1.prisma.matchPayment.deleteMany({
+                    where: { tenantId, teamId: { notIn: validTenantTeamIds } },
+                }),
+                prisma_1.prisma.match.deleteMany({
+                    where: { tenantId, teamId: { notIn: validTenantTeamIds } },
+                }),
+                prisma_1.prisma.tournament.deleteMany({
+                    where: { tenantId, teamId: { notIn: validTenantTeamIds } },
+                }),
+                prisma_1.prisma.expense.deleteMany({
+                    where: { tenantId, teamId: { notIn: validTenantTeamIds } },
+                }),
+                prisma_1.prisma.sponsor.deleteMany({
+                    where: { tenantId, teamId: { notIn: validTenantTeamIds } },
+                }),
+            ]);
+        }
+        // Also purge any MatchPayment records whose player no longer exists
+        const allActivePlayers = await repositories_1.playerRepository.findMany(tenantId, { isActive: true });
+        const validPlayerIds = allActivePlayers.map((p) => p.id);
+        if (validPlayerIds.length === 0) {
+            await Promise.all([
+                prisma_1.prisma.matchPayment.deleteMany({ where: { tenantId } }),
+                prisma_1.prisma.playerReturn.deleteMany({ where: { tenantId } }),
+            ]);
+        }
+        else {
+            await Promise.all([
+                prisma_1.prisma.matchPayment.deleteMany({
+                    where: { tenantId, playerId: { notIn: validPlayerIds } },
+                }),
+                prisma_1.prisma.playerReturn.deleteMany({
+                    where: { tenantId, playerId: { notIn: validPlayerIds } },
+                }),
+            ]);
+        }
+        let allowedTeamIds = [];
+        if (!isSuperAdmin) {
+            const currentUser = await repositories_1.userRepository.findById(user.id);
+            let enrolledTeamIds = [];
+            if (currentUser?.playerId) {
+                const player = await repositories_1.playerRepository.findById(currentUser.playerId);
+                if (player?.teamIds)
+                    enrolledTeamIds.push(...player.teamIds);
+            }
+            const matchingPlayer = await repositories_1.playerRepository.findByMatchingCriteria(tenantId, {
+                phone: currentUser?.phone || undefined,
+                email: currentUser?.email,
+                name: currentUser?.name,
+            });
+            if (matchingPlayer?.teamIds) {
+                enrolledTeamIds.push(...matchingPlayer.teamIds);
+            }
+            const userTeams = await repositories_1.teamRepository.findByCaptainOrEnrolled(tenantId, user.id, Array.from(new Set(enrolledTeamIds)));
+            allowedTeamIds = userTeams.map((t) => t.id);
+        }
+        else {
+            allowedTeamIds = validTenantTeamIds;
+        }
+        // Determine target team filter
+        let teamFilter = {};
+        if (teamIdQuery) {
+            if (isSuperAdmin || allowedTeamIds.includes(teamIdQuery)) {
+                teamFilter = { teamId: teamIdQuery };
+            }
+            else {
+                teamFilter = { teamId: { in: allowedTeamIds } };
+            }
+        }
+        else {
+            teamFilter = { teamId: { in: allowedTeamIds } };
+        }
+        // 1. Teams & Players Counts
+        const totalTeams = isSuperAdmin ? validTenantTeamIds.length : allowedTeamIds.length;
+        const totalPlayers = validPlayerIds.length;
+        // 2. Matches & Tournaments
+        const matches = allowedTeamIds.length > 0 ? await repositories_1.matchRepository.findMany(tenantId, teamFilter) : [];
+        const totalMatches = matches.length;
+        const matchesWon = matches.filter((m) => m.result === 'won').length;
+        const matchesLost = matches.filter((m) => m.result === 'lost').length;
+        const winRate = totalMatches > 0 ? Math.round((matchesWon / totalMatches) * 100) : 0;
+        const tournaments = allowedTeamIds.length > 0 ? await repositories_1.tournamentRepository.findMany(tenantId, teamFilter) : [];
+        const totalTournaments = tournaments.length;
+        const activeTournaments = tournaments.filter((t) => t.status === 'ongoing').length;
+        // 3. Financial Inflow & Outflow
+        const expenses = allowedTeamIds.length > 0 ? await repositories_1.expenseRepository.findMany(tenantId, teamFilter) : [];
+        const totalExpenses = expenses.reduce((acc, e) => acc + (e.amount || 0), 0);
+        const totalEntryFees = tournaments.reduce((acc, t) => acc + (t.entryFee || 0), 0);
+        const totalMatchExpenses = matches.reduce((acc, m) => acc + (m.totalMatchExpense || 0), 0);
+        const totalInvested = totalExpenses + totalEntryFees + totalMatchExpenses;
+        const sponsors = allowedTeamIds.length > 0 ? await repositories_1.sponsorRepository.findMany(tenantId, teamFilter) : [];
+        const totalSponsorInvested = sponsors.reduce((acc, s) => acc + (s.amountInvested || 0), 0);
+        const totalSponsorReturnsPaid = sponsors.reduce((acc, s) => acc + (s.returnsPaid || 0), 0);
+        const netSponsorship = totalSponsorInvested - totalSponsorReturnsPaid;
+        const tournamentPrizesWon = tournaments.reduce((acc, t) => acc + (t.actualWinningPrizeWon || 0), 0);
+        const matchPrizesWon = matches.reduce((acc, m) => acc + (m.winningPrizeMoney || 0) + (m.momPrizeMoney || 0), 0);
+        const totalPrizeMoney = tournamentPrizesWon + matchPrizesWon;
+        // 4. Player Ledger Fees & Dues
+        const payments = allowedTeamIds.length > 0 && validPlayerIds.length > 0
+            ? await repositories_1.paymentRepository.findMany(tenantId, teamFilter)
+            : [];
+        const totalPlayerFeeAssigned = payments.reduce((acc, p) => acc + (p.feeAssigned || 0), 0);
+        const totalPlayerFeeCollected = payments.reduce((acc, p) => acc + (p.feePaid || 0), 0);
+        const totalPendingDues = Math.max(0, totalPlayerFeeAssigned - totalPlayerFeeCollected);
+        const collectionRate = totalPlayerFeeAssigned > 0
+            ? Math.round((totalPlayerFeeCollected / totalPlayerFeeAssigned) * 100)
+            : 0;
+        // Total Inflow / Returns: Net Sponsors + Winning Prizes + Player Fees Collected
+        const totalReturns = netSponsorship + totalPrizeMoney + totalPlayerFeeCollected;
+        const netProfitLoss = totalReturns - totalInvested;
+        // 5. Recent Matches & Top Debtors
+        const recentMatches = matches.slice(0, 5).map((m) => ({ ...m, _id: m.id }));
+        // Group pending dues by player
+        const playerDuesMap = new Map();
+        payments.forEach((p) => {
+            const due = (p.feeAssigned || 0) - (p.feePaid || 0);
+            if (due > 0) {
+                playerDuesMap.set(p.playerId, (playerDuesMap.get(p.playerId) || 0) + due);
+            }
+        });
+        const topDebtors = await Promise.all(Array.from(playerDuesMap.entries())
+            .sort((a, b) => b[1] - a[1])
+            .slice(0, 5)
+            .map(async ([playerId, pendingDue]) => {
+            const player = await repositories_1.playerRepository.findById(playerId);
+            return {
+                _id: playerId,
+                id: playerId,
+                name: player?.name || 'Squad Member',
+                phone: player?.phone,
+                jerseyNumber: player?.jerseyNumber,
+                pendingDue,
+            };
+        }));
+        return {
+            summary: {
+                totalTeams,
+                totalPlayers,
+                totalMatches,
+                matchesWon,
+                matchesLost,
+                winRate,
+                totalTournaments,
+                activeTournaments,
+            },
+            finances: {
+                totalInvested,
+                totalReturns,
+                netProfitLoss,
+                totalPrizeMoney,
+                totalSponsorInvested,
+                netSponsorship,
+                totalPlayerFeeAssigned,
+                totalPlayerFeeCollected,
+                totalFeeAssigned: totalPlayerFeeAssigned,
+                totalFeeCollected: totalPlayerFeeCollected,
+                totalPendingDues,
+                collectionRate,
+                totalEntryFees,
+                totalExpenses,
+                totalMatchExpenses,
+            },
+            recentMatches,
+            topDebtors,
+        };
+    }
+}
+exports.DashboardService = DashboardService;
+exports.dashboardService = new DashboardService();

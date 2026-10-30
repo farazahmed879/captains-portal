@@ -376,33 +376,50 @@ body:has(.auth-split-page) .main-content {
   will-change: width, height;
 }
 
-/* Dock icon with 100% GPU-accelerated matrix scaling */
+/* Dock icon with crisp downscaled native geometry (100% sharp vectors & 0% blur) */
 .dock-icon {
-  position: relative;
-  width: 46px;
-  height: 46px;
+  position: absolute;
+  width: 74px;
+  height: 74px;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 14px;
+  border-radius: 22px;
   color: #ffffff;
   text-decoration: none;
   border: none;
   cursor: pointer;
-  transform: scale(var(--dock-scale, 1));
-  will-change: transform;
   box-shadow:
-    0 6px 14px -4px rgba(0, 0, 0, 0.45),
-    inset 0 1px 0 rgba(255, 255, 255, 0.35),
-    inset 0 -2px 4px rgba(0, 0, 0, 0.12);
-  transition: filter 0.18s ease, box-shadow 0.18s ease;
+    0 8px 18px -4px rgba(0, 0, 0, 0.45),
+    inset 0 1.5px 0 rgba(255, 255, 255, 0.35),
+    inset 0 -3px 6px rgba(0, 0, 0, 0.12);
+  transition: box-shadow 0.18s ease;
   overflow: visible;
+  image-rendering: -webkit-optimize-contrast;
+  image-rendering: crisp-edges;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-/* Direction-aware transform origins for side & bottom dock */
-.pos-bottom .dock-icon { transform-origin: center bottom; }
-.pos-left   .dock-icon { transform-origin: left center; }
-.pos-right  .dock-icon { transform-origin: right center; }
+/* Direction-aware transform origins & positions for side & bottom dock */
+.pos-bottom .dock-icon {
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%) scale(calc(var(--dock-scale, 1) * 0.62162));
+  transform-origin: center bottom;
+}
+.pos-left .dock-icon {
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%) scale(calc(var(--dock-scale, 1) * 0.62162));
+  transform-origin: left center;
+}
+.pos-right .dock-icon {
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%) scale(calc(var(--dock-scale, 1) * 0.62162));
+  transform-origin: right center;
+}
 
 .dock-icon::before {
   content: '';
@@ -410,11 +427,25 @@ body:has(.auth-split-page) .main-content {
   inset: 0;
   border-radius: inherit;
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.28) 0%, transparent 52%);
+  opacity: 0.85;
+  transition: opacity 0.18s ease;
   pointer-events: none;
 }
-.dock-icon svg { width: 22px; height: 22px; filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.2)); }
-.dock-icon:hover { filter: brightness(1.1) saturate(1.1); }
-.dock-icon:active { filter: brightness(0.85); }
+.dock-icon:hover::before {
+  opacity: 1;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.45) 0%, transparent 60%);
+}
+.dock-icon:active::before {
+  opacity: 0.4;
+}
+
+.dock-icon svg {
+  width: 35px;
+  height: 35px;
+  overflow: visible;
+  shape-rendering: geometricPrecision;
+  text-rendering: geometricPrecision;
+}
 
 /* Brand Icon */
 .dock-brand {
@@ -427,20 +458,22 @@ body:has(.auth-split-page) .main-content {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  border-radius: 13px;
+  border-radius: 20px;
   display: block;
-  box-shadow: 0 4px 14px rgba(2, 132, 199, 0.4);
+  box-shadow: 0 6px 18px rgba(2, 132, 199, 0.45);
+  image-rendering: -webkit-optimize-contrast;
+  image-rendering: high-quality;
 }
 .dock-status-dot {
   position: absolute;
-  top: -2px;
-  right: -2px;
-  width: 10px;
-  height: 10px;
+  top: -3px;
+  right: -3px;
+  width: 15px;
+  height: 15px;
   border-radius: 50%;
   background: #22c55e;
-  border: 2px solid #0f172a;
-  box-shadow: 0 0 8px #22c55e;
+  border: 3px solid #0f172a;
+  box-shadow: 0 0 10px #22c55e;
   animation: dockPulse 2.4s ease-in-out infinite;
 }
 .dock-settings { background: linear-gradient(145deg, #64748b, #1e293b); }
@@ -467,19 +500,19 @@ body:has(.auth-split-page) .main-content {
 .pos-right  .dock-item.bouncing .dock-icon { animation: dockBounceRight  0.62s cubic-bezier(0.28, 0.84, 0.42, 1); }
 
 @keyframes dockBounceBottom {
-  0%, 100% { transform: scale(var(--dock-scale, 1)) translateY(0); }
-  32% { transform: scale(var(--dock-scale, 1)) translateY(-18px); }
-  64% { transform: scale(var(--dock-scale, 1)) translateY(-6px); }
+  0%, 100% { transform: translateX(-50%) scale(calc(var(--dock-scale, 1) * 0.62162)) translateY(0); }
+  32% { transform: translateX(-50%) scale(calc(var(--dock-scale, 1) * 0.62162)) translateY(-24px); }
+  64% { transform: translateX(-50%) scale(calc(var(--dock-scale, 1) * 0.62162)) translateY(-8px); }
 }
 @keyframes dockBounceLeft {
-  0%, 100% { transform: scale(var(--dock-scale, 1)) translateX(0); }
-  32% { transform: scale(var(--dock-scale, 1)) translateX(18px); }
-  64% { transform: scale(var(--dock-scale, 1)) translateX(6px); }
+  0%, 100% { transform: translateY(-50%) scale(calc(var(--dock-scale, 1) * 0.62162)) translateX(0); }
+  32% { transform: translateY(-50%) scale(calc(var(--dock-scale, 1) * 0.62162)) translateX(24px); }
+  64% { transform: translateY(-50%) scale(calc(var(--dock-scale, 1) * 0.62162)) translateX(8px); }
 }
 @keyframes dockBounceRight {
-  0%, 100% { transform: scale(var(--dock-scale, 1)) translateX(0); }
-  32% { transform: scale(var(--dock-scale, 1)) translateX(-18px); }
-  64% { transform: scale(var(--dock-scale, 1)) translateX(-6px); }
+  0%, 100% { transform: translateY(-50%) scale(calc(var(--dock-scale, 1) * 0.62162)) translateX(0); }
+  32% { transform: translateY(-50%) scale(calc(var(--dock-scale, 1) * 0.62162)) translateX(-24px); }
+  64% { transform: translateY(-50%) scale(calc(var(--dock-scale, 1) * 0.62162)) translateX(-8px); }
 }
 
 /* Glass Separator */
@@ -648,7 +681,16 @@ body:has(.auth-split-page) .main-content {
   .dock-wrap.pos-bottom { bottom: 8px; padding: 0 8px; }
   .dock { max-width: 100%; overflow-x: auto; gap: 6px; }
   .dock-item { width: 42px !important; height: 42px !important; }
-  .dock-icon { width: 42px !important; height: 42px !important; }
+  .dock-icon {
+    position: relative !important;
+    width: 42px !important;
+    height: 42px !important;
+    border-radius: 12px !important;
+    transform: none !important;
+  }
+  .dock-icon svg { width: 22px !important; height: 22px !important; }
+  .dock-brand-img { border-radius: 12px !important; }
+  .dock-status-dot { width: 10px !important; height: 10px !important; border-width: 2px !important; }
   .dock-tooltip { display: none; }
 }
 
@@ -1431,6 +1473,24 @@ body:has(.auth-split-page) .main-content {
   outline: none;
   font-family: inherit;
   transition: all 0.2s ease;
+}
+
+/* Hide native up/down stepper arrows on all number inputs across all browsers */
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button,
+input.form-input[type="number"]::-webkit-outer-spin-button,
+input.form-input[type="number"]::-webkit-inner-spin-button,
+.form-input::-webkit-outer-spin-button,
+.form-input::-webkit-inner-spin-button {
+  -webkit-appearance: none !important;
+  margin: 0 !important;
+  display: none !important;
+}
+
+input[type="number"],
+input.form-input[type="number"] {
+  -moz-appearance: textfield !important;
+  appearance: textfield !important;
 }
 
 .form-select, select {
@@ -3237,7 +3297,8 @@ select.ledger-select:focus,
   background: #ffffff;
 }
 
-.compact-table {
+.compact-table,
+.data-table.compact-table {
   width: 100%;
   border-collapse: separate;
   border-spacing: 0;
@@ -3245,28 +3306,32 @@ select.ledger-select:focus,
   text-align: left;
 }
 
-.compact-table th {
+.compact-table th,
+.data-table.compact-table th {
   position: sticky;
   top: 0;
   z-index: 2;
-  background: #f8fafc;
-  padding: 8px 12px;
-  font-size: 10.5px;
+  background: #f8fafc !important;
+  padding: 8px 12px !important;
+  font-size: 11px !important;
   font-weight: 700;
   text-transform: uppercase;
   color: #64748b;
   letter-spacing: 0.05em;
-  border-bottom: 1.5px solid var(--border-color);
+  border-bottom: 1.5px solid var(--border-color) !important;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
 }
 
-.compact-table td {
-  padding: 8px 12px;
-  border-bottom: 1px solid #f1f5f9;
+.compact-table td,
+.data-table.compact-table td {
+  padding: 8px 12px !important;
+  font-size: 12.5px !important;
+  border-bottom: 1px solid #f1f5f9 !important;
   vertical-align: middle;
 }
 
-.compact-table tr:hover td {
+.compact-table tr:hover td,
+.data-table.compact-table tr:hover td {
   background: #f8fafc;
 }
 
@@ -4747,9 +4812,11 @@ select.ledger-select:focus,
 
   .dock-item,
   .dock-icon {
+    position: relative !important;
     width: 38px !important;
     height: 38px !important;
-    border-radius: 10px;
+    border-radius: 10px !important;
+    transform: none !important;
   }
 
   .dock-icon svg {
@@ -4797,9 +4864,11 @@ select.ledger-select:focus,
 
   .dock-item,
   .dock-icon {
+    position: relative !important;
     width: 34px !important;
     height: 34px !important;
-    border-radius: 8px;
+    border-radius: 8px !important;
+    transform: none !important;
   }
 
   .dock-icon svg {

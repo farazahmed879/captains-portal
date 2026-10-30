@@ -1,0 +1,15 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = require("express");
+const teamController_1 = require("../controllers/teamController");
+const auth_1 = require("../middlewares/auth");
+const router = (0, express_1.Router)();
+router.use(auth_1.authenticate);
+router.get('/', teamController_1.getTeams);
+router.get('/:id', teamController_1.getTeamById);
+router.post('/', teamController_1.createTeam);
+router.put('/:id', teamController_1.updateTeam);
+router.delete('/:id', teamController_1.deleteTeam);
+router.post('/:id/players', teamController_1.addPlayersToTeam);
+router.delete('/:id/players/:playerId', teamController_1.removePlayerFromTeam);
+exports.default = router;
