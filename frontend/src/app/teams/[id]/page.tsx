@@ -8,6 +8,7 @@ import { queryKeys } from '../../../lib/queryKeys';
 import { Header } from '../../../components/Header';
 import { StatCard } from '../../../components/StatCard';
 import { fetchApi } from '../../../lib/api';
+import { formatDate } from '../../../lib/format';
 import { confirmDelete, showToast } from '../../../lib/alerts';
 import {
   Button,
@@ -564,7 +565,7 @@ export default function TeamProfilePage() {
                   header: 'Date',
                   width: '14%',
                   style: { fontSize: '12px', color: 'var(--text-secondary)' },
-                  render: (m: any) => new Date(m.matchDate).toLocaleDateString(),
+                  render: (m: any) => formatDate(m.matchDate),
                 },
                 {
                   header: 'Venue',

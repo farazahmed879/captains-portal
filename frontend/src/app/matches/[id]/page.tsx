@@ -7,6 +7,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { queryKeys } from '../../../lib/queryKeys';
 import { Header } from '../../../components/Header';
 import { fetchApi } from '../../../lib/api';
+import { formatDateWithDay } from '../../../lib/format';
 import { confirmDelete, showToast } from '../../../lib/alerts';
 import {
   Button,
@@ -351,12 +352,7 @@ export default function MatchDetailPage() {
                 </span>
                 <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                   <Calendar size={14} />
-                  {new Date(matchData.matchDate).toLocaleDateString('en-US', {
-                    weekday: 'short',
-                    year: 'numeric',
-                    month: 'short',
-                    day: 'numeric',
-                  })}
+                  {formatDateWithDay(matchData.matchDate)}
                 </span>
                 <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                   <Clock size={14} />

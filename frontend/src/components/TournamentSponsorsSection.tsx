@@ -6,7 +6,7 @@ import { useQuery } from '@tanstack/react-query';
 import { fetchApi } from '../lib/api';
 import { queryKeys } from '../lib/queryKeys';
 import { confirmDelete, showToast } from '../lib/alerts';
-import { formatCurrency } from '../lib/format';
+import { formatCurrency, formatDate } from '../lib/format';
 import { SPONSOR_CONTRACT_OPTIONS, getPaymentMethodLabel } from '../constants';
 import { Button, Badge, Modal, Select, DataTable } from './ui';
 import {
@@ -324,7 +324,7 @@ export const TournamentSponsorsSection: React.FC<TournamentSponsorsSectionProps>
               width: '12%',
               render: (e) => (
                 <span style={{ fontSize: '11.5px', color: 'var(--text-secondary)' }}>
-                  {new Date(e.date).toLocaleDateString()}
+                  {formatDate(e.date)}
                 </span>
               ),
             },

@@ -229,6 +229,7 @@ export const SponsorTransactionModal: React.FC<SponsorTransactionModalProps> = (
           <DatePicker
             id="sponsor-tx-date"
             label="Transaction Date *"
+            value={watch('date')}
             error={errors.date?.message}
             required
             {...register('date', { required: 'Please select a date' })}

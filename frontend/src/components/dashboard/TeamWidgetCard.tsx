@@ -48,16 +48,22 @@ export const TeamWidgetCard: React.FC<TeamWidgetCardProps> = ({
   const footerContent = selectedTeam ? (
     <>
       <span>Open squad list for {selectedTeam.name}</span>
-      <Link href={`/teams/${selectedTeam._id}`}>
-        <span>Team Details</span>
-        <ChevronRightIcon size={12} />
-      </Link>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+        <Link href="/teams" style={{ color: 'var(--text-secondary)' }}>
+          <span>View All</span>
+        </Link>
+        <span style={{ color: '#cbd5e1' }}>•</span>
+        <Link href={`/teams/${selectedTeam._id}`}>
+          <span>Team Details</span>
+          <ChevronRightIcon size={12} />
+        </Link>
+      </div>
     </>
   ) : (
     <>
       <span>Manage club teams, tape ball & hard ball squads</span>
       <Link href="/teams">
-        <span>Open Teams</span>
+        <span>View All Teams</span>
         <ChevronRightIcon size={12} />
       </Link>
     </>

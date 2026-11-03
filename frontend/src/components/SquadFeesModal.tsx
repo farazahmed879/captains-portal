@@ -346,18 +346,21 @@ export const SquadFeesModal: React.FC<SquadFeesModalProps> = ({
       }
     });
 
+    const activeMomPrize = momPlayerId ? Number(momPrizeMoney) || 0 : 0;
+    const totalInflow = totalCollected + activeMomPrize;
     const pendingDues = Math.max(0, totalAssigned - totalCollected);
-    const netBalance = totalCollected - totalGroundCost;
-    const remainingDeficit = totalGroundCost > totalCollected ? totalGroundCost - totalCollected : 0;
+    const netBalance = totalInflow - totalGroundCost;
+    const remainingDeficit = totalGroundCost > totalInflow ? totalGroundCost - totalInflow : 0;
     const recoveryRate =
       totalGroundCost > 0
-        ? Math.min(100, Math.round((totalCollected / totalGroundCost) * 100))
+        ? Math.min(100, Math.round((totalInflow / totalGroundCost) * 100))
         : 100;
 
     return {
       squadCount,
       totalAssigned,
       totalCollected,
+      activeMomPrize,
       pendingDues,
       netBalance,
       remainingDeficit,
@@ -369,7 +372,7 @@ export const SquadFeesModal: React.FC<SquadFeesModalProps> = ({
       availableCount: Object.values(rows).filter((r) => !r.inSquad).length,
       dirtyCount: dirtyCount + (isMomDirty ? 1 : 0),
     };
-  }, [rows, totalGroundCost, isMomDirty]);
+  }, [rows, totalGroundCost, isMomDirty, momPlayerId, momPrizeMoney]);
 
   // Filtered rows for current tab & search
   const visibleRows = useMemo(() => {

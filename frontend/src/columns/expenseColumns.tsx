@@ -3,6 +3,7 @@ import { Column } from '../components/ui/DataTable';
 import { Badge, Button } from '../components/ui';
 import { Calendar, Pencil, Trash2 } from '../components/icons';
 import { Expense } from '../types';
+import { formatDate } from '../lib/format';
 
 interface ExpenseColumnActions {
   onEdit: (expense: Expense) => void;
@@ -20,7 +21,7 @@ export const getExpenseColumns = ({
     render: (exp: any) => (
       <div style={{ display: 'flex', alignItems: 'center', gap: '5px', whiteSpace: 'nowrap' }}>
         <Calendar size={12} color="var(--text-muted)" />
-        <span>{new Date(exp.expenseDate).toLocaleDateString()}</span>
+        <span>{formatDate(exp.expenseDate)}</span>
       </div>
     ),
   },

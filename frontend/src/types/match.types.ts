@@ -35,6 +35,8 @@ export interface Match {
   ballCost?: number;
   refreshmentCost?: number;
   otherCosts?: number;
+  isReimbursed?: boolean;
+  reimbursedAmount?: number;
   winningPrizeMoney?: number;
   notes?: string;
   collectedAmount?: number;
@@ -54,6 +56,8 @@ export interface CreateMatchFormValues {
   stage: string;
   perPlayerFee: number | '';
   totalMatchExpense: number | '';
+  isReimbursed?: boolean;
+  reimbursedAmount?: number | '';
   overs: number | '';
   notes: string;
 }
@@ -68,6 +72,8 @@ export interface EditMatchFormValues {
   stage: string;
   perPlayerFee: number | '';
   totalMatchExpense: number | '';
+  isReimbursed?: boolean;
+  reimbursedAmount?: number | '';
   overs?: number | '';
   result: string;
   notes: string;

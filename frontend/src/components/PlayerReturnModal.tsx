@@ -56,6 +56,7 @@ export const PlayerReturnModal: React.FC<PlayerReturnModalProps> = ({
     register,
     handleSubmit,
     reset,
+    watch,
     setError,
     clearErrors,
     formState: { errors },
@@ -195,6 +196,7 @@ export const PlayerReturnModal: React.FC<PlayerReturnModalProps> = ({
           <Input
             label="Return Date"
             type="date"
+            value={watch('returnDate')}
             error={errors.returnDate?.message}
             required
             {...register('returnDate', { required: 'Please select a date' })}

@@ -8,6 +8,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { queryKeys } from '../../../lib/queryKeys';
 import { Header } from '../../../components/Header';
 import { fetchApi } from '../../../lib/api';
+import { formatDate } from '../../../lib/format';
 import { confirmDelete, confirmDuesClear, showToast } from '../../../lib/alerts';
 import {
   Button,
@@ -853,7 +854,7 @@ export default function PlayerProfilePage() {
                                   <div className="tourney-match-sub">
                                     <span>
                                       {match?.matchDate
-                                        ? new Date(match.matchDate).toLocaleDateString('en-GB')
+                                        ? formatDate(match.matchDate, 'N/A')
                                         : 'N/A'}
                                     </span>
                                     {match?.venue && (
@@ -1335,7 +1336,7 @@ export default function PlayerProfilePage() {
                             className: 'cell-date',
                             render: (rec: any) =>
                               rec.matchId?.matchDate
-                                ? new Date(rec.matchId.matchDate).toLocaleDateString('en-GB')
+                                ? formatDate(rec.matchId.matchDate, 'N/A')
                                 : 'N/A',
                           },
                           {
@@ -1492,7 +1493,7 @@ export default function PlayerProfilePage() {
                   width: '14%',
                   render: (ret: any) => (
                     <span style={{ fontSize: '12px' }}>
-                      {ret.returnDate ? new Date(ret.returnDate).toLocaleDateString('en-GB') : '-'}
+                      {ret.returnDate ? formatDate(ret.returnDate, '-') : '-'}
                     </span>
                   ),
                 },

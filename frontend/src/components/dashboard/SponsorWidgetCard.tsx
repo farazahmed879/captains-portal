@@ -49,16 +49,22 @@ export const SponsorWidgetCard: React.FC<SponsorWidgetCardProps> = ({
   const footerContent = selectedSponsor ? (
     <>
       <span>Open brand contract for {selectedSponsor.companyName || selectedSponsor.sponsorName}</span>
-      <Link href={`/sponsors/${selectedSponsor._id}`}>
-        <span>Sponsor Details</span>
-        <ChevronRightIcon size={12} />
-      </Link>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+        <Link href="/sponsors" style={{ color: 'var(--text-secondary)' }}>
+          <span>View All</span>
+        </Link>
+        <span style={{ color: '#cbd5e1' }}>•</span>
+        <Link href={`/sponsors/${selectedSponsor._id}`}>
+          <span>Sponsor Details</span>
+          <ChevronRightIcon size={12} />
+        </Link>
+      </div>
     </>
   ) : (
     <>
       <span>View all brand sponsors, deliverables & payouts</span>
       <Link href="/sponsors">
-        <span>Open Sponsors</span>
+        <span>View All Sponsors</span>
         <ChevronRightIcon size={12} />
       </Link>
     </>

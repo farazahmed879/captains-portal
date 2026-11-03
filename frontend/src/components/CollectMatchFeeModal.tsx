@@ -8,7 +8,7 @@ import { Plus, CheckCircle2, AlertCircle } from './icons';
 import { fetchApi } from '../lib/api';
 import { confirmDuesClear, showToast } from '../lib/alerts';
 import { PAYMENT_METHOD_OPTIONS, PaymentMethod } from '../constants';
-import { formatCurrency, formatNumber } from '../lib/format';
+import { formatCurrency, formatNumber, formatDate } from '../lib/format';
 
 interface MatchPaymentFormValues {
   matchId: string;
@@ -296,7 +296,7 @@ export const CollectMatchFeeModal: React.FC<CollectMatchFeeModalProps> = ({
                             vs {match?.opponentTeam || 'Opponent'}
                           </div>
                           <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-                            {match?.venue || 'Venue'} • {match?.matchDate ? new Date(match.matchDate).toLocaleDateString() : ''}
+                            {match?.venue || 'Venue'} • {match?.matchDate ? formatDate(match.matchDate, '') : ''}
                           </div>
                         </div>
                       );
@@ -389,7 +389,7 @@ export const CollectMatchFeeModal: React.FC<CollectMatchFeeModalProps> = ({
                     { value: '', label: '— Choose Match —' },
                     ...allMatches.map((m) => ({
                       value: m._id,
-                      label: `vs ${m.opponentTeam} (${new Date(m.matchDate).toLocaleDateString()}) - ${m.venue || ''}`,
+                      label: `vs ${m.opponentTeam} (${formatDate(m.matchDate)}) - ${m.venue || ''}`,
                     })),
                   ]}
                 />

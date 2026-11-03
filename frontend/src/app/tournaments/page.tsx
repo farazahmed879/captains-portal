@@ -9,6 +9,7 @@ import { Tournament } from '../../types';
 import { getTournamentColumns } from '../../columns';
 import { Header } from '../../components/Header';
 import { fetchApi } from '../../lib/api';
+import { formatDate } from '../../lib/format';
 import { confirmDelete, confirmBulkDelete, showToast } from '../../lib/alerts';
 import {
   Button,
@@ -310,7 +311,7 @@ export default function TournamentsPage() {
                         <span>{trn.venue || 'Karachi Grounds'}</span>
                         <span>•</span>
                         <CalendarIcon size={12} />
-                        <span>{new Date(trn.startDate).toLocaleDateString()}</span>
+                        <span>{formatDate(trn.startDate)}</span>
                       </div>
                     </div>
 

@@ -8,6 +8,7 @@ import { queryKeys } from '../../../lib/queryKeys';
 import { Header } from '../../../components/Header';
 import { StatCard } from '../../../components/StatCard';
 import { fetchApi } from '../../../lib/api';
+import { formatDate } from '../../../lib/format';
 import { confirmDelete, showToast } from '../../../lib/alerts';
 import {
   Button,
@@ -304,6 +305,16 @@ export default function TournamentDetailPage() {
     (sum: number, m: any) => sum + (m.totalMatchExpense || 0),
     0
   );
+  // Match expenses that are reimbursed and deduct from entry fee:
+  const totalReimbursedGround = matches.reduce((sum: number, m: any) => {
+    if (m.isReimbursed === false) return sum;
+    const amt =
+      m.reimbursedAmount !== undefined && m.reimbursedAmount !== null
+        ? Number(m.reimbursedAmount)
+        : Number(m.totalMatchExpense || m.groundCost || 0);
+    return sum + amt;
+  }, 0);
+
   const entryFee = tournament.entryFee || 0;
   const advancePayment = tournament.advancePayment || 0;
   const totalExtraPayments = expenses.reduce(
@@ -320,15 +331,20 @@ export default function TournamentDetailPage() {
     sponsors.reduce((sum: number, s: any) => sum + (s.amountInvested || 0), 0);
   const sponsorPayouts = data.financials?.sponsorPayouts ?? 0;
   const sponsorFunds = data.financials?.sponsorNet ?? sponsorFundsReceived - sponsorPayouts;
-  const totalPrizeWon = tournament.actualWinningPrizeWon || 0;
+  const tournamentPrizeWon = tournament.actualWinningPrizeWon || 0;
+  const matchMomPrizeWon = matches.reduce(
+    (sum: number, m: any) => sum + (m.momPrizeMoney || 0) + (m.winningPrizeMoney || 0),
+    0
+  );
+  const totalPrizeWon = tournamentPrizeWon + matchMomPrizeWon;
 
   // Entry Fee Running Ledger Balances:
   // e.g. Entry Fee 175,000 - Advance - Winning Prize (4,000) = 171,000 Net Entry Fee
   const entryFeeAfterAdvanceAndPrize = Math.max(0, entryFee - advancePayment - totalPrizeWon);
-  // Balance remaining against Entry Fee after Ground Costs + Extra Payments
+  // Balance remaining against Entry Fee after Reimbursed Ground Costs + Extra Payments
   const remainingEntryFeeBalance = Math.max(
     0,
-    entryFeeAfterAdvanceAndPrize - totalMatchExpenses - totalExtraPayments
+    entryFeeAfterAdvanceAndPrize - totalReimbursedGround - totalExtraPayments
   );
   // Balance of Net Entry Fee vs Squad Fee Collection (e.g. 171,000 - 144,800 = 26,200)
   const entryVsSquadCollectionBalance = entryFeeAfterAdvanceAndPrize - totalFeesCollected;
@@ -449,7 +465,7 @@ export default function TournamentDetailPage() {
                 </span>
                 <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                   <CalendarIcon size={13} />
-                  {new Date(tournament.startDate).toLocaleDateString()}
+                  {formatDate(tournament.startDate)}
                 </span>
                 <span>
                   Team: <strong style={{ color: 'var(--text-primary)' }}>{tournament.teamId?.name || 'Gulzar CC'}</strong>
@@ -567,21 +583,22 @@ export default function TournamentDetailPage() {
             </div>
             <div style={{ fontSize: '11px', color: '#1e40af', marginTop: '2px' }}>
               Ground ({matches.length}): <strong>Rs. {fNum(totalMatchExpenses)}</strong>
+              {totalReimbursedGround > 0 && totalReimbursedGround !== totalMatchExpenses ? ` (Reimbursed: Rs. ${fNum(totalReimbursedGround)})` : ''}
               {advancePayment > 0 ? ` · Adv: Rs. ${fNum(advancePayment)}` : ''}
               {totalExtraPayments > 0 ? ` · Extra: Rs. ${fNum(totalExtraPayments)}` : ''}
             </div>
           </div>
 
-          {/* 4. Prize Money */}
+          {/* 4. Prize Money (Tournament Prize + Match MOM Prizes) */}
           <div style={{ padding: '10px 14px', background: '#fffbeb', border: '1px solid #fef3c7', borderRadius: '10px' }}>
             <div style={{ fontSize: '10.5px', fontWeight: 800, color: '#92400e', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-              Prize Money Won
+              Prize & MOM Won
             </div>
             <div style={{ fontSize: '16px', fontWeight: 800, color: '#d97706', marginTop: '2px' }}>
               Rs. {fNum(totalPrizeWon)}
             </div>
             <div style={{ fontSize: '11px', color: '#92400e', marginTop: '2px' }}>
-              Expected: Rs. {fNum(tournament.expectedWinningPrize)}
+              Winning: <strong>Rs. {fNum(tournamentPrizeWon)}</strong> · MOM: <strong>Rs. {fNum(matchMomPrizeWon)}</strong>
             </div>
           </div>
 
@@ -626,7 +643,15 @@ export default function TournamentDetailPage() {
             </span>
             <span>−</span>
             <span>
-              Winning Prize: <strong style={{ color: '#d97706' }}>Rs. {fNum(totalPrizeWon)}</strong>
+              Winning + MOM Prize:{' '}
+              <strong style={{ color: '#d97706' }}>
+                Rs. {fNum(totalPrizeWon)}
+              </strong>
+              {matchMomPrizeWon > 0 && (
+                <span style={{ fontSize: '11px', color: '#b45309', marginLeft: '4px' }}>
+                  (Win: Rs. {fNum(tournamentPrizeWon)} + MOM: Rs. {fNum(matchMomPrizeWon)})
+                </span>
+              )}
             </span>
             <span>=</span>
             <span style={{ padding: '2px 8px', background: '#fff1f2', border: '1px solid #fecdd3', borderRadius: '6px', color: '#be123c', fontWeight: 700 }}>
@@ -641,6 +666,11 @@ export default function TournamentDetailPage() {
             <span>•</span>
             <span>
               Total Paid (Ground + Extra): <strong style={{ color: '#2563eb' }}>Rs. {fNum(totalPaid)}</strong>
+              {totalReimbursedGround > 0 && totalReimbursedGround !== totalMatchExpenses && (
+                <span style={{ fontSize: '11px', color: '#1d4ed8', marginLeft: '4px' }}>
+                  (Reimbursed: Rs. {fNum(totalReimbursedGround)})
+                </span>
+              )}
             </span>
             <span>•</span>
             <span style={{ fontWeight: 700, color: remainingEntryFeeBalance > 0 ? '#e11d48' : '#15803d' }}>
@@ -780,16 +810,57 @@ export default function TournamentDetailPage() {
                       <div>
                         <div style={{ fontWeight: 600, fontSize: '12px', color: 'var(--accent-blue)' }}>{m.venue}</div>
                         <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-                          {new Date(m.matchDate).toLocaleDateString()}
+                          {formatDate(m.matchDate)}
                         </div>
                       </div>
                     ),
                   },
                   {
                     header: 'Ground Cost',
-                    width: '11%',
-                    style: { fontWeight: 700, fontSize: '12.5px', color: 'var(--accent-rose)' },
-                    render: (m: any) => `Rs. ${fNum(m.totalMatchExpense)}`,
+                    width: '12%',
+                    render: (m: any) => {
+                      const cost = m.totalMatchExpense || 0;
+                      const isReimb = m.isReimbursed !== false;
+                      const reimbAmt =
+                        m.reimbursedAmount !== undefined && m.reimbursedAmount !== null
+                          ? Number(m.reimbursedAmount)
+                          : cost;
+                      return (
+                        <div>
+                          <div style={{ fontWeight: 700, fontSize: '12.5px', color: 'var(--accent-rose)' }}>
+                            Rs. {fNum(cost)}
+                          </div>
+                          {cost > 0 && isReimb && (
+                            <div
+                              style={{
+                                fontSize: '10px',
+                                color: '#15803d',
+                                fontWeight: 600,
+                                marginTop: '2px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '3px',
+                              }}
+                            >
+                              <span>🔄 Reimbursed</span>
+                              {reimbAmt !== cost && <span>(Rs. {fNum(reimbAmt)})</span>}
+                            </div>
+                          )}
+                          {cost > 0 && !isReimb && (
+                            <div
+                              style={{
+                                fontSize: '10px',
+                                color: 'var(--text-muted)',
+                                fontWeight: 500,
+                                marginTop: '2px',
+                              }}
+                            >
+                              Direct Expense
+                            </div>
+                          )}
+                        </div>
+                      );
+                    },
                   },
                   {
                     header: 'Squad Fees',
@@ -839,8 +910,9 @@ export default function TournamentDetailPage() {
                     width: '12%',
                     render: (m: any) => {
                       const collected = m.totalCollected || 0;
+                      const momPrize = (m.momPrizeMoney || 0) + (m.winningPrizeMoney || 0);
                       const expense = m.totalMatchExpense || m.groundCost || 0;
-                      const pnl = collected - expense;
+                      const pnl = collected + momPrize - expense;
                       const isProfit = pnl > 0;
                       const isLoss = pnl < 0;
                       return (
@@ -858,7 +930,7 @@ export default function TournamentDetailPage() {
                           >
                             {isProfit ? '+' : isLoss ? '-' : ''}Rs. {fNum(Math.abs(pnl))}
                           </div>
-                          <div style={{ marginTop: '1px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexWrap: 'wrap', marginTop: '1px' }}>
                             {isProfit ? (
                               <Badge variant="success" style={{ fontSize: '9.5px', padding: '1px 5px' }}>
                                 Profit
@@ -872,6 +944,11 @@ export default function TournamentDetailPage() {
                                 Break-even
                               </Badge>
                             )}
+                            {m.momPrizeMoney > 0 && (
+                              <Badge variant="warning" style={{ fontSize: '9px', padding: '1px 4px' }}>
+                                🏆 +Rs. {fNum(m.momPrizeMoney)}
+                              </Badge>
+                            )}
                           </div>
                         </div>
                       );
@@ -881,9 +958,16 @@ export default function TournamentDetailPage() {
                     header: 'Result / Score',
                     width: '8%',
                     render: (m: any) => (
-                      <Badge variant={getResultBadgeVariant(m.result)} style={{ fontSize: '10px', padding: '2px 6px' }}>
-                        {m.result?.toUpperCase()}
-                      </Badge>
+                      <div>
+                        <Badge variant={getResultBadgeVariant(m.result)} style={{ fontSize: '10px', padding: '2px 6px' }}>
+                          {m.result?.toUpperCase()}
+                        </Badge>
+                        {m.momPlayerId && (
+                          <div style={{ fontSize: '10.5px', color: '#b45309', fontWeight: 700, marginTop: '2px' }}>
+                            🏆 {m.momPlayerId?.name || 'MOM'}
+                          </div>
+                        )}
+                      </div>
                     ),
                   },
                   {
@@ -979,7 +1063,7 @@ export default function TournamentDetailPage() {
                   {
                     header: 'Date',
                     width: '20%',
-                    render: (e: any) => new Date(e.expenseDate || e.createdAt).toLocaleDateString(),
+                    render: (e: any) => formatDate(e.expenseDate || e.createdAt),
                   },
                   {
                     header: 'Amount Paid',

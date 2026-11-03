@@ -7,7 +7,7 @@ import { Input, Textarea, Button, Alert } from './ui';
 import { ReceiptIcon, Building2, Calendar, CheckCircle2 } from './icons';
 import { fetchApi } from '../lib/api';
 import { showToast } from '../lib/alerts';
-import { formatCurrency, formatNumber } from '../lib/format';
+import { formatCurrency, formatNumber, formatDate } from '../lib/format';
 
 interface MatchExpenseFormValues {
   groundCost: number | '';
@@ -15,6 +15,8 @@ interface MatchExpenseFormValues {
   ballCost: number | '';
   refreshmentCost: number | '';
   otherCosts: number | '';
+  isReimbursed: boolean;
+  reimbursedAmount: number | '';
   notes: string;
 }
 
@@ -34,6 +36,8 @@ export const MatchExpenseModal: React.FC<MatchExpenseModalProps> = ({
   const [serverError, setServerError] = useState<string | null>(null);
   const [showBreakdown, setShowBreakdown] = useState<boolean>(false);
 
+  const isTournamentMatch = Boolean(match?.tournamentId || match?.matchType === 'tournament');
+
   const {
     register,
     handleSubmit,
@@ -48,6 +52,8 @@ export const MatchExpenseModal: React.FC<MatchExpenseModalProps> = ({
       ballCost: 0,
       refreshmentCost: 0,
       otherCosts: 0,
+      isReimbursed: isTournamentMatch,
+      reimbursedAmount: 0,
       notes: '',
     },
   });
@@ -59,6 +65,17 @@ export const MatchExpenseModal: React.FC<MatchExpenseModalProps> = ({
       const bCost = Number(match.ballCost) || 0;
       const rCost = Number(match.refreshmentCost) || 0;
       const oCost = Number(match.otherCosts) || 0;
+      const total = gCost + uCost + bCost + rCost + oCost;
+
+      const isReimb =
+        match.isReimbursed !== undefined
+          ? Boolean(match.isReimbursed)
+          : Boolean(match.tournamentId || match.matchType === 'tournament');
+
+      const rAmt =
+        match.reimbursedAmount !== undefined && match.reimbursedAmount !== null
+          ? match.reimbursedAmount
+          : gCost || total;
 
       reset({
         groundCost: gCost,
@@ -66,6 +83,8 @@ export const MatchExpenseModal: React.FC<MatchExpenseModalProps> = ({
         ballCost: bCost,
         refreshmentCost: rCost,
         otherCosts: oCost,
+        isReimbursed: isReimb,
+        reimbursedAmount: rAmt,
         notes: match.notes || '',
       });
 
@@ -84,6 +103,8 @@ export const MatchExpenseModal: React.FC<MatchExpenseModalProps> = ({
   const watchedBall = Number(watch('ballCost')) || 0;
   const watchedRefresh = Number(watch('refreshmentCost')) || 0;
   const watchedOther = Number(watch('otherCosts')) || 0;
+  const watchedIsReimbursed = watch('isReimbursed');
+  const watchedReimbursedAmount = watch('reimbursedAmount');
 
   const totalExpense =
     watchedGround + watchedUmpire + watchedBall + watchedRefresh + watchedOther;
@@ -99,6 +120,13 @@ export const MatchExpenseModal: React.FC<MatchExpenseModalProps> = ({
     const other = Number(values.otherCosts) || 0;
     const total = ground + umpire + ball + refresh + other;
 
+    const isReimb = isTournamentMatch ? Boolean(values.isReimbursed) : false;
+    const reimbAmt = isReimb
+      ? values.reimbursedAmount !== '' && values.reimbursedAmount !== undefined
+        ? Number(values.reimbursedAmount)
+        : ground || total
+      : 0;
+
     try {
       const res = await fetchApi<{ success: boolean; match: any }>(
         `/matches/${match._id}`,
@@ -111,6 +139,8 @@ export const MatchExpenseModal: React.FC<MatchExpenseModalProps> = ({
             refreshmentCost: refresh,
             otherCosts: other,
             totalMatchExpense: total,
+            isReimbursed: isReimb,
+            reimbursedAmount: reimbAmt,
             notes: values.notes,
           }),
         }
@@ -130,7 +160,7 @@ export const MatchExpenseModal: React.FC<MatchExpenseModalProps> = ({
 
   const opponentName = match?.opponentTeam || 'Opponent';
   const venueName = match?.venue || 'Venue';
-  const matchDate = match?.matchDate ? new Date(match.matchDate).toLocaleDateString() : '';
+  const matchDate = match?.matchDate ? formatDate(match.matchDate, '') : '';
 
   return (
     <Modal
@@ -204,6 +234,132 @@ export const MatchExpenseModal: React.FC<MatchExpenseModalProps> = ({
             Fee paid to tournament organizer or ground manager to play this match.
           </div>
         </div>
+
+        {/* Organizer Reimbursement & Entry Fee Deduction */}
+        {isTournamentMatch && (
+          <div
+            style={{
+              padding: '12px 14px',
+              background: watchedIsReimbursed ? '#f0fdf4' : '#f8fafc',
+              border: `1.5px solid ${watchedIsReimbursed ? '#86efac' : '#e2e8f0'}`,
+              borderRadius: '10px',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '10px',
+              transition: 'all 0.2s ease',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
+              <input
+                type="checkbox"
+                id="isReimbursed"
+                style={{
+                  width: '18px',
+                  height: '18px',
+                  marginTop: '2px',
+                  cursor: 'pointer',
+                  accentColor: '#16a34a',
+                }}
+                {...register('isReimbursed')}
+              />
+              <label htmlFor="isReimbursed" style={{ cursor: 'pointer', flex: 1 }}>
+                <div
+                  style={{
+                    fontSize: '13px',
+                    fontWeight: 700,
+                    color: watchedIsReimbursed ? '#166534' : 'var(--text-primary)',
+                  }}
+                >
+                  Reimburse payment (Deduct from tournament entry fee)
+                </div>
+                <div
+                  style={{
+                    fontSize: '11.5px',
+                    color: 'var(--text-muted)',
+                    marginTop: '2px',
+                    lineHeight: 1.4,
+                  }}
+                >
+                  {watchedIsReimbursed
+                    ? 'This match ground fee will be deducted from the tournament organizer’s entry fee balance.'
+                    : 'Check this if this payment was/will be adjusted against the tournament entry fee.'}
+                </div>
+              </label>
+            </div>
+
+            {watchedIsReimbursed && (
+              <div
+                style={{
+                  paddingTop: '8px',
+                  borderTop: '1px dashed #bbf7d0',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '8px',
+                }}
+              >
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    gap: '12px',
+                  }}
+                >
+                  <div style={{ flex: 1 }}>
+                    <Input
+                      label="Reimbursement / Deduction Amount (Rs.) *"
+                      type="number"
+                      step="100"
+                      min="0"
+                      placeholder="e.g. 12000"
+                      {...register('reimbursedAmount', { valueAsNumber: true })}
+                    />
+                  </div>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="sm"
+                    style={{
+                      alignSelf: 'flex-end',
+                      marginBottom: '2px',
+                      fontSize: '11px',
+                      padding: '6px 10px',
+                    }}
+                    onClick={() =>
+                      setValue('reimbursedAmount', watchedGround || totalExpense)
+                    }
+                  >
+                    Use Total (Rs. {formatNumber(watchedGround || totalExpense)})
+                  </Button>
+                </div>
+
+                <div
+                  style={{
+                    fontSize: '11px',
+                    fontWeight: 600,
+                    color: '#15803d',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '5px',
+                    background: '#dcfce7',
+                    padding: '6px 10px',
+                    borderRadius: '6px',
+                  }}
+                >
+                  <span>
+                    ✓ Rs.{' '}
+                    {formatNumber(
+                      Number(watchedReimbursedAmount) ||
+                        watchedGround ||
+                        totalExpense
+                    )}{' '}
+                    will be deducted from Tournament Entry Fee
+                  </span>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Breakdown Toggle */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '4px' }}>

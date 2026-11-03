@@ -4,6 +4,7 @@ import { Column } from '../components/ui/DataTable';
 import { Badge, Button } from '../components/ui';
 import { ExternalLink, Calendar, Users, Pencil, Trash2, CheckCircle2 } from '../components/icons';
 import { Match, MatchPayment } from '../types';
+import { formatDate } from '../lib/format';
 
 interface MatchColumnActions {
   onPayments: (id: string) => void;
@@ -106,23 +107,32 @@ export const getMatchColumns = ({
           }}
         >
           <Calendar size={12} />
-          <span>{new Date(m.matchDate).toLocaleDateString()}</span>
+          <span>{formatDate(m.matchDate)}</span>
         </div>
       </div>
     ),
   },
   {
     header: 'Match Costs',
-    render: (m: any) => (
-      <div>
-        <div style={{ fontWeight: 700, color: 'var(--accent-rose)' }}>
-          Rs. {fNum(m.totalMatchExpense)}
+    render: (m: any) => {
+      const isTourney = Boolean(m.tournamentId || m.matchType === 'tournament');
+      const isReimb = isTourney && m.isReimbursed !== false && (m.groundCost > 0 || m.reimbursedAmount > 0);
+      return (
+        <div>
+          <div style={{ fontWeight: 700, color: 'var(--accent-rose)' }}>
+            Rs. {fNum(m.totalMatchExpense)}
+          </div>
+          <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+            Ground: Rs. {fNum(m.groundCost)} | Ref: Rs. {fNum(m.refreshmentCost)}
+          </div>
+          {isReimb && (
+            <div style={{ fontSize: '10px', color: '#15803d', fontWeight: 600, marginTop: '2px' }}>
+              🔄 Reimbursed in Entry Fee
+            </div>
+          )}
         </div>
-        <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-          Ground: Rs. {fNum(m.groundCost)} | Ref: Rs. {fNum(m.refreshmentCost)}
-        </div>
-      </div>
-    ),
+      );
+    },
   },
   {
     header: 'Squad Dues Status',
@@ -156,8 +166,9 @@ export const getMatchColumns = ({
     header: 'Profit / Loss',
     render: (m: any) => {
       const collected = m.totalCollected || 0;
+      const momPrize = (m.momPrizeMoney || 0) + (m.winningPrizeMoney || 0);
       const expense = m.totalMatchExpense || m.groundCost || 0;
-      const pnl = collected - expense;
+      const pnl = collected + momPrize - expense;
       const isProfit = pnl > 0;
       const isLoss = pnl < 0;
       return (
@@ -174,7 +185,7 @@ export const getMatchColumns = ({
           >
             {isProfit ? '+' : isLoss ? '-' : ''}Rs. {fNum(Math.abs(pnl))}
           </div>
-          <div style={{ marginTop: '2px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexWrap: 'wrap', marginTop: '2px' }}>
             {isProfit ? (
               <Badge variant="success" style={{ fontSize: '9.5px', padding: '1px 5px' }}>
                 Profit
@@ -186,6 +197,11 @@ export const getMatchColumns = ({
             ) : (
               <Badge variant="secondary" style={{ fontSize: '9.5px', padding: '1px 5px' }}>
                 Break-even
+              </Badge>
+            )}
+            {m.momPrizeMoney > 0 && (
+              <Badge variant="warning" style={{ fontSize: '9px', padding: '1px 4px' }}>
+                🏆 +Rs. {fNum(m.momPrizeMoney)}
               </Badge>
             )}
           </div>

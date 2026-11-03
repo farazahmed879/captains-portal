@@ -145,6 +145,13 @@ export const createMatch = async (req: AuthRequest, res: Response): Promise<void
       momPlayerId: momPlayerId || undefined,
       momAwardDetails,
       momPrizeMoney: Number(momPrizeMoney) || 0,
+      isReimbursed: req.body.isReimbursed !== undefined ? Boolean(req.body.isReimbursed) : false,
+      reimbursedAmount:
+        req.body.isReimbursed
+          ? req.body.reimbursedAmount !== undefined
+            ? Number(req.body.reimbursedAmount)
+            : ground || totalMatchExpense
+          : 0,
       notes,
     });
 
@@ -201,6 +208,25 @@ export const updateMatch = async (req: AuthRequest, res: Response): Promise<void
     }
     if (req.body.momPrizeMoney !== undefined) {
       req.body.momPrizeMoney = Number(req.body.momPrizeMoney) || 0;
+    }
+
+    if (req.body.isReimbursed !== undefined) {
+      req.body.isReimbursed = Boolean(req.body.isReimbursed);
+      if (req.body.isReimbursed) {
+        req.body.reimbursedAmount =
+          req.body.reimbursedAmount !== undefined
+            ? Number(req.body.reimbursedAmount)
+            : req.body.groundCost !== undefined
+            ? Number(req.body.groundCost)
+            : req.body.totalMatchExpense || 0;
+      } else {
+        req.body.reimbursedAmount = 0;
+      }
+    } else if (req.body.reimbursedAmount !== undefined) {
+      req.body.reimbursedAmount = Number(req.body.reimbursedAmount) || 0;
+      if (req.body.reimbursedAmount > 0) {
+        req.body.isReimbursed = true;
+      }
     }
 
     const match = await Match.findOneAndUpdate(

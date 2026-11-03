@@ -6,6 +6,7 @@ import { queryKeys } from "../../lib/queryKeys";
 import { Header } from "../../components/Header";
 import { StatCard } from "../../components/StatCard";
 import { fetchApi } from "../../lib/api";
+import { formatDate } from "../../lib/format";
 import { confirmDelete, confirmBulkDelete, showToast } from "../../lib/alerts";
 import {
   Button,
@@ -286,7 +287,7 @@ export default function FinancesPage() {
                     >
                       <Calendar size={12} color="var(--text-muted)" />
                       <span>
-                        {new Date(exp.expenseDate).toLocaleDateString()}
+                        {formatDate(exp.expenseDate)}
                       </span>
                     </div>
                   ),
@@ -512,7 +513,7 @@ export default function FinancesPage() {
                       <div
                         style={{ fontSize: "11px", color: "var(--text-muted)" }}
                       >
-                        {new Date(exp.expenseDate).toLocaleDateString()}
+                        {formatDate(exp.expenseDate)}
                       </div>
                     </div>
                   </div>

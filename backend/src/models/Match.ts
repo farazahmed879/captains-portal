@@ -19,6 +19,10 @@ export interface IMatch extends Document {
   otherCosts: number;
   totalMatchExpense: number;
 
+  // Reimbursement / deduction against tournament entry fee
+  isReimbursed?: boolean;
+  reimbursedAmount?: number;
+
   // Player Fee distribution
   perPlayerFee: number;
   squadPlayerIds: Types.ObjectId[];
@@ -66,6 +70,9 @@ const MatchSchema = new Schema<IMatch>(
     refreshmentCost: { type: Number, default: 0 },
     otherCosts: { type: Number, default: 0 },
     totalMatchExpense: { type: Number, default: 0 },
+
+    isReimbursed: { type: Boolean, default: false },
+    reimbursedAmount: { type: Number, default: 0 },
 
     perPlayerFee: { type: Number, default: 0 },
     squadPlayerIds: [{ type: Schema.Types.ObjectId, ref: 'Player' }],

@@ -11,6 +11,7 @@ import { DetailPageSkeleton } from '../../../components/ui/Skeleton';
 import { Header } from '../../../components/Header';
 import { StatCard } from '../../../components/StatCard';
 import { fetchApi } from '../../../lib/api';
+import { formatDate } from '../../../lib/format';
 import { confirmDelete, showToast } from '../../../lib/alerts';
 import {
   Button,
@@ -331,7 +332,7 @@ export default function SponsorDetailPage() {
                     <Calendar size={13} />
                     First Investment:{' '}
                     {sponsor.investmentDate
-                      ? new Date(sponsor.investmentDate).toLocaleDateString()
+                      ? formatDate(sponsor.investmentDate, 'N/A')
                       : 'N/A'}
                   </span>
                 </div>
@@ -404,7 +405,7 @@ export default function SponsorDetailPage() {
             )}
             {sponsor.returnDate && (
               <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
-                Last Payout Date: {new Date(sponsor.returnDate).toLocaleDateString()}
+                Last Payout Date: {formatDate(sponsor.returnDate)}
               </div>
             )}
           </div>

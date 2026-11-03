@@ -5,6 +5,7 @@ import { Badge, Button } from '../components/ui';
 import { ExternalLink, Plus, RotateCcw, Pencil, Trash2, Trophy } from '../components/icons';
 import { Sponsor, SponsorTransaction } from '../types';
 import { paymentMethodLabel, SponsorTxType } from '../components/SponsorTransactionModal';
+import { formatDate } from '../lib/format';
 
 interface SponsorColumnActions {
   onAddFunds: (sponsor: Sponsor) => void;
@@ -159,10 +160,10 @@ export const getSponsorTransactionColumns = ({
     width: '13%',
     render: (t: any) => (
       <div style={{ whiteSpace: 'nowrap' }}>
-        <div style={{ fontWeight: 600 }}>{new Date(t.date).toLocaleDateString()}</div>
+        <div style={{ fontWeight: 600 }}>{formatDate(t.date)}</div>
         {t.createdAt && (
           <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-            Logged {new Date(t.createdAt).toLocaleDateString()}
+            Logged {formatDate(t.createdAt)}
           </div>
         )}
       </div>

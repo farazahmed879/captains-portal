@@ -44,6 +44,14 @@ export const getTournaments = async (req: AuthRequest, res: Response): Promise<v
         const advancePayment = tournament.advancePayment || 0;
         const tournamentExpensesSum = expenses.reduce((acc, e) => acc + (e.amount || 0), 0);
         const matchExpensesSum = matches.reduce((acc, m) => acc + (m.totalMatchExpense || 0), 0);
+        const reimbursedMatchFeeSum = matches.reduce((acc, m) => {
+          if (m.isReimbursed === false) return acc;
+          const amt =
+            m.reimbursedAmount !== undefined && m.reimbursedAmount !== null
+              ? Number(m.reimbursedAmount)
+              : Number(m.totalMatchExpense || m.groundCost || 0);
+          return acc + amt;
+        }, 0);
         const totalPaid = advancePayment + matchExpensesSum + tournamentExpensesSum;
         const totalInvested = totalPaid;
 
@@ -56,8 +64,14 @@ export const getTournaments = async (req: AuthRequest, res: Response): Promise<v
         const actualWinningPrizeWon = tournament.actualWinningPrizeWon || 0;
         const totalReturns = actualWinningPrizeWon + sponsorFunds + matchPrizeWon + totalFeesCollected;
 
-        const entryFeeAfterAdvanceAndPrize = Math.max(0, entryFee - advancePayment - actualWinningPrizeWon);
-        const entryFeeBalance = Math.max(0, entryFeeAfterAdvanceAndPrize - matchExpensesSum - tournamentExpensesSum);
+        const entryFeeAfterAdvanceAndPrize = Math.max(
+          0,
+          entryFee - advancePayment - actualWinningPrizeWon - matchPrizeWon
+        );
+        const entryFeeBalance = Math.max(
+          0,
+          entryFeeAfterAdvanceAndPrize - reimbursedMatchFeeSum - tournamentExpensesSum
+        );
         const netPnl = totalReturns - totalPaid;
 
         return {

@@ -1,4 +1,5 @@
 import React, { forwardRef } from 'react';
+import { DatePicker } from './DatePicker';
 
 export interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   label?: string;
@@ -10,6 +11,21 @@ export interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> 
 
 export const Input = forwardRef<HTMLInputElement, InputProps>(
   ({ label, error, helperText, icon, iconRight, className = '', id, style, ...props }, ref) => {
+    if (props.type === 'date') {
+      return (
+        <DatePicker
+          ref={ref}
+          label={label}
+          error={error}
+          helperText={helperText}
+          className={className}
+          id={id}
+          style={style}
+          {...props}
+        />
+      );
+    }
+
     const inputId = id || (label ? label.toLowerCase().replace(/\s+/g, '-') : undefined);
 
     return (

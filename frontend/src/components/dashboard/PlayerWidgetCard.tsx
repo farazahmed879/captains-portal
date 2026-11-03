@@ -54,16 +54,22 @@ export const PlayerWidgetCard: React.FC<PlayerWidgetCardProps> = ({
   const footerContent = selectedPlayer ? (
     <>
       <span>Open full ledger for {selectedPlayer.name}</span>
-      <Link href={`/players/${selectedPlayer._id}`}>
-        <span>Player Profile</span>
-        <ChevronRightIcon size={12} />
-      </Link>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+        <Link href="/players" style={{ color: 'var(--text-secondary)' }}>
+          <span>View All</span>
+        </Link>
+        <span style={{ color: '#cbd5e1' }}>•</span>
+        <Link href={`/players/${selectedPlayer._id}`}>
+          <span>Player Profile</span>
+          <ChevronRightIcon size={12} />
+        </Link>
+      </div>
     </>
   ) : (
     <>
       <span>Manage all player profiles & ledgers</span>
       <Link href="/players">
-        <span>Open Rosters</span>
+        <span>View All Players</span>
         <ChevronRightIcon size={12} />
       </Link>
     </>

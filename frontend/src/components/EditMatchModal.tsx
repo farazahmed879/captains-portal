@@ -203,6 +203,8 @@ export const EditMatchModal: React.FC<EditMatchModalProps> = ({
         perPlayerFee: Number(values.perPlayerFee) || 0,
         totalMatchExpense: Number(values.totalMatchExpense) || 0,
         groundCost: Number(values.totalMatchExpense) || 0,
+        isReimbursed: match.isReimbursed,
+        reimbursedAmount: match.reimbursedAmount,
         overs: Number(values.overs) || 20,
       };
 
@@ -254,6 +256,7 @@ export const EditMatchModal: React.FC<EditMatchModalProps> = ({
     <Modal
       isOpen={isOpen}
       onClose={onClose}
+      maxWidth="780px"
       title={
         match
           ? `Edit Match — ${selectedTeamName} vs ${selectedOpponentTeam || match.opponentTeam || "Opponent"}`
@@ -283,7 +286,14 @@ export const EditMatchModal: React.FC<EditMatchModalProps> = ({
         )}
 
         {/* Row 1: Team 1 (Club Team) & Team 2 (Opponent Team) */}
-        <div className="grid-2" style={{ alignItems: "end" }}>
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
+            gap: "16px",
+            alignItems: "end",
+          }}
+        >
           <Select
             label="My Team / Club Team (Team 1) *"
             value={selectedTeamId}
@@ -306,7 +316,14 @@ export const EditMatchModal: React.FC<EditMatchModalProps> = ({
         </div>
 
         {/* Row 2: Tournament / League & Venue / Ground */}
-        <div className="grid-2" style={{ alignItems: "end" }}>
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
+            gap: "16px",
+            alignItems: "end",
+          }}
+        >
           <Select
             label="Tournament / League"
             value={selectedTournamentId}
@@ -329,7 +346,14 @@ export const EditMatchModal: React.FC<EditMatchModalProps> = ({
         </div>
 
         {/* Row 3: Match Date, Match Type, Stage */}
-        <div className="grid-3" style={{ alignItems: "end" }}>
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(210px, 1fr))",
+            gap: "16px",
+            alignItems: "end",
+          }}
+        >
           <DatePicker
             label="Match Date *"
             value={currentDate}
@@ -352,7 +376,14 @@ export const EditMatchModal: React.FC<EditMatchModalProps> = ({
         </div>
 
         {/* Row 4: Match Result, Fee per Player, Ground Cost */}
-        <div className="grid-3" style={{ alignItems: "end" }}>
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
+            gap: "16px",
+            alignItems: "end",
+          }}
+        >
           <Select
             label="Match Result"
             value={selectedResult}

@@ -140,17 +140,17 @@ export const CreateMatchModal: React.FC<CreateMatchModalProps> = ({
       const resolvedTournamentId =
         defaultTournamentId || values.tournamentId || undefined;
       const expenseAmount = Number(values.totalMatchExpense) || 0;
+      const isTourney = Boolean(lockTournament || resolvedTournamentId);
       const payload = {
         ...values,
         tournamentId: resolvedTournamentId,
         tournamentStage: values.stage,
-        matchType:
-          lockTournament || resolvedTournamentId
-            ? "tournament"
-            : values.matchType,
+        matchType: isTourney ? "tournament" : values.matchType,
         perPlayerFee: Number(values.perPlayerFee) || 0,
         totalMatchExpense: expenseAmount,
         groundCost: expenseAmount,
+        isReimbursed: isTourney,
+        reimbursedAmount: isTourney ? expenseAmount : 0,
         overs: Number(values.overs) || 20,
       };
 
@@ -181,6 +181,7 @@ export const CreateMatchModal: React.FC<CreateMatchModalProps> = ({
     <Modal
       isOpen={isOpen}
       onClose={handleClose}
+      maxWidth="780px"
       title={
         lockedTournamentObj
           ? `Schedule Match — ${lockedTournamentObj.name}`
@@ -218,7 +219,14 @@ export const CreateMatchModal: React.FC<CreateMatchModalProps> = ({
         )}
 
         {/* Row 1: Team & Tournament (Read-only filled when locked to a specific tournament) */}
-        <div className="grid-2" style={{ alignItems: "end" }}>
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
+            gap: "16px",
+            alignItems: "end",
+          }}
+        >
           <Select
             label="Club Team *"
             value={selectedTeamId}
@@ -294,7 +302,14 @@ export const CreateMatchModal: React.FC<CreateMatchModalProps> = ({
         </div>
 
         {/* Row 2: Opponent Team & Venue */}
-        <div className="grid-2" style={{ alignItems: "end" }}>
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
+            gap: "16px",
+            alignItems: "end",
+          }}
+        >
           <Select
             label="Opponent Team *"
             searchable
@@ -318,8 +333,14 @@ export const CreateMatchModal: React.FC<CreateMatchModalProps> = ({
 
         {/* Row 3: Date, Match Type (hidden when locked to tournament) & Stage */}
         <div
-          className={lockTournament ? "grid-2" : "grid-3"}
-          style={{ alignItems: "end" }}
+          style={{
+            display: "grid",
+            gridTemplateColumns: lockTournament
+              ? "repeat(auto-fit, minmax(260px, 1fr))"
+              : "repeat(auto-fit, minmax(210px, 1fr))",
+            gap: "16px",
+            alignItems: "end",
+          }}
         >
           <DatePicker
             label="Match Date *"
@@ -345,7 +366,14 @@ export const CreateMatchModal: React.FC<CreateMatchModalProps> = ({
         </div>
 
         {/* Row 4: Overs, Fee per Player & Total Ground Cost */}
-        <div className="grid-3" style={{ alignItems: "end" }}>
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
+            gap: "16px",
+            alignItems: "end",
+          }}
+        >
           <Input
             label="Match Overs"
             type="number"

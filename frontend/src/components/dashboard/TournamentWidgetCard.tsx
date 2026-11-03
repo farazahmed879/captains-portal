@@ -47,16 +47,22 @@ export const TournamentWidgetCard: React.FC<TournamentWidgetCardProps> = ({
   const footerContent = selectedTournament ? (
     <>
       <span>Open full tournament breakdown for {selectedTournament.name}</span>
-      <Link href={`/tournaments/${selectedTournament._id}`}>
-        <span>Tournament Profile</span>
-        <ChevronRightIcon size={12} />
-      </Link>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+        <Link href="/tournaments" style={{ color: 'var(--text-secondary)' }}>
+          <span>View All</span>
+        </Link>
+        <span style={{ color: '#cbd5e1' }}>•</span>
+        <Link href={`/tournaments/${selectedTournament._id}`}>
+          <span>Tournament Profile</span>
+          <ChevronRightIcon size={12} />
+        </Link>
+      </div>
     </>
   ) : (
     <>
       <span>Browse all tournaments & entry fees</span>
       <Link href="/tournaments">
-        <span>Open Tournaments</span>
+        <span>View All Tournaments</span>
         <ChevronRightIcon size={12} />
       </Link>
     </>

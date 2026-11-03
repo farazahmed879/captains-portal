@@ -9,6 +9,7 @@ import { Match, MatchPayment } from '../../types';
 import { getMatchColumns } from '../../columns';
 import { Header } from '../../components/Header';
 import { fetchApi } from '../../lib/api';
+import { formatDate } from '../../lib/format';
 import { confirmDelete, confirmBulkDelete, showToast } from '../../lib/alerts';
 import {
   Button,
@@ -431,7 +432,7 @@ export default function MatchesPage() {
                           marginTop: '2px',
                         }}
                       >
-                        {(m.teamId?.name || 'Our Team')} vs {m.opponentTeam} • {new Date(m.matchDate).toLocaleDateString()}
+                        {(m.teamId?.name || 'Our Team')} vs {m.opponentTeam} • {formatDate(m.matchDate)}
                       </div>
                     </div>
 
