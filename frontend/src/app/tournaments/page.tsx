@@ -233,12 +233,14 @@ export default function TournamentsPage() {
           <div>
             <DataTable<Tournament>
               data={paginatedTournaments}
+              loading={loading}
               keyExtractor={(trn: any) => trn._id}
               emptyMessage="No tournaments found matching criteria."
               onRowClick={(trn: any) => router.push(`/tournaments/${trn._id}`)}
               selectable
               selectedIds={selectedIds}
               onSelectionChange={setSelectedIds}
+              serialStartIndex={(currentPage - 1) * pageSize}
               columns={tournamentColumns}
             />
 

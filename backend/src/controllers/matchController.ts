@@ -102,12 +102,16 @@ export const createMatch = async (req: AuthRequest, res: Response): Promise<void
       return;
     }
 
-    const ground = Number(groundCost) || 0;
+    const ground =
+      groundCost !== undefined
+        ? Number(groundCost) || 0
+        : Number(req.body.totalMatchExpense) || 0;
     const umpire = Number(umpireCost) || 0;
     const ball = Number(ballCost) || 0;
     const refresh = Number(refreshmentCost) || 0;
     const other = Number(otherCosts) || 0;
     const totalMatchExpense = ground + umpire + ball + refresh + other;
+    const resolvedStage = tournamentStage || req.body.stage || 'group';
 
     // Default per player fee calculation if not explicitly provided
     let calculatedPerPlayerFee = Number(perPlayerFee) || 0;
@@ -121,7 +125,7 @@ export const createMatch = async (req: AuthRequest, res: Response): Promise<void
       teamId,
       matchType: matchType || 'friendly',
       tournamentId: matchType === 'tournament' ? tournamentId : undefined,
-      tournamentStage: matchType === 'tournament' ? tournamentStage || 'regular' : undefined,
+      tournamentStage: matchType === 'tournament' ? resolvedStage : undefined,
       matchDate,
       opponentTeam,
       venue,

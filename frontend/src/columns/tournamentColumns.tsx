@@ -62,16 +62,26 @@ export const getTournamentColumns = ({
     ),
   },
   {
-    header: 'Entry Fee',
-    width: '11%',
-    style: { fontWeight: 600 },
-    render: (trn: any) => `Rs. ${fNum(trn.financials?.entryFee || trn.entryFee)}`,
+    header: 'Entry Fee & Balance',
+    width: '13%',
+    render: (trn: any) => {
+      const entry = trn.financials?.entryFee ?? trn.entryFee ?? 0;
+      const balance = trn.financials?.entryFeeBalance ?? entry;
+      return (
+        <div>
+          <div style={{ fontWeight: 700, fontSize: '12.5px' }}>Rs. {fNum(entry)}</div>
+          <div style={{ fontSize: '11px', color: balance > 0 ? 'var(--accent-rose)' : 'var(--accent-green)' }}>
+            Bal: Rs. {fNum(balance)}
+          </div>
+        </div>
+      );
+    },
   },
   {
-    header: 'Match Costs',
+    header: 'Total Paid',
     width: '11%',
     style: { fontWeight: 600, color: 'var(--accent-rose)' },
-    render: (trn: any) => `Rs. ${fNum(trn.financials?.matchExpenses || 0)}`,
+    render: (trn: any) => `Rs. ${fNum(trn.financials?.totalPaid ?? trn.financials?.matchExpenses ?? 0)}`,
   },
   {
     header: 'Prize Won',

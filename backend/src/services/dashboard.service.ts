@@ -136,7 +136,7 @@ export class DashboardService {
     const totalExpenses = expenses.reduce((acc, e) => acc + (e.amount || 0), 0);
     const totalEntryFees = tournaments.reduce((acc, t) => acc + (t.entryFee || 0), 0);
     const totalMatchExpenses = matches.reduce((acc, m) => acc + (m.totalMatchExpense || 0), 0);
-    const totalInvested = totalExpenses + totalEntryFees + totalMatchExpenses;
+    const totalInvested = totalExpenses + totalMatchExpenses;
 
     const sponsors =
       allowedTeamIds.length > 0 ? await sponsorRepository.findMany(tenantId, teamFilter) : [];

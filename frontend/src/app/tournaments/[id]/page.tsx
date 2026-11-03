@@ -59,7 +59,13 @@ export default function TournamentDetailPage() {
   const [isExpenseModalOpen, setIsExpenseModalOpen] = useState<boolean>(false);
   const [selectedMatchForMom, setSelectedMatchForMom] = useState<any>(null);
   const [isMomModalOpen, setIsMomModalOpen] = useState<boolean>(false);
-  const [activeTab, setActiveTab] = useState<'matches' | 'sponsors'>('matches');
+  const [activeTab, setActiveTab] = useState<'matches' | 'extra_payments' | 'sponsors'>('matches');
+  const [isExtraPaymentOpen, setIsExtraPaymentOpen] = useState<boolean>(false);
+  const [extraTitle, setExtraTitle] = useState<string>('');
+  const [extraAmount, setExtraAmount] = useState<number | ''>('');
+  const [extraDate, setExtraDate] = useState<string>(new Date().toISOString().split('T')[0]);
+  const [extraNotes, setExtraNotes] = useState<string>('');
+  const [isSavingExtra, setIsSavingExtra] = useState<boolean>(false);
 
   const tournamentQuery = useQuery({
     queryKey: queryKeys.tournament(id),
@@ -165,7 +171,64 @@ export default function TournamentDetailPage() {
     queryClient.invalidateQueries({ queryKey: queryKeys.tournament(id) });
     queryClient.invalidateQueries({ queryKey: ['tournaments'] });
     queryClient.invalidateQueries({ queryKey: ['matches'] });
+    queryClient.invalidateQueries({ queryKey: ['expenses'] });
     queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+  };
+
+  const handleAddExtraPayment = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!extraAmount || Number(extraAmount) <= 0) {
+      showToast.error('Please enter a valid payment amount.');
+      return;
+    }
+    const teamIdVal = data?.tournament?.teamId?._id || data?.tournament?.teamId;
+    if (!teamIdVal) {
+      showToast.error('Tournament team not found.');
+      return;
+    }
+    setIsSavingExtra(true);
+    try {
+      const res = await fetchApi<{ success: boolean }>('/expenses', {
+        method: 'POST',
+        body: JSON.stringify({
+          teamId: teamIdVal,
+          tournamentId: id,
+          category: 'tournament_entry_fee',
+          title: extraTitle.trim() || 'Extra Tournament Payment',
+          amount: Number(extraAmount),
+          expenseDate: extraDate || new Date().toISOString(),
+          description: extraNotes.trim() || undefined,
+        }),
+      });
+      if (res.success) {
+        showToast.success('Extra tournament payment recorded!');
+        setExtraTitle('');
+        setExtraAmount('');
+        setExtraNotes('');
+        setIsExtraPaymentOpen(false);
+        invalidateData();
+      }
+    } catch (err: any) {
+      showToast.error(err?.message || 'Failed to record extra payment.');
+    } finally {
+      setIsSavingExtra(false);
+    }
+  };
+
+  const handleDeleteExtraPayment = async (expenseId: string, title: string) => {
+    const confirmed = await confirmDelete(`extra payment "${title}"`);
+    if (!confirmed) return;
+    try {
+      const res = await fetchApi<{ success: boolean }>(`/expenses/${expenseId}`, {
+        method: 'DELETE',
+      });
+      if (res.success) {
+        showToast.success('Extra payment removed.');
+        invalidateData();
+      }
+    } catch (err: any) {
+      showToast.error(err?.message || 'Failed to delete extra payment.');
+    }
   };
 
   const handleDelete = async () => {
@@ -241,7 +304,16 @@ export default function TournamentDetailPage() {
     (sum: number, m: any) => sum + (m.totalMatchExpense || 0),
     0
   );
-  const totalInvested = (tournament.entryFee || 0) + totalMatchExpenses;
+  const entryFee = tournament.entryFee || 0;
+  const advancePayment = tournament.advancePayment || 0;
+  const totalExtraPayments = expenses.reduce(
+    (sum: number, e: any) => sum + (e.amount || 0),
+    0
+  );
+  // Total paid is Ground Cost + Advance Payment + Extra Payments
+  const totalPaid = advancePayment + totalMatchExpenses + totalExtraPayments;
+  const totalInvested = totalPaid;
+
   // Tournament-scoped sponsor money (funds received minus payouts back to sponsors)
   const sponsorFundsReceived =
     data.financials?.sponsorFundsReceived ??
@@ -249,8 +321,20 @@ export default function TournamentDetailPage() {
   const sponsorPayouts = data.financials?.sponsorPayouts ?? 0;
   const sponsorFunds = data.financials?.sponsorNet ?? sponsorFundsReceived - sponsorPayouts;
   const totalPrizeWon = tournament.actualWinningPrizeWon || 0;
+
+  // Entry Fee Running Ledger Balances:
+  // e.g. Entry Fee 175,000 - Advance - Winning Prize (4,000) = 171,000 Net Entry Fee
+  const entryFeeAfterAdvanceAndPrize = Math.max(0, entryFee - advancePayment - totalPrizeWon);
+  // Balance remaining against Entry Fee after Ground Costs + Extra Payments
+  const remainingEntryFeeBalance = Math.max(
+    0,
+    entryFeeAfterAdvanceAndPrize - totalMatchExpenses - totalExtraPayments
+  );
+  // Balance of Net Entry Fee vs Squad Fee Collection (e.g. 171,000 - 144,800 = 26,200)
+  const entryVsSquadCollectionBalance = entryFeeAfterAdvanceAndPrize - totalFeesCollected;
+
   const totalReturns = totalPrizeWon + sponsorFunds + totalFeesCollected;
-  const netRoi = totalReturns - totalInvested;
+  const netRoi = totalReturns - totalPaid;
   const isProfitable = netRoi >= 0;
 
   return (
@@ -284,6 +368,14 @@ export default function TournamentDetailPage() {
               onClick={() => setIsCreateMatchOpen(true)}
             >
               Schedule Match
+            </Button>
+            <Button
+              variant="secondary"
+              size="sm"
+              icon={<DollarIcon size={13} color="var(--accent-green)" />}
+              onClick={() => setIsExtraPaymentOpen(true)}
+            >
+              + Extra Payment
             </Button>
             <Button
               variant="secondary"
@@ -406,12 +498,30 @@ export default function TournamentDetailPage() {
         <div
           style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(195px, 1fr))',
             gap: '10px',
-            marginBottom: '16px',
+            marginBottom: '12px',
           }}
         >
-          {/* Squad Fees */}
+          {/* 1. Entry Fee Ledger */}
+          <div style={{ padding: '10px 14px', background: '#fff1f2', border: '1px solid #ffe4e6', borderRadius: '10px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ fontSize: '10.5px', fontWeight: 800, color: '#9f1239', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                Entry Fee Ledger
+              </span>
+              <span style={{ fontSize: '10.5px', fontWeight: 700, color: '#be123c' }}>
+                Total: Rs. {fNum(entryFee)}
+              </span>
+            </div>
+            <div style={{ fontSize: '16px', fontWeight: 800, color: '#e11d48', marginTop: '2px' }}>
+              Bal: Rs. {fNum(entryFeeAfterAdvanceAndPrize)}
+            </div>
+            <div style={{ fontSize: '11px', color: '#9f1239', marginTop: '2px' }}>
+              Adv: <strong>Rs. {fNum(advancePayment)}</strong> · Prize: <strong>Rs. {fNum(totalPrizeWon)}</strong> · Rem: <strong>Rs. {fNum(remainingEntryFeeBalance)}</strong>
+            </div>
+          </div>
+
+          {/* 2. Squad Fees Collected */}
           <div style={{ padding: '10px 14px', background: '#f0fdf4', border: '1px solid #dcfce7', borderRadius: '10px' }}>
             <div style={{ fontSize: '10.5px', fontWeight: 800, color: '#166534', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
               Squad Fees Collected
@@ -420,37 +530,49 @@ export default function TournamentDetailPage() {
               Rs. {fNum(totalFeesCollected)}
             </div>
             <div style={{ fontSize: '11px', color: '#166534', marginTop: '2px' }}>
-              Due: <strong>Rs. {fNum(totalFeesPending)}</strong> · Assig: Rs. {fNum(totalFeesAssigned)}
+              Due: <strong>Rs. {fNum(totalFeesPending)}</strong> · Entry Diff:{' '}
+              <strong>
+                {entryVsSquadCollectionBalance > 0
+                  ? `Rs. ${fNum(entryVsSquadCollectionBalance)} Short`
+                  : `+Rs. ${fNum(Math.abs(entryVsSquadCollectionBalance))}`}
+              </strong>
             </div>
           </div>
 
-          {/* Entry Fee */}
-          <div style={{ padding: '10px 14px', background: '#fff1f2', border: '1px solid #ffe4e6', borderRadius: '10px' }}>
-            <div style={{ fontSize: '10.5px', fontWeight: 800, color: '#9f1239', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-              Entry Fee Invested
-            </div>
-            <div style={{ fontSize: '16px', fontWeight: 800, color: '#e11d48', marginTop: '2px' }}>
-              Rs. {fNum(tournament.entryFee)}
-            </div>
-            <div style={{ fontSize: '11px', color: '#9f1239', marginTop: '2px' }}>
-              Paid to organizer
-            </div>
-          </div>
-
-          {/* Match Costs */}
+          {/* 3. Total Paid (Ground Cost + Advance + Extra) */}
           <div style={{ padding: '10px 14px', background: '#eff6ff', border: '1px solid #dbeafe', borderRadius: '10px' }}>
-            <div style={{ fontSize: '10.5px', fontWeight: 800, color: '#1e40af', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-              Match Ground Costs
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ fontSize: '10.5px', fontWeight: 800, color: '#1e40af', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                Total Paid (Ground + Extra)
+              </span>
+              <button
+                type="button"
+                onClick={() => setIsExtraPaymentOpen(true)}
+                style={{
+                  fontSize: '10px',
+                  fontWeight: 700,
+                  color: '#0284c7',
+                  background: '#ffffff',
+                  border: '1px solid #bae6fd',
+                  borderRadius: '4px',
+                  padding: '1px 6px',
+                  cursor: 'pointer',
+                }}
+              >
+                + Extra
+              </button>
             </div>
             <div style={{ fontSize: '16px', fontWeight: 800, color: '#2563eb', marginTop: '2px' }}>
-              Rs. {fNum(totalMatchExpenses)}
+              Rs. {fNum(totalPaid)}
             </div>
             <div style={{ fontSize: '11px', color: '#1e40af', marginTop: '2px' }}>
-              {matches.length} {matches.length === 1 ? 'Match' : 'Matches'} Ground & Ref
+              Ground ({matches.length}): <strong>Rs. {fNum(totalMatchExpenses)}</strong>
+              {advancePayment > 0 ? ` · Adv: Rs. ${fNum(advancePayment)}` : ''}
+              {totalExtraPayments > 0 ? ` · Extra: Rs. ${fNum(totalExtraPayments)}` : ''}
             </div>
           </div>
 
-          {/* Prize Money */}
+          {/* 4. Prize Money */}
           <div style={{ padding: '10px 14px', background: '#fffbeb', border: '1px solid #fef3c7', borderRadius: '10px' }}>
             <div style={{ fontSize: '10.5px', fontWeight: 800, color: '#92400e', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
               Prize Money Won
@@ -463,7 +585,7 @@ export default function TournamentDetailPage() {
             </div>
           </div>
 
-          {/* Dedicated Sponsors */}
+          {/* 5. Dedicated Sponsors */}
           <div style={{ padding: '10px 14px', background: '#f5f3ff', border: '1px solid #ede9fe', borderRadius: '10px' }}>
             <div style={{ fontSize: '10.5px', fontWeight: 800, color: '#5b21b6', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
               Dedicated Sponsors
@@ -474,6 +596,56 @@ export default function TournamentDetailPage() {
             <div style={{ fontSize: '11px', color: '#5b21b6', marginTop: '2px' }}>
               {sponsors.length} Sponsors · Paid out: Rs. {fNum(sponsorPayouts)}
             </div>
+          </div>
+        </div>
+
+        {/* Step-by-Step Entry Fee & Collection Balance Summary Strip */}
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: '12px',
+            padding: '10px 16px',
+            marginBottom: '16px',
+            background: '#f8fafc',
+            border: '1px solid var(--border-color)',
+            borderRadius: '10px',
+            fontSize: '12px',
+            color: 'var(--text-secondary)',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flexWrap: 'wrap' }}>
+            <span>
+              Entry Fee: <strong style={{ color: 'var(--text-primary)' }}>Rs. {fNum(entryFee)}</strong>
+            </span>
+            <span>−</span>
+            <span>
+              Advance: <strong style={{ color: '#0284c7' }}>Rs. {fNum(advancePayment)}</strong>
+            </span>
+            <span>−</span>
+            <span>
+              Winning Prize: <strong style={{ color: '#d97706' }}>Rs. {fNum(totalPrizeWon)}</strong>
+            </span>
+            <span>=</span>
+            <span style={{ padding: '2px 8px', background: '#fff1f2', border: '1px solid #fecdd3', borderRadius: '6px', color: '#be123c', fontWeight: 700 }}>
+              Net Entry Balance: Rs. {fNum(entryFeeAfterAdvanceAndPrize)}
+            </span>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flexWrap: 'wrap' }}>
+            <span>
+              Squad Collection: <strong style={{ color: '#15803d' }}>Rs. {fNum(totalFeesCollected)}</strong>
+            </span>
+            <span>•</span>
+            <span>
+              Total Paid (Ground + Extra): <strong style={{ color: '#2563eb' }}>Rs. {fNum(totalPaid)}</strong>
+            </span>
+            <span>•</span>
+            <span style={{ fontWeight: 700, color: remainingEntryFeeBalance > 0 ? '#e11d48' : '#15803d' }}>
+              Organizer Balance Due: Rs. {fNum(remainingEntryFeeBalance)}
+            </span>
           </div>
         </div>
 
@@ -511,6 +683,28 @@ export default function TournamentDetailPage() {
             >
               <SwordsIcon size={15} />
               <span>Tournament Matches ({matches.length})</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setActiveTab('extra_payments')}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '7px',
+                padding: '7px 14px',
+                borderRadius: '8px',
+                fontSize: '13px',
+                fontWeight: 700,
+                border: activeTab === 'extra_payments' ? '1px solid #0284c7' : '1px solid transparent',
+                background: activeTab === 'extra_payments' ? '#eff6ff' : '#ffffff',
+                color: activeTab === 'extra_payments' ? '#0284c7' : '#64748b',
+                cursor: 'pointer',
+                transition: 'all 0.15s ease',
+              }}
+            >
+              <ReceiptIcon size={15} />
+              <span>Extra Payments ({expenses.length})</span>
             </button>
 
             <button
@@ -562,7 +756,7 @@ export default function TournamentDetailPage() {
                 columns={[
                   {
                     header: 'Team vs Team',
-                    width: '24%',
+                    width: '22%',
                     render: (m: any) => {
                       const clubName = m.teamId?.name || tournament?.teamId?.name || 'Our Team';
                       return (
@@ -581,7 +775,7 @@ export default function TournamentDetailPage() {
                   },
                   {
                     header: 'Date & Venue',
-                    width: '16%',
+                    width: '14%',
                     render: (m: any) => (
                       <div>
                         <div style={{ fontWeight: 600, fontSize: '12px', color: 'var(--accent-blue)' }}>{m.venue}</div>
@@ -593,13 +787,13 @@ export default function TournamentDetailPage() {
                   },
                   {
                     header: 'Ground Cost',
-                    width: '12%',
+                    width: '11%',
                     style: { fontWeight: 700, fontSize: '12.5px', color: 'var(--accent-rose)' },
                     render: (m: any) => `Rs. ${fNum(m.totalMatchExpense)}`,
                   },
                   {
                     header: 'Squad Fees',
-                    width: '16%',
+                    width: '14%',
                     render: (m: any) => {
                       const collected = m.totalCollected || 0;
                       const assigned = m.totalAssigned || 0;
@@ -641,8 +835,51 @@ export default function TournamentDetailPage() {
                     },
                   },
                   {
+                    header: 'Profit / Loss',
+                    width: '12%',
+                    render: (m: any) => {
+                      const collected = m.totalCollected || 0;
+                      const expense = m.totalMatchExpense || m.groundCost || 0;
+                      const pnl = collected - expense;
+                      const isProfit = pnl > 0;
+                      const isLoss = pnl < 0;
+                      return (
+                        <div>
+                          <div
+                            style={{
+                              fontWeight: 700,
+                              fontSize: '12.5px',
+                              color: isProfit
+                                ? 'var(--accent-green)'
+                                : isLoss
+                                ? 'var(--accent-rose)'
+                                : 'var(--text-secondary)',
+                            }}
+                          >
+                            {isProfit ? '+' : isLoss ? '-' : ''}Rs. {fNum(Math.abs(pnl))}
+                          </div>
+                          <div style={{ marginTop: '1px' }}>
+                            {isProfit ? (
+                              <Badge variant="success" style={{ fontSize: '9.5px', padding: '1px 5px' }}>
+                                Profit
+                              </Badge>
+                            ) : isLoss ? (
+                              <Badge variant="danger" style={{ fontSize: '9.5px', padding: '1px 5px' }}>
+                                Loss
+                              </Badge>
+                            ) : (
+                              <Badge variant="secondary" style={{ fontSize: '9.5px', padding: '1px 5px' }}>
+                                Break-even
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    },
+                  },
+                  {
                     header: 'Result / Score',
-                    width: '10%',
+                    width: '8%',
                     render: (m: any) => (
                       <Badge variant={getResultBadgeVariant(m.result)} style={{ fontSize: '10px', padding: '2px 6px' }}>
                         {m.result?.toUpperCase()}
@@ -651,7 +888,7 @@ export default function TournamentDetailPage() {
                   },
                   {
                     header: 'Actions',
-                    width: '22%',
+                    width: '19%',
                     align: 'right',
                     render: (m: any) => {
                       const pending = m.pendingFee || Math.max(0, (m.totalAssigned || 0) - (m.totalCollected || 0));
@@ -703,7 +940,75 @@ export default function TournamentDetailPage() {
           </div>
         )}
 
-        {/* TAB 2: SPONSORS & LEDGER */}
+        {/* TAB 2: EXTRA PAYMENTS */}
+        {activeTab === 'extra_payments' && (
+          <div style={{ marginBottom: '20px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+              <div style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>
+                Additional payments made for this tournament (outside per-match ground costs) • Total Extra Paid:{' '}
+                <strong style={{ color: 'var(--accent-rose)' }}>Rs. {fNum(totalExtraPayments)}</strong>
+              </div>
+              <Button
+                variant="primary"
+                size="sm"
+                icon={<Plus size={13} />}
+                onClick={() => setIsExtraPaymentOpen(true)}
+              >
+                + Add Extra Payment
+              </Button>
+            </div>
+            <div style={{ border: '1px solid var(--border-color)', borderRadius: '8px', background: '#ffffff' }}>
+              <DataTable
+                className="compact-table"
+                data={expenses}
+                keyExtractor={(e: any) => e._id}
+                emptyMessage="No extra payments recorded for this tournament. Click '+ Add Extra Payment' to add one."
+                columns={[
+                  {
+                    header: 'Payment Title / Purpose',
+                    width: '35%',
+                    render: (e: any) => (
+                      <div>
+                        <div style={{ fontWeight: 700, fontSize: '13px', color: 'var(--text-primary)' }}>{e.title}</div>
+                        {e.description && (
+                          <div style={{ fontSize: '11.5px', color: 'var(--text-muted)' }}>{e.description}</div>
+                        )}
+                      </div>
+                    ),
+                  },
+                  {
+                    header: 'Date',
+                    width: '20%',
+                    render: (e: any) => new Date(e.expenseDate || e.createdAt).toLocaleDateString(),
+                  },
+                  {
+                    header: 'Amount Paid',
+                    width: '25%',
+                    style: { fontWeight: 700, fontSize: '13px', color: 'var(--accent-rose)' },
+                    render: (e: any) => `Rs. ${fNum(e.amount)}`,
+                  },
+                  {
+                    header: 'Actions',
+                    width: '20%',
+                    align: 'right',
+                    render: (e: any) => (
+                      <Button
+                        variant="danger"
+                        size="sm"
+                        isIconOnly
+                        icon={<TrashIcon size={13} />}
+                        onClick={() => handleDeleteExtraPayment(e._id, e.title)}
+                        title="Delete extra payment"
+                      />
+                    ),
+                  },
+                ]}
+              />
+            </div>
+          </div>
+        )}
+
+        {/* TAB 3: SPONSORS & LEDGER */}
         {activeTab === 'sponsors' && (
           <TournamentSponsorsSection
             tournament={tournament}
@@ -765,6 +1070,66 @@ export default function TournamentDetailPage() {
           }}
         />
 
+        {/* Modal: Add Extra Tournament Payment */}
+        <Modal
+          isOpen={isExtraPaymentOpen}
+          onClose={() => setIsExtraPaymentOpen(false)}
+          title={`Add Extra Payment — ${tournament.name}`}
+          subtitle="Record additional tournament payment (organizer installment, ball/umpire fee, etc.)"
+          footer={
+            <>
+              <Button
+                variant="secondary"
+                onClick={() => setIsExtraPaymentOpen(false)}
+                disabled={isSavingExtra}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="primary"
+                onClick={handleAddExtraPayment}
+                loading={isSavingExtra}
+              >
+                Save Extra Payment
+              </Button>
+            </>
+          }
+        >
+          <form onSubmit={handleAddExtraPayment} className="form-stack">
+            <Input
+              label="Payment Title / Purpose *"
+              placeholder="e.g. Organizer Extra Installment / Knock-out Fee"
+              value={extraTitle}
+              onChange={(e) => setExtraTitle(e.target.value)}
+              required
+            />
+            <div className="grid-2">
+              <Input
+                label="Amount (Rs.) *"
+                type="number"
+                placeholder="5000"
+                value={extraAmount}
+                onWheel={(e) => e.currentTarget.blur()}
+                onChange={(e) => setExtraAmount(e.target.value === '' ? '' : Number(e.target.value))}
+                required
+              />
+              <Input
+                label="Payment Date"
+                type="date"
+                value={extraDate}
+                onChange={(e) => setExtraDate(e.target.value)}
+              />
+            </div>
+            <Textarea
+              label="Notes / Reference"
+              rows={2}
+              placeholder="Optional payment note or receipt reference..."
+              value={extraNotes}
+              onChange={(e) => setExtraNotes(e.target.value)}
+            />
+          </form>
+        </Modal>
+
         {/* Unified 2-Column Squad Fees Ledger Modal */}
         <SquadFeesModal
           isOpen={isFeesModalOpen}
@@ -772,6 +1137,7 @@ export default function TournamentDetailPage() {
           match={selectedMatchForFees}
           initialPayments={matchPayments}
           players={players}
+          tournamentMatches={matches}
           onSuccess={() => {
             invalidateData();
             if (selectedMatchForFees) {

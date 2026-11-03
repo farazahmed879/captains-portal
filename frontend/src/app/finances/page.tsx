@@ -12,9 +12,6 @@ import {
   Badge,
   Input,
   Select,
-  Textarea,
-  DatePicker,
-  Modal,
   Card,
   DataTable,
   Pagination,
@@ -27,11 +24,9 @@ import {
   Plus,
   Calendar,
   Tag,
-  DollarSign,
   TrendingDown,
   Trash2,
   Pencil,
-  Filter,
   Search,
 } from "../../components/icons";
 import { CreateExpenseModal } from "../../components/CreateExpenseModal";
@@ -121,7 +116,9 @@ export default function FinancesPage() {
   const [isBulkDeleting, setIsBulkDeleting] = useState<boolean>(false);
 
   const toggleSelectOne = (id: string) => {
-    setSelectedIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
+    );
   };
 
   const handleBulkDelete = async () => {
@@ -130,7 +127,11 @@ export default function FinancesPage() {
     if (!confirmed) return;
     setIsBulkDeleting(true);
     try {
-      await Promise.all(selectedIds.map((id) => fetchApi(`/expenses/${id}`, { method: "DELETE" })));
+      await Promise.all(
+        selectedIds.map((id) =>
+          fetchApi(`/expenses/${id}`, { method: "DELETE" }),
+        ),
+      );
       showToast.success(`${selectedIds.length} expense(s) deleted.`);
       setSelectedIds([]);
       invalidateData();
@@ -264,8 +265,10 @@ export default function FinancesPage() {
           <div>
             <DataTable<any>
               data={paginatedExpenses}
+              loading={loading}
               keyExtractor={(exp) => exp._id}
               emptyMessage="No expenses found."
+              serialStartIndex={(currentPage - 1) * pageSize}
               selectable
               selectedIds={selectedIds}
               onSelectionChange={setSelectedIds}
@@ -360,7 +363,10 @@ export default function FinancesPage() {
                         size="sm"
                         isIconOnly
                         icon={<Pencil size={14} color="var(--accent-blue)" />}
-                      onClick={(e) => { e.stopPropagation(); handleEditOpen(exp); }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleEditOpen(exp);
+                        }}
                         title="Edit Expense"
                       />
                       <Button
@@ -368,7 +374,10 @@ export default function FinancesPage() {
                         size="sm"
                         isIconOnly
                         icon={<Trash2 size={14} />}
-                      onClick={(e) => { e.stopPropagation(); handleDelete(exp._id, exp.title); }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDelete(exp._id, exp.title);
+                        }}
                         title="Delete Expense"
                       />
                     </div>
@@ -419,7 +428,10 @@ export default function FinancesPage() {
                         size="sm"
                         isIconOnly
                         icon={<Pencil size={14} color="var(--accent-blue)" />}
-                      onClick={(e) => { e.stopPropagation(); handleEditOpen(exp); }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleEditOpen(exp);
+                        }}
                         title="Edit"
                       />
                       <Button
@@ -427,7 +439,10 @@ export default function FinancesPage() {
                         size="sm"
                         isIconOnly
                         icon={<Trash2 size={14} />}
-                      onClick={(e) => { e.stopPropagation(); handleDelete(exp._id, exp.title); }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDelete(exp._id, exp.title);
+                        }}
                         title="Delete"
                       />
                     </div>

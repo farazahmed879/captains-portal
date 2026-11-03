@@ -10,6 +10,7 @@ export interface ITournament extends Document {
   startDate: Date;
   endDate?: Date;
   entryFee: number;
+  advancePayment?: number;
   expectedWinningPrize?: number;
   actualWinningPrizeWon?: number;
   status: 'upcoming' | 'ongoing' | 'completed' | 'knocked_out' | 'champions';
@@ -33,6 +34,7 @@ const TournamentSchema = new Schema<ITournament>(
     startDate: { type: Date, required: true },
     endDate: { type: Date },
     entryFee: { type: Number, default: 0 },
+    advancePayment: { type: Number, default: 0 },
     expectedWinningPrize: { type: Number, default: 0 },
     actualWinningPrizeWon: { type: Number, default: 0 },
     status: {

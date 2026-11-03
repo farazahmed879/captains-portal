@@ -111,6 +111,7 @@ export const UserRoleTable: React.FC<UserRoleTableProps> = ({
             selectable={Boolean(onSelectionChange)}
             selectedIds={selectedIds}
             onSelectionChange={onSelectionChange}
+            serialStartIndex={(currentPage - 1) * pageSize}
           />
           {!isLoading && totalItems > 0 && (
             <div style={{ borderBottomLeftRadius: 'var(--radius-lg)', borderBottomRightRadius: 'var(--radius-lg)', overflow: 'hidden' }}>

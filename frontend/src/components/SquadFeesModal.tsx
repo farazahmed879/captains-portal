@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Modal } from './ui/Modal';
-import { Button, Badge, Input, Select, Checkbox } from './ui';
+import { Button, Badge, Input, Select } from './ui';
 import {
   Search,
   X,
@@ -14,6 +14,7 @@ import {
   Save,
   Receipt,
   Pencil,
+  ArrowUpDown,
 } from 'lucide-react';
 import { fetchApi } from '../lib/api';
 import { showToast, confirmDelete } from '../lib/alerts';
@@ -27,6 +28,8 @@ export interface SquadFeesModalProps {
   match: any;
   initialPayments?: any[];
   players: any[];
+  /** Optional list of matches in the same tournament (avoids extra fetch if already loaded) */
+  tournamentMatches?: any[];
   onSuccess?: () => void;
   /** Render inline on a page (without Modal wrapper) */
   inline?: boolean;
@@ -41,6 +44,8 @@ interface PlayerRowState {
   role?: string;
   jerseyNumber?: number | string;
   matchesPlayed?: number;
+  lastMatchDate?: string | null;
+  isRegular?: boolean;
   paymentId?: string;
   inSquad: boolean;
   feeAssigned: number;
@@ -57,17 +62,22 @@ export const SquadFeesModal: React.FC<SquadFeesModalProps> = ({
   match,
   initialPayments = [],
   players,
+  tournamentMatches,
   onSuccess,
   inline = false,
   onEditExpenses,
 }) => {
   const matchId = match?._id;
+  const tournamentId = match?.tournamentId?._id || match?.tournamentId || '';
   const defaultMatchFee = match?.perPlayerFee || 1000;
   const totalGroundCost = match?.totalMatchExpense || match?.groundCost || 0;
 
   // Local state
   const [rows, setRows] = useState<Record<string, PlayerRowState>>({});
+  const [fetchedTournamentMatches, setFetchedTournamentMatches] = useState<any[]>([]);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [pinnedTopIds, setPinnedTopIds] = useState<string[]>([]);
+  const tableBodyRef = useRef<HTMLDivElement>(null);
   const [search, setSearch] = useState('');
   const [activeTab, setActiveTab] = useState<FilterTab>('all');
   const [bulkAssigned, setBulkAssigned] = useState<number>(defaultMatchFee);
@@ -87,7 +97,7 @@ export const SquadFeesModal: React.FC<SquadFeesModalProps> = ({
     const paySig = (initialPayments || [])
       .map((p) => `${p._id}:${p.playerId?._id || p.playerId}:${p.feeAssigned}:${p.feePaid}:${p.notes || ''}`)
       .join('|');
-    const playerSig = (players || []).map((p) => p._id).join(',');
+    const playerSig = (players || []).map((p) => `${p._id}:${p.matchesPlayed || 0}`).join(',');
     const momSig = `${match?.momPlayerId?._id || match?.momPlayerId || ''}:${match?.momPrizeMoney || 0}:${match?.momAwardDetails || ''}`;
     return `${matchId}#${defaultMatchFee}#${paySig}#${playerSig}#${momSig}`;
   }, [initialPayments, players, match, matchId, defaultMatchFee]);
@@ -96,12 +106,75 @@ export const SquadFeesModal: React.FC<SquadFeesModalProps> = ({
   useEffect(() => {
     if (!isOpen || !matchId) return;
     setSelectedIds([]);
+    setPinnedTopIds([]);
     setSearch('');
     setBulkAssigned(defaultMatchFee);
     setBulkPaid(defaultMatchFee);
     setActiveTab('all');
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, matchId]);
+
+  // Fetch tournament matches when match belongs to a tournament (if not already provided via props)
+  useEffect(() => {
+    if (!isOpen || !tournamentId) {
+      setFetchedTournamentMatches([]);
+      return;
+    }
+    if (tournamentMatches && tournamentMatches.length > 0) {
+      return;
+    }
+    let cancelled = false;
+    fetchApi<{ success: boolean; matches: any[] }>(`/tournaments/${tournamentId}`)
+      .then((res) => {
+        if (!cancelled && res.success && Array.isArray(res.matches)) {
+          setFetchedTournamentMatches(res.matches);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setFetchedTournamentMatches([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [isOpen, tournamentId, tournamentMatches]);
+
+  // Map of playerId -> { count, lastDate } for matches played in THIS tournament
+  const tournamentStatsMap = useMemo(() => {
+    const map: Record<string, { count: number; lastDate: number }> = {};
+    const list = tournamentMatches && tournamentMatches.length > 0 ? tournamentMatches : fetchedTournamentMatches;
+    if (!list || list.length === 0) return map;
+
+    list.forEach((m: any) => {
+      const mDate = m.matchDate ? new Date(m.matchDate).getTime() : 0;
+      const participantIds = new Set<string>();
+
+      if (Array.isArray(m.payments)) {
+        m.payments.forEach((p: any) => {
+          const pid = p.playerId?._id || p.playerId;
+          if (pid) participantIds.add(String(pid));
+        });
+      }
+      if (Array.isArray(m.squadPlayerIds)) {
+        m.squadPlayerIds.forEach((sp: any) => {
+          const pid = sp?._id || sp;
+          if (pid) participantIds.add(String(pid));
+        });
+      }
+
+      participantIds.forEach((pid) => {
+        if (!map[pid]) {
+          map[pid] = { count: 1, lastDate: mDate };
+        } else {
+          map[pid].count += 1;
+          if (mDate > map[pid].lastDate) {
+            map[pid].lastDate = mDate;
+          }
+        }
+      });
+    });
+
+    return map;
+  }, [tournamentMatches, fetchedTournamentMatches]);
 
   // Sync rows + MOM from server data whenever the underlying data actually changes
   useEffect(() => {
@@ -139,6 +212,8 @@ export const SquadFeesModal: React.FC<SquadFeesModalProps> = ({
           role: p.role,
           jerseyNumber: p.jerseyNumber,
           matchesPlayed: p.matchesPlayed || 0,
+          lastMatchDate: p.lastMatchDate || null,
+          isRegular: Boolean(p.isRegular),
           paymentId: payment._id,
           inSquad: true,
           feeAssigned: Number(payment.feeAssigned) || 0,
@@ -154,6 +229,8 @@ export const SquadFeesModal: React.FC<SquadFeesModalProps> = ({
           role: p.role,
           jerseyNumber: p.jerseyNumber,
           matchesPlayed: p.matchesPlayed || 0,
+          lastMatchDate: p.lastMatchDate || null,
+          isRegular: Boolean(p.isRegular),
           paymentId: undefined,
           inSquad: false,
           feeAssigned: defaultMatchFee,
@@ -188,15 +265,56 @@ export const SquadFeesModal: React.FC<SquadFeesModalProps> = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, dataSignature]);
 
-  // Derived lists
+  // Derived lists: prioritize client-pinned selected players, saved squad players & tournament players
   const allPlayerRows = useMemo(() => {
+    const pinnedSet = new Set(pinnedTopIds);
+
     return Object.values(rows).sort((a, b) => {
-      // Show squad players first, then sort by name
-      if (a.inSquad && !b.inSquad) return -1;
-      if (!a.inSquad && b.inSquad) return 1;
+      // 0. Client-side "Selected on Top" pinned players come first when triggered
+      if (pinnedSet.size > 0) {
+        const pinA = pinnedSet.has(a.playerId);
+        const pinB = pinnedSet.has(b.playerId);
+        if (pinA && !pinB) return -1;
+        if (!pinA && pinB) return 1;
+      }
+
+      // 1. Players already saved in this match's squad come first
+      const savedA = Boolean(a.paymentId);
+      const savedB = Boolean(b.paymentId);
+      if (savedA && !savedB) return -1;
+      if (!savedA && savedB) return 1;
+
+      // 2. Players who already played in THIS tournament come on top (most tournament matches first)
+      const tourA = tournamentStatsMap[a.playerId]?.count || 0;
+      const tourB = tournamentStatsMap[b.playerId]?.count || 0;
+      if (tourA > 0 && tourB === 0) return -1;
+      if (tourB > 0 && tourA === 0) return 1;
+      if (tourB !== tourA) return tourB - tourA;
+
+      const tourDateA = tournamentStatsMap[a.playerId]?.lastDate || 0;
+      const tourDateB = tournamentStatsMap[b.playerId]?.lastDate || 0;
+      if (tourDateB !== tourDateA) return tourDateB - tourDateA;
+
+      // 3. Players who played matches overall (most matches played on top)
+      const matchesA = Number(a.matchesPlayed) || 0;
+      const matchesB = Number(b.matchesPlayed) || 0;
+      if (matchesA > 0 && matchesB === 0) return -1;
+      if (matchesB > 0 && matchesA === 0) return 1;
+      if (matchesB !== matchesA) return matchesB - matchesA;
+
+      // 4. For players with same match count, sort by most recent match date
+      const dateA = a.lastMatchDate ? new Date(a.lastMatchDate).getTime() : 0;
+      const dateB = b.lastMatchDate ? new Date(b.lastMatchDate).getTime() : 0;
+      if (dateB !== dateA) return dateB - dateA;
+
+      // 5. Regular squad members first
+      if (a.isRegular && !b.isRegular) return -1;
+      if (!a.isRegular && b.isRegular) return 1;
+
+      // 6. Fallback alphabetically by name
       return a.name.localeCompare(b.name);
     });
-  }, [rows]);
+  }, [rows, tournamentStatsMap, pinnedTopIds]);
 
   // Stats calculation
   const stats = useMemo(() => {
@@ -278,8 +396,6 @@ export const SquadFeesModal: React.FC<SquadFeesModalProps> = ({
   // Batch selection handlers
   const allVisibleSelected =
     visibleRows.length > 0 && visibleRows.every((r) => selectedIds.includes(r.playerId));
-  const isSomeSelected =
-    visibleRows.some((r) => selectedIds.includes(r.playerId)) && !allVisibleSelected;
 
   const toggleSelectAllVisible = () => {
     if (allVisibleSelected) {
@@ -291,10 +407,77 @@ export const SquadFeesModal: React.FC<SquadFeesModalProps> = ({
     }
   };
 
-  const toggleSelectRow = (id: string) => {
-    setSelectedIds((prev) =>
-      prev.includes(id) ? prev.filter((k) => k !== id) : [...prev, id]
-    );
+  // Client-only sort: bring currently selected / squad players to top on demand
+  const activeSelectionOrSquadIds = useMemo(() => {
+    const squadIds = Object.values(rows)
+      .filter((r) => r.inSquad)
+      .map((r) => r.playerId);
+    return Array.from(new Set([...selectedIds, ...squadIds]));
+  }, [selectedIds, rows]);
+
+  const isSelectedSortedTop =
+    pinnedTopIds.length > 0 &&
+    activeSelectionOrSquadIds.length > 0 &&
+    activeSelectionOrSquadIds.every((id) => pinnedTopIds.includes(id));
+
+  const handleSortSelectedToTop = () => {
+    if (isSelectedSortedTop) {
+      setPinnedTopIds([]);
+    } else {
+      setPinnedTopIds(activeSelectionOrSquadIds);
+      tableBodyRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
+
+  const handleRowClick = (row: PlayerRowState) => {
+    const id = row.playerId;
+    const isCurrentlySelected = selectedIds.includes(id);
+
+    if (!row.inSquad) {
+      // Clicking a row that is not in the squad adds them with default fee and selects them
+      setRows((prev) => {
+        const current = prev[id];
+        if (!current) return prev;
+        return {
+          ...prev,
+          [id]: {
+            ...current,
+            inSquad: true,
+            feeAssigned: bulkAssigned || defaultMatchFee,
+            feePaid: bulkPaid || defaultMatchFee,
+            isDirty: true,
+          },
+        };
+      });
+      if (!isCurrentlySelected) {
+        setSelectedIds((prev) => [...prev, id]);
+      }
+      return;
+    }
+
+    if (isCurrentlySelected) {
+      setSelectedIds((prev) => prev.filter((k) => k !== id));
+      // If this row was an unsaved addition in this session, clicking again toggles them off
+      if (!row.paymentId) {
+        setRows((prev) => {
+          const current = prev[id];
+          if (!current) return prev;
+          return {
+            ...prev,
+            [id]: {
+              ...current,
+              inSquad: false,
+              feeAssigned: defaultMatchFee,
+              feePaid: defaultMatchFee,
+              notes: undefined,
+              isDirty: false,
+            },
+          };
+        });
+      }
+    } else {
+      setSelectedIds((prev) => [...prev, id]);
+    }
   };
 
   // Row edit handlers
@@ -395,23 +578,6 @@ export const SquadFeesModal: React.FC<SquadFeesModalProps> = ({
     }
   };
 
-  const addToSquad = (id: string) => {
-    setRows((prev) => {
-      const current = prev[id];
-      if (!current) return prev;
-      return {
-        ...prev,
-        [id]: {
-          ...current,
-          inSquad: true,
-          feeAssigned: bulkAssigned || defaultMatchFee,
-          feePaid: bulkPaid || defaultMatchFee,
-          isDirty: true,
-        },
-      };
-    });
-  };
-
   const removeRowFromSquad = async (id: string) => {
     const row = rows[id];
     if (!row) return;
@@ -426,6 +592,7 @@ export const SquadFeesModal: React.FC<SquadFeesModalProps> = ({
       try {
         await fetchApi(`/payments/${row.paymentId}`, { method: 'DELETE' });
         showToast.success(`Removed ${row.name} from squad.`);
+        setSelectedIds((prev) => prev.filter((k) => k !== id));
         setRows((prev) => ({
           ...prev,
           [id]: {
@@ -444,6 +611,7 @@ export const SquadFeesModal: React.FC<SquadFeesModalProps> = ({
       }
     } else {
       // Just mark not in squad locally
+      setSelectedIds((prev) => prev.filter((k) => k !== id));
       setRows((prev) => ({
         ...prev,
         [id]: {
@@ -763,49 +931,60 @@ export const SquadFeesModal: React.FC<SquadFeesModalProps> = ({
                 </Button>
               </div>
 
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={toggleSelectAllVisible}
-                disabled={visibleRows.length === 0}
-                className={styles.btnDeselect}
-              >
-                {allVisibleSelected ? 'Deselect All' : `Select All Visible (${visibleRows.length})`}
-              </Button>
+              <div className={styles.batchRight}>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  icon={<ArrowUpDown size={12} />}
+                  onClick={handleSortSelectedToTop}
+                  disabled={activeSelectionOrSquadIds.length === 0 && pinnedTopIds.length === 0}
+                  className={`${styles.btnBatch} ${
+                    isSelectedSortedTop ? styles.btnSortTopActive : ''
+                  }`}
+                  title="Sort selected / squad players to the top of the list"
+                >
+                  {isSelectedSortedTop
+                    ? 'Reset Sort'
+                    : `Selected on Top (${activeSelectionOrSquadIds.length})`}
+                </Button>
+
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={toggleSelectAllVisible}
+                  disabled={visibleRows.length === 0}
+                  className={styles.btnDeselect}
+                >
+                  {allVisibleSelected ? 'Deselect All' : `Select All Visible (${visibleRows.length})`}
+                </Button>
+              </div>
             </div>
 
             {/* Table Card (Single Unified List with In-Place Edit) */}
             <div className={styles.tableCard}>
               {/* Header */}
               <div className={styles.tableHeader}>
-                <div className={styles.thCenter}>
-                  <Checkbox
-                    size="md"
-                    checked={allVisibleSelected}
-                    indeterminate={isSomeSelected}
-                    onChange={toggleSelectAllVisible}
-                    disabled={visibleRows.length === 0}
-                    aria-label="Select all visible"
-                  />
-                </div>
+                <div className={styles.thCenterText}>#</div>
                 <div className={styles.thLeft}>Player</div>
-                <div className={styles.thCenterText}>Quick Action</div>
                 <div className={styles.thRight}>Fee Assigned</div>
                 <div className={styles.thRight}>Fee Paid</div>
-                <div className={styles.thCenterText}>Action</div>
+                <div className={styles.thRight}>Quick Action</div>
               </div>
 
               {/* Table Body */}
-              <div className={styles.tableBody}>
+              <div ref={tableBodyRef} className={styles.tableBody}>
                 {visibleRows.length === 0 ? (
                   <div className={styles.emptyState}>
                     No players found matching the current search & filter.
                   </div>
                 ) : (
-                  visibleRows.map((row) => {
+                  visibleRows.map((row, idx) => {
                     const isChecked = selectedIds.includes(row.playerId);
                     const isMom = momPlayerId === row.playerId;
+                    const tourMatches = tournamentStatsMap[row.playerId]?.count || 0;
+                    const displayMatches = tourMatches > 0 ? tourMatches : row.matchesPlayed || 0;
                     const isFree = row.inSquad && row.feeAssigned === 0 && row.feePaid === 0;
                     const isTopi = row.inSquad && row.feeAssigned > 0 && row.feePaid === 0;
                     const isPaid =
@@ -830,28 +1009,29 @@ export const SquadFeesModal: React.FC<SquadFeesModalProps> = ({
                         : isPartial
                         ? styles.rowPartial
                         : styles.rowInSquad
-                    } ${row.isDirty ? styles.rowDirty : ''}`;
+                    } ${row.isDirty ? styles.rowDirty : ''} ${
+                      isChecked ? styles.rowSelected : ''
+                    }`;
 
                     return (
-                      <div key={row.playerId} className={rowClass}>
-                        {/* Checkbox */}
+                      <div
+                        key={row.playerId}
+                        className={rowClass}
+                        onClick={() => handleRowClick(row)}
+                      >
+                        {/* Serial Number */}
                         <div className={styles.thCenter}>
-                          <Checkbox
-                            size="md"
-                            checked={isChecked}
-                            onChange={() => toggleSelectRow(row.playerId)}
-                            variant={isTopi ? 'danger' : isFree ? 'success' : 'primary'}
-                            aria-label={`Select ${row.name}`}
-                          />
+                          <span
+                            className={`${styles.serialCell} ${
+                              isChecked ? styles.serialCellSelected : ''
+                            }`}
+                          >
+                            {idx + 1}
+                          </span>
                         </div>
 
                         {/* Player Info & Status Badges */}
-                        <div
-                          className={styles.playerInfoCell}
-                          onClick={() => {
-                            if (!row.inSquad) addToSquad(row.playerId);
-                          }}
-                        >
+                        <div className={styles.playerInfoCell}>
                           <span className={styles.playerName} title={row.name}>
                             {row.name}
                             {row.jerseyNumber ? (
@@ -862,6 +1042,15 @@ export const SquadFeesModal: React.FC<SquadFeesModalProps> = ({
                           {row.role && (
                             <Badge variant="secondary" className={styles.playerRoleBadge}>
                               {row.role.replace('_', ' ')}
+                            </Badge>
+                          )}
+
+                          {displayMatches > 0 && (
+                            <Badge
+                              variant={tourMatches > 0 ? 'primary' : 'secondary'}
+                              className={styles.badgeStatus}
+                            >
+                              {displayMatches} {displayMatches === 1 ? 'match' : 'matches'}
                             </Badge>
                           )}
 
@@ -902,52 +1091,12 @@ export const SquadFeesModal: React.FC<SquadFeesModalProps> = ({
                           )}
                         </div>
 
-                        {/* Quick Action Pill Buttons */}
-                        <div className={styles.quickActionGroup}>
-                          <button
-                            type="button"
-                            onClick={() => setRowDefault(row.playerId)}
-                            title={`Fill with default fee (Rs. ${bulkAssigned})`}
-                            className={`${styles.pillBtn} ${
-                              isDefault ? styles.pillBtnDefaultActive : ''
-                            }`}
-                          >
-                            Default
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setRowFree(row.playerId)}
-                            title="Set fee to Rs. 0 (Free Player)"
-                            className={`${styles.pillBtn} ${
-                              isFree ? styles.pillBtnFreeActive : ''
-                            }`}
-                          >
-                            Free
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setRowTopi(row.playerId)}
-                            title="Mark Topi: Rs. 0 Paid"
-                            className={`${styles.pillBtn} ${
-                              isTopi ? styles.pillBtnTopiActive : ''
-                            }`}
-                          >
-                            Topi 🧢
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => toggleMomPlayer(row.playerId)}
-                            title={`Toggle ${row.name} as MOM`}
-                            className={`${styles.pillBtn} ${styles.pillBtnMom} ${
-                              isMom ? styles.pillBtnMomActive : ''
-                            }`}
-                          >
-                            🏆 MOM
-                          </button>
-                        </div>
-
                         {/* Fee Assigned Input (In-Place Edit) */}
-                        <div>
+                        <div
+                          onClick={(e) => {
+                            if (row.inSquad) e.stopPropagation();
+                          }}
+                        >
                           <input
                             type="number"
                             value={row.inSquad ? row.feeAssigned : ''}
@@ -965,7 +1114,11 @@ export const SquadFeesModal: React.FC<SquadFeesModalProps> = ({
                         </div>
 
                         {/* Fee Paid Input (In-Place Edit) */}
-                        <div>
+                        <div
+                          onClick={(e) => {
+                            if (row.inSquad) e.stopPropagation();
+                          }}
+                        >
                           <input
                             type="number"
                             value={row.inSquad ? row.feePaid : ''}
@@ -982,20 +1135,55 @@ export const SquadFeesModal: React.FC<SquadFeesModalProps> = ({
                           />
                         </div>
 
-                        {/* Row Action (Add / Delete / Save) */}
-                        <div className={styles.rowActions}>
-                          {!row.inSquad ? (
-                            <Button
+                        {/* Quick Action (Extreme Right) */}
+                        <div
+                          className={styles.quickActionCell}
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <div className={styles.quickActionGroup}>
+                            <button
                               type="button"
-                              variant="outline"
-                              size="sm"
-                              className={styles.btnRowAdd}
-                              onClick={() => addToSquad(row.playerId)}
-                              title="Add to match squad"
+                              onClick={() => setRowDefault(row.playerId)}
+                              title={`Fill with default fee (Rs. ${bulkAssigned})`}
+                              className={`${styles.pillBtn} ${
+                                isDefault ? styles.pillBtnDefaultActive : ''
+                              }`}
                             >
-                              + Add
-                            </Button>
-                          ) : (
+                              Default
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setRowFree(row.playerId)}
+                              title="Set fee to Rs. 0 (Free Player)"
+                              className={`${styles.pillBtn} ${
+                                isFree ? styles.pillBtnFreeActive : ''
+                              }`}
+                            >
+                              Free
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setRowTopi(row.playerId)}
+                              title="Mark Topi: Rs. 0 Paid"
+                              className={`${styles.pillBtn} ${
+                                isTopi ? styles.pillBtnTopiActive : ''
+                              }`}
+                            >
+                              Topi 🧢
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => toggleMomPlayer(row.playerId)}
+                              title={`Toggle ${row.name} as MOM`}
+                              className={`${styles.pillBtn} ${styles.pillBtnMom} ${
+                                isMom ? styles.pillBtnMomActive : ''
+                              }`}
+                            >
+                              🏆 MOM
+                            </button>
+                          </div>
+
+                          {row.inSquad && (
                             <button
                               type="button"
                               onClick={() => removeRowFromSquad(row.playerId)}
@@ -1335,7 +1523,7 @@ export const SquadFeesModal: React.FC<SquadFeesModalProps> = ({
     <Modal
       isOpen={isOpen}
       onClose={onClose || (() => {})}
-      maxWidth="1140px"
+      maxWidth="1200px"
       title={`Squad Fees — ${match?.opponentTeam || match?.venue || 'Match'}`}
       subtitle="Unified squad ledger — assign, edit, and track player match fees & financials"
       footer={

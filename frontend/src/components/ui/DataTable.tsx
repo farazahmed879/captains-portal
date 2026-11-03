@@ -26,6 +26,8 @@ export interface DataTableProps<T> {
   selectable?: boolean;
   selectedIds?: string[];
   onSelectionChange?: (ids: string[]) => void;
+  showSerialNumber?: boolean;
+  serialStartIndex?: number;
 }
 
 export function DataTable<T>({
@@ -42,6 +44,8 @@ export function DataTable<T>({
   selectable = false,
   selectedIds = [],
   onSelectionChange,
+  showSerialNumber = true,
+  serialStartIndex = 0,
 }: DataTableProps<T>) {
   const getKey = (item: T, index: number): string | number => {
     if (keyExtractor) return keyExtractor(item, index);
@@ -75,7 +79,8 @@ export function DataTable<T>({
     }
   };
 
-  const totalColumnsCount = columns.length + (isSelectable ? 1 : 0);
+  const totalColumnsCount =
+    columns.length + (isSelectable ? 1 : 0) + (showSerialNumber ? 1 : 0);
 
   return (
     <Table className={className} style={style}>
@@ -97,6 +102,14 @@ export function DataTable<T>({
                   variant="danger"
                 />
               </div>
+            </TableHead>
+          )}
+          {showSerialNumber && (
+            <TableHead
+              align="center"
+              style={{ width: '46px', textAlign: 'center', padding: '10px 8px' }}
+            >
+              #
             </TableHead>
           )}
           {columns.map((col, idx) => (
@@ -151,6 +164,21 @@ export function DataTable<T>({
                         variant="danger"
                       />
                     </div>
+                  </TableCell>
+                )}
+                {showSerialNumber && (
+                  <TableCell
+                    align="center"
+                    style={{
+                      width: '46px',
+                      textAlign: 'center',
+                      padding: '10px 8px',
+                      fontWeight: 700,
+                      fontSize: '12px',
+                      color: '#64748b',
+                    }}
+                  >
+                    {serialStartIndex + index + 1}
                   </TableCell>
                 )}
                 {columns.map((col, colIdx) => (

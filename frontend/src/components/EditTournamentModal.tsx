@@ -34,6 +34,7 @@ export const EditTournamentModal: React.FC<EditTournamentModalProps> = ({
       format: 'Hard Ball',
       venue: '',
       entryFee: '',
+      advancePayment: '',
       expectedWinningPrize: '',
       actualWinningPrizeWon: '',
       status: 'upcoming',
@@ -48,6 +49,7 @@ export const EditTournamentModal: React.FC<EditTournamentModalProps> = ({
         format: tournament.format || 'Hard Ball',
         venue: tournament.venue || '',
         entryFee: tournament.entryFee !== undefined && tournament.entryFee !== null ? tournament.entryFee : '',
+        advancePayment: tournament.advancePayment !== undefined && tournament.advancePayment !== null ? tournament.advancePayment : '',
         expectedWinningPrize: tournament.expectedWinningPrize !== undefined && tournament.expectedWinningPrize !== null ? tournament.expectedWinningPrize : '',
         actualWinningPrizeWon: tournament.actualWinningPrizeWon !== undefined && tournament.actualWinningPrizeWon !== null ? tournament.actualWinningPrizeWon : '',
         status: tournament.status || 'upcoming',
@@ -64,6 +66,7 @@ export const EditTournamentModal: React.FC<EditTournamentModalProps> = ({
       const payload = {
         ...values,
         entryFee: Number(values.entryFee) || 0,
+        advancePayment: Number(values.advancePayment) || 0,
         expectedWinningPrize: values.expectedWinningPrize === '' ? undefined : Number(values.expectedWinningPrize),
         actualWinningPrizeWon: values.actualWinningPrizeWon === '' ? undefined : Number(values.actualWinningPrizeWon),
       };
@@ -138,11 +141,12 @@ export const EditTournamentModal: React.FC<EditTournamentModalProps> = ({
           />
         </div>
 
-        <div className="grid-3">
+        <div className="grid-2">
           <Input
             label="Entry Fee (Rs.)"
             type="number"
-            placeholder="50000"
+            placeholder="175000"
+            onWheel={(e) => e.currentTarget.blur()}
             {...register('entryFee', {
               min: { value: 0, message: 'Fee cannot be negative' },
             })}
@@ -150,9 +154,23 @@ export const EditTournamentModal: React.FC<EditTournamentModalProps> = ({
           />
 
           <Input
-            label="Expected Winning Prize"
+            label="Advance Payment (Rs.)"
+            type="number"
+            placeholder="0"
+            onWheel={(e) => e.currentTarget.blur()}
+            {...register('advancePayment', {
+              min: { value: 0, message: 'Advance cannot be negative' },
+            })}
+            error={errors.advancePayment?.message}
+          />
+        </div>
+
+        <div className="grid-2">
+          <Input
+            label="Expected Winning Prize (Rs.)"
             type="number"
             placeholder="145000"
+            onWheel={(e) => e.currentTarget.blur()}
             {...register('expectedWinningPrize')}
           />
 
@@ -160,6 +178,7 @@ export const EditTournamentModal: React.FC<EditTournamentModalProps> = ({
             label="Actual Prize Won (Rs.)"
             type="number"
             placeholder="30000"
+            onWheel={(e) => e.currentTarget.blur()}
             {...register('actualWinningPrizeWon')}
           />
         </div>

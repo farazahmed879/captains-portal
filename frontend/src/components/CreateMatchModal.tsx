@@ -137,12 +137,20 @@ export const CreateMatchModal: React.FC<CreateMatchModalProps> = ({
   const onSubmit = async (values: CreateMatchFormValues) => {
     setServerError(null);
     try {
+      const resolvedTournamentId =
+        defaultTournamentId || values.tournamentId || undefined;
+      const expenseAmount = Number(values.totalMatchExpense) || 0;
       const payload = {
         ...values,
-        tournamentId: defaultTournamentId || values.tournamentId || undefined,
-        matchType: lockTournament ? "tournament" : values.matchType,
+        tournamentId: resolvedTournamentId,
+        tournamentStage: values.stage,
+        matchType:
+          lockTournament || resolvedTournamentId
+            ? "tournament"
+            : values.matchType,
         perPlayerFee: Number(values.perPlayerFee) || 0,
-        totalMatchExpense: Number(values.totalMatchExpense) || 0,
+        totalMatchExpense: expenseAmount,
+        groundCost: expenseAmount,
         overs: Number(values.overs) || 20,
       };
 
@@ -342,6 +350,7 @@ export const CreateMatchModal: React.FC<CreateMatchModalProps> = ({
             label="Match Overs"
             type="number"
             placeholder="20"
+            onWheel={(e) => e.currentTarget.blur()}
             {...register("overs")}
           />
 
@@ -349,6 +358,7 @@ export const CreateMatchModal: React.FC<CreateMatchModalProps> = ({
             label="Fee per Player (Rs.) *"
             type="number"
             placeholder="1000"
+            onWheel={(e) => e.currentTarget.blur()}
             {...register("perPlayerFee", {
               required: "Player fee is required",
               min: { value: 0, message: "Fee cannot be negative" },
@@ -360,6 +370,7 @@ export const CreateMatchModal: React.FC<CreateMatchModalProps> = ({
             label="Ground / Match Cost (Rs.)"
             type="number"
             placeholder="11000"
+            onWheel={(e) => e.currentTarget.blur()}
             {...register("totalMatchExpense")}
           />
         </div>

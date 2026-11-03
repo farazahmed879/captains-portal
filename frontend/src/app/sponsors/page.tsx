@@ -294,6 +294,7 @@ export default function SponsorsPage() {
           <div>
             <DataTable<Sponsor>
               data={paginatedSponsors}
+              loading={loading}
               keyExtractor={(spons) => spons._id}
               emptyMessage="No sponsors found."
               onRowClick={(spons) => router.push(`/sponsors/${spons._id}`)}
@@ -301,6 +302,7 @@ export default function SponsorsPage() {
               selectedIds={selectedIds}
               onSelectionChange={setSelectedIds}
               columns={sponsorColumns}
+              serialStartIndex={(currentPage - 1) * pageSize}
             />
 
           <Pagination

@@ -7,6 +7,7 @@ export interface Tournament {
   venue?: string;
   organizer?: string;
   entryFee?: number;
+  advancePayment?: number;
   expectedWinningPrize?: number;
   actualWinningPrizeWon?: number;
   status?: TournamentStatus | string;
@@ -26,6 +27,7 @@ export interface CreateTournamentFormValues {
   format: string;
   venue: string;
   entryFee: number | '';
+  advancePayment: number | '';
   expectedWinningPrize: number | '';
   actualWinningPrizeWon: number | '';
   status: string;
@@ -37,6 +39,7 @@ export interface EditTournamentFormValues {
   format: string;
   venue: string;
   entryFee: number | '';
+  advancePayment: number | '';
   expectedWinningPrize: number | '';
   actualWinningPrizeWon: number | '';
   status: string;

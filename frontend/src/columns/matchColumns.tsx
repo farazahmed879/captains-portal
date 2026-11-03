@@ -153,6 +153,47 @@ export const getMatchColumns = ({
     ),
   },
   {
+    header: 'Profit / Loss',
+    render: (m: any) => {
+      const collected = m.totalCollected || 0;
+      const expense = m.totalMatchExpense || m.groundCost || 0;
+      const pnl = collected - expense;
+      const isProfit = pnl > 0;
+      const isLoss = pnl < 0;
+      return (
+        <div>
+          <div
+            style={{
+              fontWeight: 700,
+              color: isProfit
+                ? 'var(--accent-green)'
+                : isLoss
+                ? 'var(--accent-rose)'
+                : 'var(--text-secondary)',
+            }}
+          >
+            {isProfit ? '+' : isLoss ? '-' : ''}Rs. {fNum(Math.abs(pnl))}
+          </div>
+          <div style={{ marginTop: '2px' }}>
+            {isProfit ? (
+              <Badge variant="success" style={{ fontSize: '9.5px', padding: '1px 5px' }}>
+                Profit
+              </Badge>
+            ) : isLoss ? (
+              <Badge variant="danger" style={{ fontSize: '9.5px', padding: '1px 5px' }}>
+                Loss
+              </Badge>
+            ) : (
+              <Badge variant="secondary" style={{ fontSize: '9.5px', padding: '1px 5px' }}>
+                Break-even
+              </Badge>
+            )}
+          </div>
+        </div>
+      );
+    },
+  },
+  {
     header: 'Result / MOM',
     render: (m: any) => (
       <div>

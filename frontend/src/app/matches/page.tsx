@@ -360,11 +360,13 @@ export default function MatchesPage() {
           <div>
             <DataTable<Match>
               data={paginatedMatches}
+              loading={loading}
               keyExtractor={(m) => m._id}
               onRowClick={(m) => router.push(`/matches/${m._id}`)}
               selectable
               selectedIds={selectedIds}
               onSelectionChange={setSelectedIds}
+              serialStartIndex={(currentPage - 1) * pageSize}
               emptyMessage="No matches found matching your filters."
               columns={matchColumns}
             />

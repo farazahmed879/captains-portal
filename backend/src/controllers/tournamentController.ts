@@ -38,10 +38,14 @@ export const getTournaments = async (req: AuthRequest, res: Response): Promise<v
         const totalFeesAssigned = matchPayments.reduce((acc, p) => acc + (p.feeAssigned || 0), 0);
         const totalFeesPending = Math.max(0, totalFeesAssigned - totalFeesCollected);
 
-        // Investment: Entry fee + tournament dedicated expenses + match ground costs
+        // Tournament Entry Fee Ledger & Total Paid:
+        // Entry Fee is the overall contract fee; actual cash paid is Advance Payment + Match Ground Costs + Extra Payments
+        const entryFee = tournament.entryFee || 0;
+        const advancePayment = tournament.advancePayment || 0;
         const tournamentExpensesSum = expenses.reduce((acc, e) => acc + (e.amount || 0), 0);
         const matchExpensesSum = matches.reduce((acc, m) => acc + (m.totalMatchExpense || 0), 0);
-        const totalInvested = (tournament.entryFee || 0) + tournamentExpensesSum + matchExpensesSum;
+        const totalPaid = advancePayment + matchExpensesSum + tournamentExpensesSum;
+        const totalInvested = totalPaid;
 
         // Returns: Winning prizes won + Sponsor funds + Squad fees collected
         const sponsorFunds = sponsors.reduce((acc, s) => acc + (s.amountInvested || 0), 0);
@@ -49,9 +53,12 @@ export const getTournaments = async (req: AuthRequest, res: Response): Promise<v
           (acc, m) => acc + (m.winningPrizeMoney || 0) + (m.momPrizeMoney || 0),
           0
         );
-        const totalReturns = (tournament.actualWinningPrizeWon || 0) + sponsorFunds + matchPrizeWon + totalFeesCollected;
+        const actualWinningPrizeWon = tournament.actualWinningPrizeWon || 0;
+        const totalReturns = actualWinningPrizeWon + sponsorFunds + matchPrizeWon + totalFeesCollected;
 
-        const netPnl = totalReturns - totalInvested;
+        const entryFeeAfterAdvanceAndPrize = Math.max(0, entryFee - advancePayment - actualWinningPrizeWon);
+        const entryFeeBalance = Math.max(0, entryFeeAfterAdvanceAndPrize - matchExpensesSum - tournamentExpensesSum);
+        const netPnl = totalReturns - totalPaid;
 
         return {
           ...tournament.toObject(),
@@ -59,16 +66,21 @@ export const getTournaments = async (req: AuthRequest, res: Response): Promise<v
           matchesWon,
           matchesLost,
           financials: {
-            entryFee: tournament.entryFee || 0,
+            entryFee,
+            advancePayment,
+            entryFeeAfterAdvanceAndPrize,
+            entryFeeBalance,
             tournamentExpenses: tournamentExpensesSum,
+            extraPayments: tournamentExpensesSum,
             matchExpenses: matchExpensesSum,
             totalMatchExpenses: matchExpensesSum,
+            totalPaid,
             totalInvested,
             sponsorFunds,
             totalFeesCollected,
             totalFeesAssigned,
             totalFeesPending,
-            actualWinningPrizeWon: tournament.actualWinningPrizeWon || 0,
+            actualWinningPrizeWon,
             matchPrizeWon,
             totalReturns,
             netPnl,
@@ -212,13 +224,15 @@ export const createTournament = async (req: AuthRequest, res: Response): Promise
       startDate,
       endDate,
       entryFee,
+      advancePayment,
       expectedWinningPrize,
+      actualWinningPrizeWon,
       status,
       notes,
     } = req.body;
 
-    if (!teamId || !name || !startDate) {
-      res.status(400).json({ success: false, message: 'Team, name, and start date are required' });
+    if (!teamId || !name) {
+      res.status(400).json({ success: false, message: 'Team and tournament name are required' });
       return;
     }
 
@@ -229,10 +243,12 @@ export const createTournament = async (req: AuthRequest, res: Response): Promise
       organizer,
       venue,
       format: format || 'T20',
-      startDate,
+      startDate: startDate || new Date(),
       endDate,
       entryFee: Number(entryFee) || 0,
+      advancePayment: Number(advancePayment) || 0,
       expectedWinningPrize: Number(expectedWinningPrize) || 0,
+      actualWinningPrizeWon: Number(actualWinningPrizeWon) || 0,
       status: status || 'ongoing',
       notes,
     });

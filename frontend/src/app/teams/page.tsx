@@ -374,6 +374,7 @@ export default function TeamsPage() {
                 selectable
                 selectedIds={selectedIds}
                 onSelectionChange={setSelectedIds}
+                serialStartIndex={(currentPage - 1) * pageSize}
                 columns={[
                   {
                     header: "Code",

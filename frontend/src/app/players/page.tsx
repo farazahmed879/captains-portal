@@ -326,6 +326,7 @@ export default function PlayersPage() {
           <div>
             <DataTable
               data={paginatedPlayers}
+              loading={loading}
               keyExtractor={(pl: any) => pl._id}
               emptyMessage="No players match the selected filters."
               onRowClick={(pl: any) => router.push(`/players/${pl._id}`)}
@@ -333,6 +334,7 @@ export default function PlayersPage() {
               selectedIds={selectedIds}
               onSelectionChange={setSelectedIds}
               columns={playerColumns}
+              serialStartIndex={(currentPage - 1) * pageSize}
             />
 
           <Pagination
