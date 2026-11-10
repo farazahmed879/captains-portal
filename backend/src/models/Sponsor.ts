@@ -1,6 +1,5 @@
 import { Schema, model, Document, Types } from 'mongoose';
-
-export type SponsorTxType = 'investment' | 'payout';
+import { SponsorTxType, PaymentMethod, SponsorContractType, SponsorStatus } from '../enums';
 
 export interface ISponsorTransaction {
   _id: Types.ObjectId;
@@ -45,13 +44,13 @@ export interface ISponsor extends Document {
 
 const SponsorTransactionSchema = new Schema<ISponsorTransaction>(
   {
-    type: { type: String, enum: ['investment', 'payout'], required: true },
+    type: { type: String, enum: Object.values(SponsorTxType), required: true },
     amount: { type: Number, required: true, min: 0 },
     date: { type: Date, required: true, default: Date.now },
     method: {
       type: String,
-      enum: ['cash', 'bank_transfer', 'easypaisa', 'jazzcash', 'cheque', 'other'],
-      default: 'cash',
+      enum: Object.values(PaymentMethod),
+      default: PaymentMethod.CASH,
     },
     reference: { type: String, trim: true },
     tournamentId: { type: Schema.Types.ObjectId, ref: 'Tournament' },
@@ -73,23 +72,16 @@ const SponsorSchema = new Schema<ISponsor>(
     investmentDate: { type: Date, required: true, default: Date.now },
     contractType: {
       type: String,
-      enum: [
-        'jersey_front',
-        'jersey_back',
-        'sleeve',
-        'tournament_banner',
-        'equipment_kit',
-        'general_grant',
-      ],
-      default: 'general_grant',
+      enum: Object.values(SponsorContractType),
+      default: SponsorContractType.GENERAL_GRANT,
     },
     returnsPaid: { type: Number, default: 0 },
     returnDate: { type: Date },
     deliverablesAgreed: { type: String },
     status: {
       type: String,
-      enum: ['pledged', 'active', 'completed'],
-      default: 'active',
+      enum: Object.values(SponsorStatus),
+      default: SponsorStatus.ACTIVE,
     },
     notes: { type: String },
     transactions: { type: [SponsorTransactionSchema], default: [] },
@@ -100,8 +92,8 @@ const SponsorSchema = new Schema<ISponsor>(
 /** Recompute cached totals + first-investment / last-payout dates from the ledger. */
 SponsorSchema.methods.recalculateTotals = function (this: ISponsor) {
   const txs = this.transactions || [];
-  const investments = txs.filter((t) => t.type === 'investment');
-  const payouts = txs.filter((t) => t.type === 'payout');
+  const investments = txs.filter((t) => t.type === SponsorTxType.INVESTMENT);
+  const payouts = txs.filter((t) => t.type === SponsorTxType.PAYOUT);
 
   this.amountInvested = investments.reduce((acc, t) => acc + (t.amount || 0), 0);
   this.returnsPaid = payouts.reduce((acc, t) => acc + (t.amount || 0), 0);

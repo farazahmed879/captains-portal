@@ -1,5 +1,7 @@
 import React from 'react';
-import { X, Shield, ShieldCheck, User, Crown } from 'lucide-react';
+import {
+  X,
+} from 'lucide-react';
 import { Button } from '../ui';
 import { RoleFilterType, UserCounts } from './types';
 
@@ -54,7 +56,6 @@ export const UserRoleToolbar: React.FC<UserRoleToolbarProps> = ({
         <Button
           className={`admin-filter-pill captains ${roleFilter === 'captains' ? 'active' : ''}`}
           onClick={() => onFilterChange('captains')}
-          icon={<Shield size={12} />}
         >
           <span>Captains ({counts.captains})</span>
         </Button>
@@ -62,7 +63,6 @@ export const UserRoleToolbar: React.FC<UserRoleToolbarProps> = ({
         <Button
           className={`admin-filter-pill players ${roleFilter === 'players' ? 'active' : ''}`}
           onClick={() => onFilterChange('players')}
-          icon={<User size={12} />}
         >
           <span>Normal Players ({counts.normalPlayers})</span>
         </Button>
@@ -70,7 +70,6 @@ export const UserRoleToolbar: React.FC<UserRoleToolbarProps> = ({
         <Button
           className={`admin-filter-pill admins ${roleFilter === 'admins' ? 'active' : ''}`}
           onClick={() => onFilterChange('admins')}
-          icon={<ShieldCheck size={12} />}
         >
           <span>Admins ({counts.admins || 0})</span>
         </Button>
@@ -78,7 +77,6 @@ export const UserRoleToolbar: React.FC<UserRoleToolbarProps> = ({
         <Button
           className={`admin-filter-pill super_admins ${roleFilter === 'super_admins' ? 'active' : ''}`}
           onClick={() => onFilterChange('super_admins')}
-          icon={<Crown size={12} />}
         >
           <span>Super Admins ({counts.superAdmins})</span>
         </Button>

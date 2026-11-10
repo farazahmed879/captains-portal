@@ -1,6 +1,7 @@
 import './globals.css';
 import type { Metadata } from 'next';
 import { Dock } from '../components/Dock';
+import { MobileTabBar } from '../components/MobileTabBar';
 import { AuthProvider } from '../lib/auth';
 import { QueryProvider } from '../lib/QueryProvider';
 import { ASSETS } from '../constants';
@@ -30,6 +31,7 @@ export default function RootLayout({
                 {children}
               </div>
               <Dock />
+              <MobileTabBar />
             </div>
           </AuthProvider>
         </QueryProvider>

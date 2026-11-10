@@ -31,7 +31,6 @@ import {
 export default function DashboardPage() {
   const router = useRouter();
   const { user: authUser } = useAuth();
-  const [teamId, setTeamId] = useState<string>('');
   const [adminTab, setAdminTab] = useState<'overview' | 'users'>('overview');
 
   // Return/Refund Modal state
@@ -162,14 +161,13 @@ export default function DashboardPage() {
   };
 
   const queryClient = useQueryClient();
-  const query = teamId ? `?teamId=${teamId}` : '';
 
   const {
     data: statsRes,
     isLoading: isStatsLoading,
     refetch: refetchStats,
   } = useQuery({
-    queryKey: ['dashboard', 'stats', teamId],
+    queryKey: ['dashboard', 'stats'],
     queryFn: () =>
       fetchApi<{
         success: boolean;
@@ -177,17 +175,17 @@ export default function DashboardPage() {
         finances: any;
         recentMatches: any[];
         topDebtors: any[];
-      }>(`/dashboard/stats${query}`),
+      }>('/dashboard/stats'),
   });
 
   const { data: playersRes } = useQuery({
-    queryKey: ['players', { teamId }],
-    queryFn: () => fetchApi<{ success: boolean; players: any[] }>(`/players${query}`),
+    queryKey: ['players'],
+    queryFn: () => fetchApi<{ success: boolean; players: any[] }>('/players'),
   });
 
   const { data: tournRes } = useQuery({
-    queryKey: ['tournaments', { teamId }],
-    queryFn: () => fetchApi<{ success: boolean; tournaments: any[] }>(`/tournaments${query}`),
+    queryKey: ['tournaments'],
+    queryFn: () => fetchApi<{ success: boolean; tournaments: any[] }>('/tournaments'),
   });
 
   const { data: teamsRes } = useQuery({
@@ -196,8 +194,8 @@ export default function DashboardPage() {
   });
 
   const { data: sponsRes } = useQuery({
-    queryKey: ['sponsors', { teamId }],
-    queryFn: () => fetchApi<{ success: boolean; sponsors: any[] }>(`/sponsors${query}`),
+    queryKey: ['sponsors'],
+    queryFn: () => fetchApi<{ success: boolean; sponsors: any[] }>('/sponsors'),
   });
 
   const { data: meRes } = useQuery({
@@ -270,8 +268,6 @@ export default function DashboardPage() {
             ? 'Manage all platform accounts, designate Team Captains or Normal Players, and control system roles'
             : 'Dynamic Personalized Dashboard with Individual Player, Tournament & Team Selection'
         }
-        selectedTeamId={teamId}
-        onTeamChange={setTeamId}
       />
 
       <div className="content-body" style={{ padding: '14px 24px 28px 24px' }}>

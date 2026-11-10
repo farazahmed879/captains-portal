@@ -4,7 +4,9 @@ import React, { useMemo, useState, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Modal } from './Modal';
 import { Button, Badge, Input, Select, Alert, Checkbox } from './ui';
-import { Users, Search, Plus, CheckCircle2 } from './icons';
+import {
+  Search,
+} from './icons';
 import { fetchApi } from '../lib/api';
 import { showToast } from '../lib/alerts';
 import { queryKeys } from '../lib/queryKeys';
@@ -209,7 +211,6 @@ export const ManageTeamPlayersModal: React.FC<ManageTeamPlayersModalProps> = ({
               onClick={handleAddSelected}
               loading={submitting}
               disabled={selectedPlayerIds.length === 0}
-              icon={<Users size={14} />}
             >
               Add to Team ({selectedPlayerIds.length})
             </Button>
@@ -238,7 +239,6 @@ export const ManageTeamPlayersModal: React.FC<ManageTeamPlayersModalProps> = ({
             type="button"
             variant={showQuickCreate ? 'secondary' : 'primary'}
             size="sm"
-            icon={<Plus size={14} />}
             onClick={() => setShowQuickCreate(!showQuickCreate)}
           >
             {showQuickCreate ? 'Close New Player Form' : 'New Player'}
@@ -253,13 +253,13 @@ export const ManageTeamPlayersModal: React.FC<ManageTeamPlayersModalProps> = ({
               padding: '12px 14px',
               borderRadius: '10px',
               background: '#f0f9ff',
-              border: '1px solid #bae6fd',
+              border: '1px solid #cbd5e1',
               display: 'flex',
               flexDirection: 'column',
               gap: '10px',
             }}
           >
-            <div style={{ fontSize: '12.5px', fontWeight: 700, color: '#0369a1' }}>
+            <div style={{ fontSize: '12.5px', fontWeight: 700, color: '#334155' }}>
               Quick Register & Add Directly to {team?.name}
             </div>
             <div className="grid-2" style={{ gap: '8px' }}>
@@ -371,7 +371,7 @@ export const ManageTeamPlayersModal: React.FC<ManageTeamPlayersModalProps> = ({
                     background: isAlreadyInTeam
                       ? '#f8fafc'
                       : isSelected
-                      ? '#eff6ff'
+                      ? '#f8fafc'
                       : '#ffffff',
                     cursor: isAlreadyInTeam ? 'default' : 'pointer',
                     opacity: isAlreadyInTeam ? 0.72 : 1,
@@ -410,7 +410,6 @@ export const ManageTeamPlayersModal: React.FC<ManageTeamPlayersModalProps> = ({
                     {isAlreadyInTeam ? (
                       <Badge
                         variant="success"
-                        icon={<CheckCircle2 size={10} />}
                         style={{ fontSize: '10.5px' }}
                       >
                         In Squad

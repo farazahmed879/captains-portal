@@ -73,11 +73,11 @@
 }
 
 .filterPillActive {
-  background: #eff6ff !important;
-  border-color: #0284c7 !important;
-  color: #0284c7 !important;
+  background: #f8fafc !important;
+  border-color: #475569 !important;
+  color: #475569 !important;
   font-weight: 700 !important;
-  box-shadow: 0 1px 3px rgba(2, 132, 199, 0.15);
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08);
 }
 
 .filterCountBadge {
@@ -115,20 +115,20 @@
 }
 
 .btnSortTopActive {
-  border-color: #0284c7 !important;
-  color: #0284c7 !important;
-  background: #eff6ff !important;
+  border-color: #475569 !important;
+  color: #475569 !important;
+  background: #f8fafc !important;
   font-weight: 700 !important;
 }
 
 .btnFreeSelected {
-  border-color: #86efac !important;
-  color: #15803d !important;
-  background: #f0fdf4 !important;
+  border-color: #15803d !important;
+  color: #166534 !important;
+  background: #f8fafc !important;
 }
 
 .btnDeselect {
-  color: #0284c7 !important;
+  color: #475569 !important;
   font-weight: 700 !important;
   font-size: 12px !important;
 }
@@ -151,7 +151,7 @@
   background: #f8fafc;
   border-bottom: 1.5px solid #e2e8f0;
   font-size: 11px;
-  font-weight: 800;
+  font-weight: 700;
   color: #475569;
   letter-spacing: 0.05em;
   text-transform: uppercase;
@@ -214,7 +214,7 @@
 }
 
 .serialCellSelected {
-  background: #0284c7;
+  background: #475569;
   color: #ffffff;
 }
 
@@ -227,35 +227,35 @@
 }
 
 .rowPaid {
-  background: #f0fdf4;
+  background: #f8fafc;
 }
 
 .rowPaid:hover {
-  background: #dcfce7;
+  background: #e2e8f0;
 }
 
 .rowTopi {
-  background: #fff1f2;
+  background: #f8fafc;
 }
 
 .rowTopi:hover {
-  background: #ffe4e6;
+  background: #f1f5f9;
 }
 
 .rowFree {
-  background: #f0fdf4;
+  background: #f8fafc;
 }
 
 .rowFree:hover {
-  background: #dcfce7;
+  background: #e2e8f0;
 }
 
 .rowPartial {
-  background: #fffbeb;
+  background: #f8fafc;
 }
 
 .rowPartial:hover {
-  background: #fef3c7;
+  background: #e2e8f0;
 }
 
 .rowNotInSquad {
@@ -264,11 +264,11 @@
 }
 
 .rowDirty {
-  border-left: 3.5px solid #0284c7 !important;
+  border-left: 3.5px solid #475569 !important;
 }
 
 .rowSelected {
-  box-shadow: inset 0 0 0 1.5px rgba(2, 132, 199, 0.45), inset 3.5px 0 0 #0284c7;
+  box-shadow: inset 0 0 0 1.5px rgba(15, 23, 42, 0.08), inset 3.5px 0 0 #475569;
 }
 
 .rowInSquad.rowSelected {
@@ -357,23 +357,23 @@
 }
 
 .pillBtnDefaultActive {
-  border-color: #0284c7;
-  background: #eff6ff;
-  color: #0284c7;
+  border-color: #475569;
+  background: #f8fafc;
+  color: #475569;
   font-weight: 700;
 }
 
 .pillBtnFreeActive {
-  border-color: #16a34a;
-  background: #f0fdf4;
-  color: #15803d;
+  border-color: #15803d;
+  background: #f8fafc;
+  color: #166534;
   font-weight: 700;
 }
 
 .pillBtnTopiActive {
-  border-color: #e11d48;
-  background: #fff1f2;
-  color: #e11d48;
+  border-color: #dc2626;
+  background: #f8fafc;
+  color: #dc2626;
   font-weight: 700;
 }
 
@@ -383,9 +383,9 @@
 }
 
 .pillBtnMomActive {
-  border-color: #d97706;
-  background: #fef3c7;
-  color: #b45309;
+  border-color: #475569;
+  background: #e2e8f0;
+  color: #334155;
   font-weight: 700;
 }
 
@@ -406,8 +406,8 @@
 }
 
 .feeInput:focus {
-  border-color: #0284c7;
-  box-shadow: 0 0 0 2px rgba(2, 132, 199, 0.15);
+  border-color: #475569;
+  box-shadow: 0 0 0 2px rgba(15, 23, 42, 0.08);
 }
 
 .feeInputDisabled {
@@ -417,8 +417,8 @@
 }
 
 .feeInputPaidSuccess {
-  color: #16a34a !important;
-  font-weight: 800 !important;
+  color: #15803d !important;
+  font-weight: 700 !important;
 }
 
 /* Row Action Buttons */
@@ -439,7 +439,7 @@
   padding: 3px 8px !important;
   font-size: 11px !important;
   height: 28px !important;
-  background: #0284c7 !important;
+  background: #475569 !important;
   color: #ffffff !important;
   border-radius: 5px !important;
 }
@@ -456,8 +456,8 @@
 }
 
 .btnRowDelete:hover {
-  color: #e11d48;
-  background: #fff1f2;
+  color: #dc2626;
+  background: #f8fafc;
 }
 
 /* Table Footer Row */
@@ -507,7 +507,7 @@
 
 .matchMetaTitle {
   font-size: 14px;
-  font-weight: 800;
+  font-weight: 700;
   color: #0f172a;
 }
 
@@ -533,21 +533,21 @@
 }
 
 .statBoxCost {
-  background: #fff1f2;
-  border: 1px solid #ffe4e6;
+  background: #f8fafc;
+  border: 1px solid #f1f5f9;
 }
 
 .statBoxCost .statLabel {
-  color: #9f1239;
+  color: #b91c1c;
 }
 
 .statBoxCost .statVal {
-  color: #e11d48;
+  color: #dc2626;
 }
 
 .statBoxCollected {
-  background: #f0fdf4;
-  border: 1px solid #dcfce7;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
 }
 
 .statBoxCollected .statLabel {
@@ -555,20 +555,20 @@
 }
 
 .statBoxCollected .statVal {
-  color: #16a34a;
+  color: #15803d;
 }
 
 .statBoxPending {
-  background: #fffbeb;
-  border: 1px solid #fef3c7;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
 }
 
 .statBoxPending .statLabel {
-  color: #92400e;
+  color: #334155;
 }
 
 .statBoxPending .statVal {
-  color: #d97706;
+  color: #475569;
 }
 
 .statBoxBalance {
@@ -577,21 +577,21 @@
 }
 
 .statBoxBalanceDeficit {
-  background: #fff7ed;
-  border: 1px solid #ffedd5;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
 }
 
 .statBoxBalanceDeficit .statLabel {
-  color: #9a3412;
+  color: #b91c1c;
 }
 
 .statBoxBalanceDeficit .statVal {
-  color: #ea580c;
+  color: #475569;
 }
 
 .statBoxBalanceRecovered {
-  background: #f0fdf4;
-  border: 1px solid #dcfce7;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
 }
 
 .statBoxBalanceRecovered .statLabel {
@@ -599,7 +599,7 @@
 }
 
 .statBoxBalanceRecovered .statVal {
-  color: #16a34a;
+  color: #15803d;
 }
 
 .statLabel {
@@ -611,7 +611,7 @@
 
 .statVal {
   font-size: 17px;
-  font-weight: 800;
+  font-weight: 700;
 }
 
 /* Recovery Progress Bar */
@@ -684,8 +684,8 @@
 }
 
 .momSidebarCardActive {
-  background: #fffdf5;
-  border: 1.5px solid #fde68a;
+  background: #f8fafc;
+  border: 1.5px solid #94a3b8;
 }
 
 .momSidebarHeader {
@@ -698,7 +698,7 @@
 .momSidebarTitle {
   font-size: 12px;
   font-weight: 700;
-  color: #92400e;
+  color: #334155;
   display: flex;
   align-items: center;
   gap: 6px;
@@ -710,7 +710,7 @@
   gap: 8px;
   margin-top: 6px;
   padding-top: 8px;
-  border-top: 1px solid #fef3c7;
+  border-top: 1px solid #e2e8f0;
 }
 
 /* Sidebar Action Buttons */
@@ -736,11 +736,11 @@
   align-items: center;
   justify-content: space-between;
   padding: 8px 12px;
-  background: #eff6ff;
-  border: 1px solid #bfdbfe;
+  background: #f8fafc;
+  border: 1px solid #cbd5e1;
   border-radius: 8px;
   font-size: 12px;
-  color: #1e40af;
+  color: #475569;
   font-weight: 600;
 }
 
@@ -778,7 +778,7 @@
 }
 
 .modalFooterDirty {
-  color: #0284c7;
+  color: #475569;
   font-weight: 700;
 }
 
@@ -797,20 +797,20 @@
 }
 
 .textBlue {
-  color: #0284c7;
+  color: #475569;
 }
 
 .textGreen {
-  color: #16a34a !important;
+  color: #15803d !important;
 }
 
 .textRose {
-  color: #e11d48 !important;
+  color: #dc2626 !important;
 }
 
 .selectedCount {
   font-weight: 600;
-  color: #0284c7;
+  color: #475569;
 }
 
 /* Native <progress> styled as recovery bar (no inline width needed) */
@@ -836,16 +836,16 @@
   transition: width 0.3s ease;
 }
 
-.progressGreen::-webkit-progress-value { background: #16a34a; }
-.progressGreen::-moz-progress-bar { background: #16a34a; }
-.progressBlue::-webkit-progress-value { background: #0284c7; }
-.progressBlue::-moz-progress-bar { background: #0284c7; }
-.progressOrange::-webkit-progress-value { background: #ea580c; }
-.progressOrange::-moz-progress-bar { background: #ea580c; }
+.progressGreen::-webkit-progress-value { background: #15803d; }
+.progressGreen::-moz-progress-bar { background: #15803d; }
+.progressBlue::-webkit-progress-value { background: #475569; }
+.progressBlue::-moz-progress-bar { background: #475569; }
+.progressOrange::-webkit-progress-value { background: #475569; }
+.progressOrange::-moz-progress-bar { background: #475569; }
 
 .momToggleText {
   font-size: 11px;
-  color: #b45309;
+  color: #334155;
   font-weight: 700;
 }
 
@@ -871,7 +871,7 @@
 
 .expenseTitle {
   font-size: 13px;
-  font-weight: 800;
+  font-weight: 700;
   color: #0f172a;
   display: flex;
   align-items: center;
@@ -906,8 +906,8 @@
   justify-content: space-between;
   padding-top: 4px;
   font-size: 13.5px;
-  font-weight: 800;
-  color: #0284c7;
+  font-weight: 700;
+  color: #475569;
 }
 
 .leftColCard {
@@ -928,4 +928,114 @@
   border-radius: 10px;
   gap: 12px;
   flex-wrap: wrap;
+}
+
+/* Phones: restack each squad row (name / fee + paid / quick actions) instead of a 680px grid */
+@media (max-width: 640px) {
+  .toolbarRow { grid-template-columns: 1fr 1fr; }
+  .toolbarRow > :first-child { grid-column: 1 / -1; }
+  .tableCard { overflow: visible; }
+  .tableHeader { display: none; }
+  .tableRow {
+    min-width: 0;
+    grid-template-columns: 26px 1fr 1fr;
+    row-gap: 8px;
+    padding: 10px;
+  }
+  .tableRow > :nth-child(2) { grid-column: 2 / -1; min-width: 0; }
+  .tableRow > :nth-child(3) { grid-column: 2; }
+  .tableRow > :nth-child(4) { grid-column: 3; }
+  .tableRow > :nth-child(5) { grid-column: 1 / -1; justify-content: flex-end; }
+}
+
+.badgeMatches { /* hook: hidden on phones */ }
+
+/* Phones: compact squad editor — one scroll (the page), labelled inputs, single-row controls */
+@media (max-width: 640px) {
+  /* Filters and batch actions: one row each, scroll sideways */
+  .filterPillsBar { flex-wrap: nowrap; scrollbar-width: none; margin: 0 -2px; }
+  .filterPillsBar::-webkit-scrollbar { display: none; }
+  .filterPill { flex-shrink: 0; padding: 3px 9px; font-size: 11.5px; }
+  .batchBar { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; padding: 6px; gap: 6px; }
+  .batchBar::-webkit-scrollbar { display: none; }
+  .batchLeft, .batchRight { flex-wrap: nowrap; flex-shrink: 0; }
+  .btnBatch { flex-shrink: 0; height: 28px !important; font-size: 11px !important; padding: 0 9px !important; white-space: nowrap; }
+
+  /* No scroll area inside the page */
+  .tableBody { max-height: none; overflow: visible; }
+
+  /* Each player: name / Fee + Paid / quick actions */
+  .tableRow {
+    grid-template-columns: 1fr 1fr;
+    column-gap: 10px;
+    row-gap: 8px;
+    padding: 10px 12px;
+  }
+  .tableRow > :nth-child(1) { display: none; }
+  .tableRow > :nth-child(2) { grid-column: 1 / -1; }
+  .tableRow > :nth-child(3),
+  .tableRow > :nth-child(4) { display: flex; align-items: center; gap: 6px; min-width: 0; }
+  .tableRow > :nth-child(3) { grid-column: 1; }
+  .tableRow > :nth-child(4) { grid-column: 2; }
+  .tableRow > :nth-child(3)::before,
+  .tableRow > :nth-child(4)::before {
+    font-size: 11px;
+    font-weight: 600;
+    color: #64748b;
+    flex-shrink: 0;
+  }
+  .tableRow > :nth-child(3)::before { content: 'Fee'; }
+  .tableRow > :nth-child(4)::before { content: 'Paid'; }
+  .tableRow > :nth-child(5) { grid-column: 1 / -1; justify-content: space-between; }
+  .feeInput { height: 34px; font-size: 14px; }
+
+  .quickActionGroup { flex: 1 1 auto; justify-content: space-between; padding: 3px; }
+  .pillBtn { flex: 1 1 0; padding: 5px 0; font-size: 12px; text-align: center; }
+
+  .playerInfoCell { gap: 4px 6px; }
+  .playerName { font-size: 13.5px; }
+  .playerRoleBadge, .badgeMatches { display: none !important; }
+}
+
+/* Collapsible header of the squad editor (match page) */
+.collapseHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.collapseTitleBlock { min-width: 0; }
+.collapseTitle { font-size: 15px; font-weight: 600; color: var(--text-primary); }
+.collapseSummary { font-size: 12.5px; color: var(--text-muted); margin-top: 2px; }
+.collapseToggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+  height: 30px;
+  padding: 0 10px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  background: #ffffff;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  cursor: pointer;
+}
+.collapseToggle:hover { background: #f8fafc; }
+.chevronUp { transform: rotate(180deg); }
+
+/* Small phones (< 440px): same size step as the rest of the app */
+@media (max-width: 439px) {
+  .leftColCard, .sidebarCard { padding: 12px; }
+  .collapseTitle { font-size: 14px; }
+  .collapseSummary { font-size: 11.5px; }
+  .collapseToggle { height: 28px; padding: 0 8px; font-size: 11.5px; }
+  .statBox { padding: 9px 10px; }
+  .statLabel { font-size: 9.5px; }
+  .statVal { font-size: 14.5px; }
+  .squadBreakdownItem { font-size: 12px; }
+  .btnSaveAll, .btnClearDues { padding: 8px 12px !important; font-size: 12px !important; }
+  .feeInput { height: 30px; font-size: 13px; }
+  .pillBtn { font-size: 11px; padding: 4px 0; }
 }

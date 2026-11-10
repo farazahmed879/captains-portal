@@ -1,4 +1,5 @@
 import { Schema, model, Document, Types } from 'mongoose';
+import { PaymentStatus, PaymentMethod } from '../enums';
 
 export interface IMatchPayment extends Document {
   tenantId: Types.ObjectId;
@@ -26,13 +27,13 @@ const MatchPaymentSchema = new Schema<IMatchPayment>(
     feePaid: { type: Number, required: true, default: 0 },
     paymentStatus: {
       type: String,
-      enum: ['paid', 'partial', 'pending'],
-      default: 'pending',
+      enum: Object.values(PaymentStatus),
+      default: PaymentStatus.PENDING,
     },
     paymentMethod: {
       type: String,
-      enum: ['cash', 'easypaisa', 'jazzcash', 'bank_transfer', 'other'],
-      default: 'cash',
+      enum: Object.values(PaymentMethod),
+      default: PaymentMethod.CASH,
     },
     paymentDate: { type: Date },
     transactionRef: { type: String, trim: true },

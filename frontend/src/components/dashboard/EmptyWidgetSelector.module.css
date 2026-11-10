@@ -1,21 +1,21 @@
 .playerIcon {
-  background: #e0f2fe;
-  color: #0284c7;
+  background: #f1f5f9;
+  color: #475569;
 }
 
 .tournamentIcon {
-  background: #fef3c7;
-  color: #d97706;
+  background: #e2e8f0;
+  color: #475569;
 }
 
 .teamIcon {
-  background: #dcfce7;
-  color: #16a34a;
+  background: #e2e8f0;
+  color: #15803d;
 }
 
 .sponsorIcon {
-  background: #f3e8ff;
-  color: #9333ea;
+  background: #f1f5f9;
+  color: #64748b;
 }
 
 .cardAddButton {

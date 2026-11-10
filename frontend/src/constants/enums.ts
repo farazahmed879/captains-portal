@@ -51,9 +51,10 @@ export enum BowlingStyle {
 export enum MatchResult {
   WON = 'won',
   LOST = 'lost',
+  DRAW = 'draw',
   TIED = 'tied',
-  ABANDONED = 'abandoned',
   UPCOMING = 'upcoming',
+  CANCELLED = 'cancelled',
 }
 
 export enum MatchType {
@@ -70,13 +71,13 @@ export enum MatchStage {
 }
 
 export enum ExpenseCategory {
-  GROUND = 'ground',
-  BALL = 'ball',
+  KIT_JERSEYS = 'kit_jerseys',
+  EQUIPMENT = 'equipment',
+  GROUND_BOOKING = 'ground_booking',
   REFRESHMENT = 'refreshment',
-  UMPIRE = 'umpire',
-  SCORER = 'scorer',
-  KIT = 'kit',
   TRANSPORT = 'transport',
+  TOURNAMENT_ENTRY_FEE = 'tournament_entry_fee',
+  MEDICATION = 'medication',
   OTHER = 'other',
 }
 
@@ -107,8 +108,21 @@ export enum TournamentStatus {
   UPCOMING = 'upcoming',
   ONGOING = 'ongoing',
   COMPLETED = 'completed',
+  KNOCKED_OUT = 'knocked_out',
   CHAMPIONS = 'champions',
 }
 
 export type SponsorTxType = 'investment' | 'payout';
 
+export enum TeamType {
+  MY_TEAM = 'my_team',
+  OPPONENT = 'opponent',
+}
+
+export enum UserRole {
+  SUPER_ADMIN = 'super_admin',
+  ADMIN = 'admin',
+  CAPTAIN = 'captain',
+  TREASURER = 'treasurer',
+  VIEWER = 'viewer',
+}

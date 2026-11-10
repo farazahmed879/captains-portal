@@ -1,13 +1,14 @@
 import React from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { Badge, Button, SubCard, KpiCell, CustomSelect } from '../ui';
 import {
   HandshakeIcon,
   ChevronRightIcon,
 } from '../icons';
 import { DashboardWidgetWrapper } from './DashboardWidgetWrapper';
-import { formatCurrency } from './types';
 import styles from './SponsorWidgetCard.module.css';
+import { formatNumber } from '../../lib/format';
 
 export interface SponsorWidgetCardProps {
   sponsorsList: any[];
@@ -26,6 +27,7 @@ export const SponsorWidgetCard: React.FC<SponsorWidgetCardProps> = ({
   onSelectSponsor,
   onRemove,
 }) => {
+  const router = useRouter();
   const sponsorOptions = [
     { value: 'all', label: 'All Sponsors' },
     ...sponsorsList.map((s) => ({
@@ -74,8 +76,8 @@ export const SponsorWidgetCard: React.FC<SponsorWidgetCardProps> = ({
     <DashboardWidgetWrapper
       title="Brand Sponsors & Grants"
       icon={<HandshakeIcon size={16} />}
-      iconBg="#f3e8ff"
-      iconColor="#7e22ce"
+      iconBg="#f1f5f9"
+      iconColor="#475569"
       selector={selectorDropdown}
       onRemove={onRemove}
       removeTitle="Remove Sponsor Widget"
@@ -85,7 +87,12 @@ export const SponsorWidgetCard: React.FC<SponsorWidgetCardProps> = ({
       {selectedSponsor ? (
         <div className={styles.sponsorSpotlightWrapper}>
           {/* Individual Sponsor Header Card */}
-          <SubCard padding="lg" className={styles.sponsorHeaderCard}>
+          <SubCard
+            padding="lg"
+            className={styles.sponsorHeaderCard}
+            onClick={() => router.push(`/sponsors/${selectedSponsor._id}`)}
+            title={`Open ${selectedSponsor.companyName || selectedSponsor.sponsorName}`}
+          >
             <div>
               <div className={styles.sponsorTitleGroup}>
                 <span className={styles.sponsorName}>
@@ -108,7 +115,7 @@ export const SponsorWidgetCard: React.FC<SponsorWidgetCardProps> = ({
                 Net Retained
               </div>
               <div className={styles.retainedValue}>
-                Rs. {formatCurrency((selectedSponsor.amountInvested || 0) - (selectedSponsor.returnsPaid || 0))}
+                Rs. {formatNumber((selectedSponsor.amountInvested || 0) - (selectedSponsor.returnsPaid || 0))}
               </div>
             </div>
           </SubCard>
@@ -117,17 +124,17 @@ export const SponsorWidgetCard: React.FC<SponsorWidgetCardProps> = ({
           <div className="widget-kpi-row">
             <KpiCell
               label="Inflow Invested"
-              value={`Rs. ${formatCurrency(selectedSponsor.amountInvested)}`}
+              value={`Rs. ${formatNumber(selectedSponsor.amountInvested)}`}
               valueColor="var(--accent-blue)"
             />
             <KpiCell
               label="Returns Paid"
-              value={`Rs. ${formatCurrency(selectedSponsor.returnsPaid)}`}
+              value={`Rs. ${formatNumber(selectedSponsor.returnsPaid)}`}
               valueColor="var(--accent-rose)"
             />
             <KpiCell
               label="Net Club Fund"
-              value={`Rs. ${formatCurrency((selectedSponsor.amountInvested || 0) - (selectedSponsor.returnsPaid || 0))}`}
+              value={`Rs. ${formatNumber((selectedSponsor.amountInvested || 0) - (selectedSponsor.returnsPaid || 0))}`}
               valueColor="var(--accent-green)"
             />
           </div>
@@ -158,12 +165,12 @@ export const SponsorWidgetCard: React.FC<SponsorWidgetCardProps> = ({
           <div className="widget-kpi-row">
             <KpiCell
               label="Inflow Invested"
-              value={`Rs. ${formatCurrency(stats?.finances?.totalSponsorInvested)}`}
+              value={`Rs. ${formatNumber(stats?.finances?.totalSponsorInvested)}`}
               valueColor="var(--accent-blue)"
             />
             <KpiCell
               label="Net Retained"
-              value={`Rs. ${formatCurrency(stats?.finances?.netSponsorship)}`}
+              value={`Rs. ${formatNumber(stats?.finances?.netSponsorship)}`}
               valueColor="var(--accent-green)"
             />
             <KpiCell
@@ -184,9 +191,9 @@ export const SponsorWidgetCard: React.FC<SponsorWidgetCardProps> = ({
                   key={spons._id}
                   padding="md"
                   borderRadius="8px"
-                  onClick={() => onSelectSponsor(spons._id)}
+                  onClick={() => router.push(`/sponsors/${spons._id}`)}
                   className={styles.sponsorCard}
-                  title={`Click to spotlight ${spons.companyName || spons.sponsorName}`}
+                  title={`Open ${spons.companyName || spons.sponsorName}`}
                 >
                   <div>
                     <div className={styles.sponsorTitleGroup}>
@@ -207,10 +214,10 @@ export const SponsorWidgetCard: React.FC<SponsorWidgetCardProps> = ({
 
                   <div className={styles.sponsorListRight}>
                     <div className={styles.sponsorAmountInvested}>
-                      Rs. {formatCurrency(spons.amountInvested)}
+                      Rs. {formatNumber(spons.amountInvested)}
                     </div>
                     <div className={styles.sponsorPayoutText}>
-                      Payout: Rs. {formatCurrency(spons.returnsPaid)}
+                      Payout: Rs. {formatNumber(spons.returnsPaid)}
                     </div>
                   </div>
                 </SubCard>

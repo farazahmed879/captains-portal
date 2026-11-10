@@ -35,9 +35,9 @@
 }
 
 .trigger.activeOpen {
-  border-color: #0284c7;
+  border-color: #475569;
   background: #f0f9ff;
-  box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.12);
+  box-shadow: 0 0 0 3px rgba(15, 23, 42, 0.08);
 }
 
 .trigger:disabled {
@@ -49,29 +49,29 @@
 
 /* Role-specific trigger accents */
 .trigger.captain {
-  color: #0284c7;
-  border-color: #bae6fd;
+  color: #475569;
+  border-color: #cbd5e1;
   background: #f0f9ff;
 }
 .trigger.admin {
-  color: #ea580c;
-  border-color: #fed7aa;
-  background: #fff7ed;
+  color: #475569;
+  border-color: #cbd5e1;
+  background: #f8fafc;
 }
 .trigger.viewer {
-  color: #16a34a;
-  border-color: #bbf7d0;
-  background: #f0fdf4;
+  color: #15803d;
+  border-color: #cbd5e1;
+  background: #f8fafc;
 }
 .trigger.treasurer {
-  color: #d97706;
-  border-color: #fde68a;
-  background: #fffbeb;
+  color: #475569;
+  border-color: #94a3b8;
+  background: #f8fafc;
 }
 .trigger.super_admin {
-  color: #7c3aed;
-  border-color: #e9d5ff;
-  background: #faf5ff;
+  color: #64748b;
+  border-color: #e2e8f0;
+  background: #f8fafc;
 }
 
 .triggerIconBox {
@@ -97,7 +97,7 @@
 
 .chevron.rotated {
   transform: rotate(180deg);
-  color: #0284c7;
+  color: #475569;
 }
 
 .lockIcon {
@@ -155,12 +155,12 @@
 }
 
 .menuHeaderIcon {
-  color: #0284c7;
+  color: #475569;
 }
 
 .menuHeaderTitle {
   font-size: 11px;
-  font-weight: 800;
+  font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.06em;
   color: #475569;
@@ -230,7 +230,7 @@
 
 .roleItem.selected {
   background: #f0f9ff;
-  border-color: #bae6fd;
+  border-color: #cbd5e1;
 }
 
 /* Icon Box */
@@ -299,10 +299,10 @@
   width: 20px;
   height: 20px;
   border-radius: 50%;
-  background: #0284c7;
+  background: #475569;
   color: #ffffff;
   flex-shrink: 0;
-  box-shadow: 0 2px 5px rgba(2, 132, 199, 0.3);
+  box-shadow: 0 2px 5px rgba(15, 23, 42, 0.08);
 }
 
 .itemArrowIcon {

@@ -8,35 +8,15 @@ import { queryKeys } from '../../../lib/queryKeys';
 import { Header } from '../../../components/Header';
 import { StatCard } from '../../../components/StatCard';
 import { fetchApi } from '../../../lib/api';
-import { formatDate } from '../../../lib/format';
+import { formatNumber } from '../../../lib/format';
 import { confirmDelete, showToast } from '../../../lib/alerts';
-import {
-  Button,
-  Badge,
-  Input,
-  Textarea,
-  Modal,
-  Card,
-  DataTable,
-} from '../../../components/ui';
+import { Button, Badge, Modal, Card, DataTable } from '../../../components/ui';
 import { DetailPageSkeleton } from '../../../components/ui/Skeleton';
 import { EditTeamModal } from '../../../components/EditTeamModal';
 import { ManageTeamPlayersModal } from '../../../components/ManageTeamPlayersModal';
-import {
-  Plus,
-  Shield,
-  Users,
-  Swords,
-  Trophy,
-  ArrowLeft,
-  DollarSign,
-  Pencil,
-  Trash2,
-  MapPin,
-  Phone,
-  Calendar,
-  ExternalLink,
-} from '../../../components/icons';
+import { EMPTY_VALUE } from '../../../constants';
+import { getTeamTournamentColumns, getTeamMatchColumns, getTeamSquadColumns } from '../../../columns/teamDetailColumns';
+import { DetailNav } from '../../../components/DetailNav';
 
 export default function TeamProfilePage() {
   const params = useParams();
@@ -105,8 +85,6 @@ export default function TeamProfilePage() {
     }
   };
 
-  const fNum = (val: number | undefined) => (val || 0).toLocaleString('en-US');
-
   if (loading) {
     return (
       <>
@@ -142,51 +120,32 @@ export default function TeamProfilePage() {
       />
 
       <div className="content-body">
-        {/* Navigation & Actions */}
-        <div
-          style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            marginBottom: '20px',
-          }}
-        >
-          <Link href="/teams" passHref legacyBehavior>
-            <Button variant="secondary" size="sm" icon={<ArrowLeft size={14} />}>
-              Back to All Teams
-            </Button>
-          </Link>
-
-          <div className="action-group">
-            <Button
-              variant="primary"
-              size="sm"
-              icon={<Plus size={14} />}
-              onClick={() => setIsAddPlayersOpen(true)}
-            >
-              Add Players to Team
-            </Button>
-            <Button
-              variant="secondary"
-              size="sm"
-              icon={<Pencil size={13} color="var(--accent-blue)" />}
-              onClick={() => setIsEditOpen(true)}
-            >
-              Edit Team
-            </Button>
-            <Button
-              variant="danger"
-              size="sm"
-              icon={<Trash2 size={13} />}
-              onClick={handleDeleteTeam}
-            >
-              Delete
-            </Button>
-          </div>
-        </div>
+        <DetailNav back={{ href: "/teams", label: "Back to All Teams" }}>
+          <Button
+            variant="primary"
+            size="sm"
+            onClick={() => setIsAddPlayersOpen(true)}
+          >
+            Add Players to Team
+          </Button>
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => setIsEditOpen(true)}
+          >
+            Edit Team
+          </Button>
+          <Button
+            variant="danger"
+            size="sm"
+            onClick={handleDeleteTeam}
+          >
+            Delete
+          </Button>
+        </DetailNav>
 
         {/* Hero Card */}
-        <Card style={{ marginBottom: '24px' }}>
+        <Card className="detail-hero" style={{ marginBottom: '24px' }}>
           <div
             style={{
               display: 'flex',
@@ -198,18 +157,19 @@ export default function TeamProfilePage() {
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: '18px' }}>
               <div
+                className="detail-avatar"
                 style={{
                   width: '68px',
                   height: '68px',
                   borderRadius: '16px',
-                  background: team.primaryColor || '#0284c7',
+                  background: '#0f172a',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
                   fontSize: '24px',
-                  fontWeight: 900,
+                  fontWeight: 700,
                   color: '#fff',
-                  boxShadow: '0 8px 20px rgba(2, 132, 199, 0.25)',
+                  boxShadow: '0 8px 20px rgba(15, 23, 42, 0.08)',
                   letterSpacing: '1px',
                 }}
               >
@@ -218,15 +178,14 @@ export default function TeamProfilePage() {
 
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
-                  <Badge variant="purple">{team.shortName || 'GCT'}</Badge>
+                  {team.shortName && <Badge variant="purple">{team.shortName}</Badge>}
                   <Badge variant="primary">FRANCHISE</Badge>
-                  <Badge variant="success">WIN RATE {winRate}%</Badge>
                 </div>
 
                 <h1
                   style={{
                     fontSize: '26px',
-                    fontWeight: 800,
+                    fontWeight: 700,
                     color: 'var(--text-primary)',
                     marginBottom: '6px',
                   }}
@@ -245,12 +204,10 @@ export default function TeamProfilePage() {
                   }}
                 >
                   <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                    <MapPin size={14} color="var(--accent-blue)" />
-                    {team.city || 'Karachi, Pakistan'}
+                    {team.city || EMPTY_VALUE}
                   </span>
                   {(team.phone || team.captain?.phone) && (
                     <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                      <Phone size={13} color="var(--accent-green)" />
                       <strong style={{ color: 'var(--text-primary)' }}>
                         {team.phone || team.captain?.phone}
                       </strong>
@@ -264,29 +221,24 @@ export default function TeamProfilePage() {
                       </strong>
                     </span>
                   )}
-                  <span>
-                    Record:{' '}
-                    <strong style={{ color: 'var(--accent-green)' }}>{stats.matchesWon || 0}W</strong> -{' '}
-                    <strong style={{ color: 'var(--accent-rose)' }}>{stats.matchesLost || 0}L</strong>
-                  </span>
                 </div>
               </div>
             </div>
 
             {/* Total Expenditures Outflow */}
-            <div style={{ textAlign: 'right' }}>
+            <div className="detail-hero-figure" style={{ textAlign: 'right' }}>
               <div style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase' }}>
                 Total Match Expenses
               </div>
               <div
                 style={{
                   fontSize: '28px',
-                  fontWeight: 900,
-                  fontFamily: 'Outfit, sans-serif',
+                  fontWeight: 700,
+                  fontFamily: 'inherit',
                   color: 'var(--accent-blue)',
                 }}
               >
-                Rs. {fNum(stats.totalMatchExpenses)}
+                Rs. {formatNumber(stats.totalMatchExpenses)}
               </div>
               <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
                 Across {stats.totalMatches || matches.length} matches played
@@ -318,28 +270,24 @@ export default function TeamProfilePage() {
             title="Active Squad"
             value={`${players.length} Players`}
             subtitle="Registered Squad Members"
-            icon={<Users size={20} color="var(--accent-blue)" />}
           />
           <StatCard
             variant="emerald"
             title="Matches Played"
             value={`${stats.totalMatches || matches.length} Matches`}
             subtitle={`${stats.matchesWon || 0} Victories Won`}
-            icon={<Swords size={20} color="var(--accent-green)" />}
           />
           <StatCard
             variant="amber"
             title="Tournaments"
             value={`${tournaments.length} Seasons`}
             subtitle="Participated Leagues"
-            icon={<Trophy size={20} color="var(--accent-amber)" />}
           />
           <StatCard
             variant="purple"
             title="Win Percentage"
             value={`${winRate}%`}
             subtitle={`${stats.matchesWon || 0}W / ${stats.matchesLost || 0}L`}
-            icon={<Shield size={20} color="var(--accent-purple)" />}
           />
         </div>
 
@@ -398,13 +346,11 @@ export default function TeamProfilePage() {
                   gap: '8px',
                 }}
               >
-                <Users size={16} color="var(--accent-blue)" />
                 Registered Squad Members ({players.length})
               </h3>
               <Button
                 variant="primary"
                 size="sm"
-                icon={<Plus size={14} />}
                 onClick={() => setIsAddPlayersOpen(true)}
               >
                 Add Players
@@ -415,86 +361,7 @@ export default function TeamProfilePage() {
               data={players}
               keyExtractor={(p: any) => p._id}
               emptyMessage="No players assigned to this team roster yet. Click '+ Add Players' to build your squad."
-              columns={[
-                {
-                  header: 'Jersey #',
-                  width: '10%',
-                  render: (p: any) => (
-                    <Badge variant="purple" style={{ fontWeight: 800 }}>
-                      {p.jerseyNumber ? `#${p.jerseyNumber}` : '-'}
-                    </Badge>
-                  ),
-                },
-                {
-                  header: 'Player',
-                  width: '22%',
-                  render: (p: any) => (
-                    <Link
-                      href={`/players/${p._id}`}
-                      style={{
-                        textDecoration: 'none',
-                        color: 'var(--text-primary)',
-                        fontWeight: 600,
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '4px',
-                      }}
-                    >
-                      {p.name}
-                      <ExternalLink size={10} color="var(--accent-blue)" />
-                    </Link>
-                  ),
-                },
-                {
-                  header: 'Role',
-                  width: '14%',
-                  render: (p: any) => (
-                    <Badge variant="secondary">
-                      {p.role?.replace('_', ' ').toUpperCase() || 'PLAYER'}
-                    </Badge>
-                  ),
-                },
-                {
-                  header: 'Batting Style',
-                  width: '15%',
-                  style: { textTransform: 'capitalize', fontSize: '12px', color: 'var(--text-secondary)' },
-                  render: (p: any) => p.battingStyle?.replace('_', ' ') || 'Right Hand',
-                },
-                {
-                  header: 'Bowling Style',
-                  width: '15%',
-                  style: { textTransform: 'capitalize', fontSize: '12px', color: 'var(--text-secondary)' },
-                  render: (p: any) => p.bowlingStyle?.replace('_', ' ') || 'N/A',
-                },
-                {
-                  header: 'Phone',
-                  width: '12%',
-                  style: { fontSize: '12px', color: 'var(--text-secondary)' },
-                  render: (p: any) => p.phone || '-',
-                },
-                {
-                  header: 'Action',
-                  width: '12%',
-                  align: 'right',
-                  render: (p: any) => (
-                    <div className="action-group" style={{ justifyContent: 'flex-end' }}>
-                      <Link href={`/players/${p._id}`} passHref legacyBehavior>
-                        <Button variant="secondary" size="sm">
-                          Profile
-                        </Button>
-                      </Link>
-                      <Button
-                        variant="danger"
-                        size="sm"
-                        isIconOnly
-                        title="Remove from Team Squad"
-                        icon={<Trash2 size={13} />}
-                        onClick={() => handleRemovePlayerFromTeam(p._id, p.name)}
-                      />
-                    </div>
-                  ),
-                },
-              ]}
+              columns={getTeamSquadColumns({ handleRemovePlayerFromTeam })}
             />
           </Card>
         )}
@@ -513,7 +380,6 @@ export default function TeamProfilePage() {
                 gap: '8px',
               }}
             >
-              <Swords size={16} color="var(--accent-blue)" />
               Matches Played ({matches.length})
             </h3>
 
@@ -521,94 +387,7 @@ export default function TeamProfilePage() {
               data={matches}
               keyExtractor={(m: any) => m._id}
               emptyMessage="No matches recorded for this team yet."
-              columns={[
-                {
-                  header: 'Match',
-                  width: '24%',
-                  render: (m: any) => (
-                    <Link
-                      href={`/matches/${m._id}`}
-                      style={{
-                        textDecoration: 'none',
-                        color: 'var(--text-primary)',
-                        fontWeight: 600,
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '4px',
-                      }}
-                    >
-                      vs {m.opponentTeam}
-                      <ExternalLink size={10} color="var(--accent-blue)" />
-                    </Link>
-                  ),
-                },
-                {
-                  header: 'Type / League',
-                  width: '20%',
-                  render: (m: any) =>
-                    m.tournamentId ? (
-                      <Link
-                        href={`/tournaments/${m.tournamentId._id}`}
-                        style={{
-                          color: 'var(--accent-blue)',
-                          textDecoration: 'none',
-                          fontSize: '12px',
-                        }}
-                      >
-                        {m.tournamentId.name}
-                      </Link>
-                    ) : (
-                      <Badge variant="secondary">Friendly</Badge>
-                    ),
-                },
-                {
-                  header: 'Date',
-                  width: '14%',
-                  style: { fontSize: '12px', color: 'var(--text-secondary)' },
-                  render: (m: any) => formatDate(m.matchDate),
-                },
-                {
-                  header: 'Venue',
-                  width: '14%',
-                  style: { fontSize: '12px', color: 'var(--text-secondary)' },
-                  render: (m: any) => m.venue || '-',
-                },
-                {
-                  header: 'Result',
-                  width: '10%',
-                  render: (m: any) => (
-                    <Badge
-                      variant={
-                        m.result === 'won'
-                          ? 'success'
-                          : m.result === 'lost'
-                          ? 'danger'
-                          : 'warning'
-                      }
-                    >
-                      {m.result ? m.result.toUpperCase() : 'PENDING'}
-                    </Badge>
-                  ),
-                },
-                {
-                  header: 'Match Expense',
-                  width: '10%',
-                  style: { fontWeight: 600 },
-                  render: (m: any) => `Rs. ${fNum(m.totalMatchExpense)}`,
-                },
-                {
-                  header: 'Action',
-                  width: '8%',
-                  align: 'right',
-                  render: (m: any) => (
-                    <Link href={`/matches/${m._id}`} passHref legacyBehavior>
-                      <Button variant="secondary" size="sm">
-                        View Details
-                      </Button>
-                    </Link>
-                  ),
-                },
-              ]}
+              columns={getTeamMatchColumns()}
             />
           </Card>
         )}
@@ -627,7 +406,6 @@ export default function TeamProfilePage() {
                 gap: '8px',
               }}
             >
-              <Trophy size={16} color="var(--accent-blue)" />
               Tournaments Participated ({tournaments.length})
             </h3>
 
@@ -635,79 +413,7 @@ export default function TeamProfilePage() {
               data={tournaments}
               keyExtractor={(t: any) => t._id}
               emptyMessage="No tournaments linked to this team yet."
-              columns={[
-                {
-                  header: 'Tournament',
-                  width: '26%',
-                  render: (t: any) => (
-                    <Link
-                      href={`/tournaments/${t._id}`}
-                      style={{
-                        textDecoration: 'none',
-                        color: 'var(--text-primary)',
-                        fontWeight: 600,
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '4px',
-                      }}
-                    >
-                      {t.name}
-                      <ExternalLink size={10} color="var(--accent-blue)" />
-                    </Link>
-                  ),
-                },
-                {
-                  header: 'Format',
-                  width: '12%',
-                  render: (t: any) => <Badge variant="purple">{t.format || 'Hard Ball'}</Badge>,
-                },
-                {
-                  header: 'Venue',
-                  width: '16%',
-                  style: { fontSize: '12px', color: 'var(--text-secondary)' },
-                  render: (t: any) => t.venue || '-',
-                },
-                {
-                  header: 'Entry Fee',
-                  width: '14%',
-                  render: (t: any) => `Rs. ${fNum(t.entryFee)}`,
-                },
-                {
-                  header: 'Prize Won',
-                  width: '14%',
-                  style: { fontWeight: 600, color: 'var(--accent-green)' },
-                  render: (t: any) => `Rs. ${fNum(t.actualWinningPrizeWon)}`,
-                },
-                {
-                  header: 'Status',
-                  width: '10%',
-                  render: (t: any) => (
-                    <Badge
-                      variant={
-                        t.status === 'champions'
-                          ? 'gold'
-                          : t.status === 'ongoing'
-                          ? 'primary'
-                          : 'warning'
-                      }
-                    >
-                      {t.status?.toUpperCase() || 'COMPLETED'}
-                    </Badge>
-                  ),
-                },
-                {
-                  header: 'Action',
-                  width: '8%',
-                  align: 'right',
-                  render: (t: any) => (
-                    <Link href={`/tournaments/${t._id}`} passHref legacyBehavior>
-                      <Button variant="secondary" size="sm">
-                        View Tournament
-                      </Button>
-                    </Link>
-                  ),
-                },
-              ]}
+              columns={getTeamTournamentColumns()}
             />
           </Card>
         )}

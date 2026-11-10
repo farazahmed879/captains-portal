@@ -4,6 +4,19 @@ import { ApiError } from '../utils/apiError';
 import { AUTH_CONSTANTS, MESSAGES } from '../constants';
 import { UserRole } from '../enums';
 
+/**
+ * super_admin can never be granted through the API (only seeded/DB-assigned),
+ * and only a super_admin may grant admin.
+ */
+const assertCanGrantRole = (requesterRole: string, newRole: string) => {
+  if (newRole === UserRole.SUPER_ADMIN) {
+    throw ApiError.forbidden('The Super Admin role cannot be assigned.');
+  }
+  if (newRole === UserRole.ADMIN && requesterRole !== UserRole.SUPER_ADMIN) {
+    throw ApiError.forbidden('Only a Super Admin can grant the Admin role.');
+  }
+};
+
 export class UserService {
   async getAllUsers(tenantId: string) {
     const rawUsers = await userRepository.findMany(tenantId);
@@ -85,11 +98,12 @@ export class UserService {
     };
   }
 
-  async updateUserRole(userId: string, tenantId: string, newRole: string) {
+  async updateUserRole(userId: string, tenantId: string, newRole: string, requesterRole: string) {
     const validRoles = Object.values(UserRole);
     if (!validRoles.includes(newRole as UserRole)) {
       throw ApiError.badRequest(`Invalid role. Valid roles: ${validRoles.join(', ')}`);
     }
+    assertCanGrantRole(requesterRole, newRole);
 
     const targetUser = await userRepository.findById(userId);
     if (!targetUser || targetUser.tenantId !== tenantId) {
@@ -131,11 +145,17 @@ export class UserService {
 
   async createUser(
     tenantId: string,
-    data: { name: string; email?: string; phone?: string; password?: string; role?: string }
+    data: { name: string; email?: string; phone?: string; password?: string; role?: string },
+    requesterRole: string
   ) {
     if (!data.name || !data.name.trim()) {
       throw ApiError.badRequest('Name is required');
     }
+    const role = data.role || UserRole.CAPTAIN;
+    if (!Object.values(UserRole).includes(role as UserRole)) {
+      throw ApiError.badRequest('Invalid role');
+    }
+    assertCanGrantRole(requesterRole, role);
 
     let finalEmail = data.email ? data.email.toLowerCase().trim() : '';
     if (!finalEmail) {
@@ -174,7 +194,7 @@ export class UserService {
       phone: data.phone ? data.phone.trim() : undefined,
       password: hashedPassword,
       playerId: matchingPlayer?.id,
-      role: data.role || UserRole.CAPTAIN,
+      role,
       isActive: true,
     });
 

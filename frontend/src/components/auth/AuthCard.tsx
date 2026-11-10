@@ -31,10 +31,10 @@ export const AuthCard: React.FC<AuthCardProps> = ({
           <div
             style={{
               padding: '9px 12px',
-              background: 'rgba(225, 29, 72, 0.15)',
-              border: '1px solid rgba(244, 63, 94, 0.35)',
+              background: 'rgba(15, 23, 42, 0.08)',
+              border: '1px solid rgba(15, 23, 42, 0.08)',
               borderRadius: '9px',
-              color: '#fca5a5',
+              color: '#cbd5e1',
               fontSize: '11.5px',
               fontWeight: 600,
               marginBottom: '10px',

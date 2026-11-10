@@ -16,7 +16,7 @@ export const updateUserRole = asyncHandler(async (req: AuthRequest, res: Respons
   const { id } = req.params;
   const { role } = req.body;
 
-  const result = await userService.updateUserRole(String(id), req.user!.tenantId, role);
+  const result = await userService.updateUserRole(String(id), req.user!.tenantId, role, req.user!.role);
   res.status(HTTP_STATUS.OK).json({
     success: true,
     ...result,
@@ -41,7 +41,7 @@ export const toggleUserStatus = asyncHandler(async (req: AuthRequest, res: Respo
 });
 
 export const createUser = asyncHandler(async (req: AuthRequest, res: Response) => {
-  const result = await userService.createUser(req.user!.tenantId, req.body);
+  const result = await userService.createUser(req.user!.tenantId, req.body, req.user!.role);
   res.status(HTTP_STATUS.CREATED).json({
     success: true,
     ...result,

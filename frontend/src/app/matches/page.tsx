@@ -5,19 +5,17 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { queryKeys } from '../../lib/queryKeys';
-import { Match, MatchPayment } from '../../types';
+import { Match } from '../../types';
 import { getMatchColumns } from '../../columns';
 import { Header } from '../../components/Header';
 import { fetchApi } from '../../lib/api';
-import { formatDate } from '../../lib/format';
+import { formatDate, formatNumber } from '../../lib/format';
 import { confirmDelete, confirmBulkDelete, showToast } from '../../lib/alerts';
 import {
   Button,
   Badge,
   Input,
   Select,
-  Textarea,
-  DatePicker,
   Card,
   DataTable,
   Modal,
@@ -26,34 +24,36 @@ import {
   CardGridSkeleton,
   BulkActionBar,
   GridSelectCheckbox,
+  ListToolbar,
 } from '../../components/ui';
 import {
-  Swords,
-  Plus,
-  Calendar,
-  MapPin,
-  CheckCircle2,
-  Trophy,
-  DollarSign,
-  Users,
   Pencil,
   Trash2,
   Search,
-  ExternalLink,
   Eye,
 } from '../../components/icons';
 import { CreateMatchModal } from '../../components/CreateMatchModal';
 import { EditMatchModal } from '../../components/EditMatchModal';
 import { SquadFeesModal } from '../../components/SquadFeesModal';
+import { useIsMobile } from '../../lib/useMediaQuery';
+import { getMatchResultVariant } from '../../constants/badgeVariants';
+import {
+  withAllOption,
+  MATCH_RESULT_OPTIONS,
+  EMPTY_VALUE,
+} from '../../constants';
+import { usePageSize } from '../../lib/usePageSize';
 
 export default function MatchesPage() {
   const router = useRouter();
   const queryClient = useQueryClient();
-  const [selectedTeamId, setSelectedTeamId] = useState<string>('');
   const [selectedTournamentFilter, setSelectedTournamentFilter] = useState<string>('');
   const [resultFilter, setResultFilter] = useState<string>('');
   const [searchQuery, setSearchQuery] = useState<string>('');
-  const [viewMode, setViewMode] = useState<'table' | 'grid'>('table');
+  const [preferredView, setViewMode] = useState<'table' | 'grid'>('table');
+  // Phones always show the list; the List/Grid switch is hidden there (globals.css).
+  const isMobile = useIsMobile();
+  const viewMode = isMobile ? 'table' : preferredView;
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [isBulkDeleting, setIsBulkDeleting] = useState<boolean>(false);
@@ -82,7 +82,7 @@ export default function MatchesPage() {
       setIsBulkDeleting(false);
     }
   };
-  const pageSize = 15;
+  const [pageSize, setPageSize] = usePageSize('matches');
 
   // Modals
   const [isCreateOpen, setIsCreateOpen] = useState<boolean>(false);
@@ -95,10 +95,9 @@ export default function MatchesPage() {
 
   // React Queries
   const matchesQuery = useQuery({
-    queryKey: queryKeys.matches({ teamId: selectedTeamId, tournamentId: selectedTournamentFilter }),
+    queryKey: queryKeys.matches({ tournamentId: selectedTournamentFilter }),
     queryFn: () => {
-      let query = `?teamId=${selectedTeamId}`;
-      if (selectedTournamentFilter) query += `&tournamentId=${selectedTournamentFilter}`;
+      const query = selectedTournamentFilter ? `?tournamentId=${selectedTournamentFilter}` : '';
       return fetchApi<{ success: boolean; matches: any[] }>(`/matches${query}`);
     },
   });
@@ -233,8 +232,6 @@ export default function MatchesPage() {
     }
   };
 
-  const fNum = (val: number | undefined) => (val || 0).toLocaleString('en-US');
-
   const filteredMatches = matches.filter((m) => {
     const q = searchQuery.toLowerCase();
     const venueMatch = (m.venue || '').toLowerCase().includes(q);
@@ -250,27 +247,14 @@ export default function MatchesPage() {
     currentPage * pageSize
   );
 
-  const getResultBadgeVariant = (result?: string) => {
-    switch (result?.toLowerCase()) {
-      case 'won':
-        return 'success' as const;
-      case 'lost':
-        return 'danger' as const;
-      default:
-        return 'warning' as const;
-    }
-  };
-
   const matchColumns = useMemo(
     () =>
       getMatchColumns({
         onPayments: openPaymentsModal,
         onEdit: handleEditOpen,
         onDelete: handleDeleteMatch,
-        getResultBadgeVariant,
-        fNum,
       }),
-    [fNum]
+    [openPaymentsModal, handleEditOpen, handleDeleteMatch]
   );
 
   return (
@@ -278,73 +262,43 @@ export default function MatchesPage() {
       <Header
         title="Matches, Ground Costs & Collections"
         subtitle="Complete Match Records Across All Tournaments with Editable & Delete Options"
-        selectedTeamId={selectedTeamId}
-        onTeamChange={(id) => {
-          setSelectedTeamId(id);
-          setCurrentPage(1);
-        }}
       />
 
       <div className="content-body">
         {/* Filter Bar: Search, Tournament Filter, Result Filter, View Switcher, Add Match */}
-        <div className="filter-bar">
-          <div className="filter-bar-left">
-            <div className="filter-field filter-field-search" style={{ width: '240px' }}>
-              <Input
-                placeholder="Search venue or opponent..."
-                value={searchQuery}
-                onChange={(e) => {
-                  setSearchQuery(e.target.value);
-                  setCurrentPage(1);
-                }}
-                icon={<Search size={14} />}
-              />
-            </div>
-
-            <div className="filter-field" style={{ width: '210px' }}>
-              <Select
-                value={selectedTournamentFilter}
-                onChange={(e) => {
-                  setSelectedTournamentFilter(e.target.value);
-                  setCurrentPage(1);
-                }}
-                options={[
-                  { value: '', label: `All Tournaments (${matches.length})` },
-                  ...tournaments.map((trn) => ({ value: trn._id, label: trn.name })),
-                ]}
-              />
-            </div>
-
-            <div className="filter-field" style={{ width: '140px' }}>
-              <Select
-                value={resultFilter}
-                onChange={(e) => {
-                  setResultFilter(e.target.value);
-                  setCurrentPage(1);
-                }}
-                options={[
-                  { value: '', label: 'All Results' },
-                  { value: 'won', label: 'Won' },
-                  { value: 'lost', label: 'Lost' },
-                  { value: 'upcoming', label: 'Upcoming' },
-                ]}
-              />
-            </div>
-          </div>
-
-          <div className="filter-bar-right">
-            <ViewSwitcher viewMode={viewMode} onChange={setViewMode} />
-
-            <Button
-              variant="primary"
-              size="sm"
-              icon={<Plus size={14} />}
-              onClick={() => setIsCreateOpen(true)}
-            >
-              New Match
-            </Button>
-          </div>
-        </div>
+        <ListToolbar
+          search={{
+            placeholder: 'Search venue or opponent...',
+            value: searchQuery,
+            onChange: (value) => {
+              setSearchQuery(value);
+              setCurrentPage(1);
+            },
+          }}
+          filters={[
+            {
+              value: selectedTournamentFilter,
+              onChange: (value) => {
+                setSelectedTournamentFilter(value);
+                setCurrentPage(1);
+              },
+              options: [
+                { value: '', label: `All Tournaments (${matches.length})` },
+                ...tournaments.map((trn) => ({ value: trn._id, label: trn.name })),
+              ],
+            },
+            {
+              value: resultFilter,
+              onChange: (value) => {
+                setResultFilter(value);
+                setCurrentPage(1);
+              },
+              options: withAllOption('All Results', MATCH_RESULT_OPTIONS),
+            },
+          ]}
+          view={{ value: viewMode, onChange: setViewMode }}
+          add={{ label: 'New Match', onClick: () => setIsCreateOpen(true) }}
+        />
 
         <BulkActionBar
           selectedIds={selectedIds}
@@ -377,6 +331,10 @@ export default function MatchesPage() {
               totalPages={totalPages}
               totalItems={filteredMatches.length}
               pageSize={pageSize}
+              onPageSizeChange={(size) => {
+                setPageSize(size);
+                setCurrentPage(1);
+              }}
               onPageChange={setCurrentPage}
               itemName="Matches"
             />
@@ -406,7 +364,7 @@ export default function MatchesPage() {
                       <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '6px' }}>
                         <Badge variant="purple">{m.tournamentId?.name || 'Tournament'}</Badge>
                         <Badge variant="primary">{m.tournamentStage}</Badge>
-                        <Badge variant={getResultBadgeVariant(m.result)}>
+                        <Badge variant={getMatchResultVariant(m.result)}>
                           {m.result?.toUpperCase()}
                         </Badge>
                       </div>
@@ -414,7 +372,7 @@ export default function MatchesPage() {
                         href={`/matches/${m._id}`}
                         style={{
                           fontSize: '18px',
-                          fontWeight: 800,
+                          fontWeight: 700,
                           color: 'var(--text-primary)',
                           textDecoration: 'none',
                           display: 'flex',
@@ -423,7 +381,6 @@ export default function MatchesPage() {
                         }}
                       >
                         <span>{m.venue}</span>
-                        <ExternalLink size={12} color="var(--accent-blue)" />
                       </Link>
                       <div
                         style={{
@@ -432,7 +389,7 @@ export default function MatchesPage() {
                           marginTop: '2px',
                         }}
                       >
-                        {(m.teamId?.name || 'Our Team')} vs {m.opponentTeam} • {formatDate(m.matchDate)}
+                        {(m.teamId?.name || EMPTY_VALUE)} vs {m.opponentTeam} • {formatDate(m.matchDate)}
                       </div>
                     </div>
 
@@ -498,8 +455,8 @@ export default function MatchesPage() {
                       >
                         Match Costs
                       </div>
-                      <div style={{ fontSize: '15px', fontWeight: 800, color: 'var(--accent-rose)' }}>
-                        Rs. {fNum(m.totalMatchExpense)}
+                      <div style={{ fontSize: '15px', fontWeight: 700, color: 'var(--accent-rose)' }}>
+                        Rs. {formatNumber(m.totalMatchExpense)}
                       </div>
                     </div>
                     <div>
@@ -512,8 +469,8 @@ export default function MatchesPage() {
                       >
                         Squad Collections
                       </div>
-                      <div style={{ fontSize: '15px', fontWeight: 800, color: 'var(--accent-green)' }}>
-                        Rs. {fNum(m.totalCollected)}
+                      <div style={{ fontSize: '15px', fontWeight: 700, color: 'var(--accent-green)' }}>
+                        Rs. {formatNumber(m.totalCollected)}
                       </div>
                     </div>
                   </div>
@@ -526,13 +483,12 @@ export default function MatchesPage() {
                           m.pendingFee > 0 ? 'var(--accent-rose)' : 'var(--accent-green)',
                       }}
                     >
-                      {m.pendingFee > 0 ? `Rs. ${fNum(m.pendingFee)} Due` : 'Squad Cleared'}
+                      {m.pendingFee > 0 ? `Rs. ${formatNumber(m.pendingFee)} Due` : 'Squad Cleared'}
                     </div>
 
                     <Button
                       variant="secondary"
                       size="sm"
-                      icon={<Users size={13} />}
                       onClick={() => openPaymentsModal(m._id)}
                     >
                       Track Squad Fees ({m.paidPlayersCount}/{m.squadPlayerIds?.length || 0})
@@ -548,6 +504,10 @@ export default function MatchesPage() {
               totalPages={totalPages}
               totalItems={filteredMatches.length}
               pageSize={pageSize}
+              onPageSizeChange={(size) => {
+                setPageSize(size);
+                setCurrentPage(1);
+              }}
               onPageChange={setCurrentPage}
               itemName="Matches"
             />

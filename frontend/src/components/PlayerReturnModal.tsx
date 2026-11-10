@@ -4,7 +4,9 @@ import React, { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Modal, Button, Input, Select, Textarea, Card, Avatar, StatBadge, Alert } from './ui';
-import { CheckCircleIcon, AlertCircleIcon } from './icons';
+import {
+  AlertCircleIcon,
+} from './icons';
 import { fetchApi } from '../lib/api';
 import { queryKeys } from '../lib/queryKeys';
 import { formatCurrency, formatLabel } from '../lib/format';
@@ -226,7 +228,6 @@ export const PlayerReturnModal: React.FC<PlayerReturnModalProps> = ({
             variant="success"
             type="submit"
             loading={loading}
-            icon={<CheckCircleIcon size={14} />}
           >
             {loading ? 'Processing...' : 'Confirm Return'}
           </Button>

@@ -36,7 +36,7 @@ Open [backend/.env](file:///d:/Captains%20Portal/backend/.env) and replace `<YOU
 ```env
 PORT=5000
 MONGODB_URI=mongodb+srv://farazahmedshaikh879_db_user:<YOUR_PASSWORD>@cluster0.pxvrnbb.mongodb.net/captains_portal?retryWrites=true&w=majority
-JWT_SECRET=captains_portal_super_secret_jwt_key_2026
+JWT_SECRET=<generate-a-long-random-string>
 CLIENT_URL=http://localhost:3000
 ```
 

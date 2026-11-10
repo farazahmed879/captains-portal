@@ -21,7 +21,7 @@ import {
   MatchStage,
 } from "../constants";
 import { CreateMatchFormValues } from "../types";
-import { TrophyIcon, Shield } from "./icons";
+import { tournamentOptions } from "../lib/options";
 
 interface CreateMatchModalProps {
   isOpen: boolean;
@@ -257,8 +257,8 @@ export const CreateMatchModal: React.FC<CreateMatchModalProps> = ({
                   padding: "0 12px",
                   borderRadius: "10px",
                   background: "#f0f9ff",
-                  border: "1px solid #bae6fd",
-                  color: "#0369a1",
+                  border: "1px solid #cbd5e1",
+                  color: "#334155",
                   fontSize: "13.5px",
                   fontWeight: 700,
                 }}
@@ -273,7 +273,6 @@ export const CreateMatchModal: React.FC<CreateMatchModalProps> = ({
                     whiteSpace: "nowrap",
                   }}
                 >
-                  <TrophyIcon size={14} color="#0284c7" />
                   <span>{lockedTournamentObj.name}</span>
                 </span>
                 <Badge
@@ -289,13 +288,7 @@ export const CreateMatchModal: React.FC<CreateMatchModalProps> = ({
             <Select
               label="Tournament / League"
               value={selectedTournamentId}
-              options={[
-                { value: "", label: "Friendly / No Tournament" },
-                ...tournaments.map((trn) => ({
-                  value: trn._id,
-                  label: `${trn.name} (${trn.format || "Hard Ball"})`,
-                })),
-              ]}
+              options={tournamentOptions(tournaments, "Friendly / No Tournament")}
               {...register("tournamentId")}
             />
           )}
@@ -343,7 +336,8 @@ export const CreateMatchModal: React.FC<CreateMatchModalProps> = ({
           }}
         >
           <DatePicker
-            label="Match Date *"
+            label="Match Date"
+            required
             value={currentDate}
             onChange={(e) => setValue("matchDate", e.target.value)}
           />

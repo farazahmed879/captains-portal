@@ -10,38 +10,35 @@ import {
   Button,
   Badge,
   Input,
-  Textarea,
   Modal,
   ViewSwitcher,
   DataTable,
   Card,
   CardHeader,
-  CardTitle,
   CardContent,
   CardFooter,
   Pagination,
   CardGridSkeleton,
   BulkActionBar,
   GridSelectCheckbox,
+  ListToolbar,
 } from "../../components/ui";
 import { fetchApi } from "../../lib/api";
+
 import { confirmDelete, confirmBulkDelete, showToast } from "../../lib/alerts";
 import {
-  Plus,
-  MapPin,
-  Phone,
+  Search,
   Pencil,
   Trash2,
-  ExternalLink,
-  Eye,
   Shield,
-  Users,
-  Swords,
-  Trophy,
 } from "../../components/icons";
 import { CreateTeamModal } from "../../components/CreateTeamModal";
 import { EditTeamModal } from "../../components/EditTeamModal";
 import { ManageTeamPlayersModal } from "../../components/ManageTeamPlayersModal";
+import { useIsMobile } from "../../lib/useMediaQuery";
+import { EMPTY_VALUE } from "../../constants";
+import { getTeamColumns } from "../../columns/teamColumns";
+import { usePageSize } from "../../lib/usePageSize";
 
 type TeamFilterTab = "my_team" | "all" | "opponent";
 
@@ -52,7 +49,10 @@ export default function TeamsPage() {
   const [isEditOpen, setIsEditOpen] = useState<boolean>(false);
   const [editingTeam, setEditingTeam] = useState<any>(null);
   const [managingSquadTeam, setManagingSquadTeam] = useState<any>(null);
-  const [viewMode, setViewMode] = useState<"grid" | "table">("table");
+  const [preferredView, setViewMode] = useState<"grid" | "table">("table");
+  // Phones always show the list; the List/Grid switch is hidden there (globals.css).
+  const isMobile = useIsMobile();
+  const viewMode = isMobile ? "table" : preferredView;
   const [teamFilter, setTeamFilter] = useState<TeamFilterTab>("my_team");
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [currentPage, setCurrentPage] = useState<number>(1);
@@ -83,7 +83,7 @@ export default function TeamsPage() {
       setIsBulkDeleting(false);
     }
   };
-  const pageSize = 10;
+  const [pageSize, setPageSize] = usePageSize('teams');
 
   const teamsQuery = useQuery({
     queryKey: queryKeys.teams(),
@@ -197,154 +197,31 @@ export default function TeamsPage() {
 
       <div className="content-body">
         {/* Filter and View Switcher Bar */}
-        <div
-          className="filter-bar"
-          style={{ flexWrap: "wrap", gap: "12px", alignItems: "center" }}
-        >
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "12px",
-              flexWrap: "wrap",
-            }}
-          >
-            {/* Filter Tabs: My Teams | All Teams / Opponent Teams */}
-            <div
-              style={{
-                display: "inline-flex",
-                background: "#f1f5f9",
-                padding: "4px",
-                borderRadius: "10px",
-                border: "1px solid var(--border-color)",
-                gap: "4px",
-              }}
-            >
-              <button
-                type="button"
-                onClick={() => {
-                  setTeamFilter("my_team");
-                  setCurrentPage(1);
-                  setSelectedIds([]);
-                }}
-                style={{
-                  padding: "6px 14px",
-                  borderRadius: "7px",
-                  border: "none",
-                  fontSize: "12.5px",
-                  fontWeight: 700,
-                  cursor: "pointer",
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: "6px",
-                  background:
-                    teamFilter === "my_team" ? "#0284c7" : "transparent",
-                  color:
-                    teamFilter === "my_team"
-                      ? "#ffffff"
-                      : "var(--text-secondary)",
-                  boxShadow:
-                    teamFilter === "my_team"
-                      ? "0 2px 6px rgba(2, 132, 199, 0.25)"
-                      : "none",
-                  transition: "all 0.15s ease",
-                }}
-              >
-                <Shield size={13} />
-                <span>My Teams ({myTeamsCount})</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => {
-                  setTeamFilter("opponent");
-                  setCurrentPage(1);
-                  setSelectedIds([]);
-                }}
-                style={{
-                  padding: "6px 14px",
-                  borderRadius: "7px",
-                  border: "none",
-                  fontSize: "12.5px",
-                  fontWeight: 700,
-                  cursor: "pointer",
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: "6px",
-                  background:
-                    teamFilter === "opponent" ? "#0284c7" : "transparent",
-                  color:
-                    teamFilter === "opponent"
-                      ? "#ffffff"
-                      : "var(--text-secondary)",
-                  boxShadow:
-                    teamFilter === "opponent"
-                      ? "0 2px 6px rgba(2, 132, 199, 0.25)"
-                      : "none",
-                  transition: "all 0.15s ease",
-                }}
-              >
-                <Swords size={13} />
-                <span>Opponent Teams ({opponentTeamsCount})</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => {
-                  setTeamFilter("all");
-                  setCurrentPage(1);
-                  setSelectedIds([]);
-                }}
-                style={{
-                  padding: "6px 14px",
-                  borderRadius: "7px",
-                  border: "none",
-                  fontSize: "12.5px",
-                  fontWeight: 700,
-                  cursor: "pointer",
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: "6px",
-                  background: teamFilter === "all" ? "#0284c7" : "transparent",
-                  color:
-                    teamFilter === "all" ? "#ffffff" : "var(--text-secondary)",
-                  boxShadow:
-                    teamFilter === "all"
-                      ? "0 2px 6px rgba(2, 132, 199, 0.25)"
-                      : "none",
-                  transition: "all 0.15s ease",
-                }}
-              >
-                <span>All Teams ({teams.length})</span>
-              </button>
-            </div>
-
-            <div style={{ position: "relative", width: "260px" }}>
-              <Input
-                type="text"
-                placeholder="Search team name, code, phone..."
-                value={searchQuery}
-                onChange={(e) => {
-                  setSearchQuery(e.target.value);
-                  setCurrentPage(1);
-                }}
-                style={{ paddingLeft: "12px", fontSize: "13px", margin: 0 }}
-              />
-            </div>
-          </div>
-
-          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-            <ViewSwitcher view={viewMode} onChange={setViewMode} />
-            <Button
-              variant="primary"
-              size="sm"
-              icon={<Plus size={15} />}
-              onClick={() => setIsModalOpen(true)}
-            >
-              <span>Create New Team</span>
-            </Button>
-          </div>
-        </div>
+        <ListToolbar
+          tabs={{
+            value: teamFilter,
+            onChange: (value) => {
+              setTeamFilter(value);
+              setCurrentPage(1);
+              setSelectedIds([]);
+            },
+            tabs: [
+              { value: 'my_team', label: 'My Teams', count: myTeamsCount },
+              { value: 'opponent', label: 'Opponent Teams', count: opponentTeamsCount },
+              { value: 'all', label: 'All Teams', count: teams.length },
+            ],
+          }}
+          search={{
+            placeholder: 'Search team name, code, phone...',
+            value: searchQuery,
+            onChange: (value) => {
+              setSearchQuery(value);
+              setCurrentPage(1);
+            },
+          }}
+          view={{ value: viewMode, onChange: setViewMode }}
+          add={{ label: 'Add Team', onClick: () => setIsModalOpen(true) }}
+        />
 
         <BulkActionBar
           selectedIds={selectedIds}
@@ -375,203 +252,7 @@ export default function TeamsPage() {
                 selectedIds={selectedIds}
                 onSelectionChange={setSelectedIds}
                 serialStartIndex={(currentPage - 1) * pageSize}
-                columns={[
-                  {
-                    header: "Code",
-                    width: "8%",
-                    render: (team: any) => (
-                      <Badge
-                        variant="purple"
-                        style={{
-                          background: team.primaryColor
-                            ? `${team.primaryColor}18`
-                            : undefined,
-                          color: team.primaryColor || "#0284c7",
-                          fontWeight: 800,
-                        }}
-                      >
-                        {team.shortName}
-                      </Badge>
-                    ),
-                  },
-                  {
-                    header: "Team Name",
-                    width: "24%",
-                    render: (team: any) => {
-                      const isMyTeam = getTeamType(team) === "my_team";
-                      const isPlayedOpponent =
-                        !isMyTeam && hasPlayedAgainstMyTeam(team);
-                      return (
-                        <div>
-                          <div
-                            style={{
-                              display: "flex",
-                              alignItems: "center",
-                              gap: "6px",
-                              flexWrap: "wrap",
-                            }}
-                          >
-                            <Link
-                              href={`/teams/${team._id}`}
-                              style={{
-                                fontWeight: 700,
-                                color: "var(--text-primary)",
-                                textDecoration: "none",
-                                display: "inline-flex",
-                                alignItems: "center",
-                                gap: "5px",
-                              }}
-                            >
-                              <span>{team.name}</span>
-                              <ExternalLink
-                                size={11}
-                                color="var(--accent-blue)"
-                              />
-                            </Link>
-                            <Badge
-                              variant={
-                                isMyTeam
-                                  ? "success"
-                                  : isPlayedOpponent
-                                    ? "warning"
-                                    : "secondary"
-                              }
-                              style={{ fontSize: "10px", padding: "1px 6px" }}
-                            >
-                              {isMyTeam
-                                ? "MY TEAM"
-                                : isPlayedOpponent
-                                  ? "OPPONENT"
-                                  : "TEAM"}
-                            </Badge>
-                          </div>
-                          {team.description && (
-                            <div
-                              style={{
-                                fontSize: "11px",
-                                color: "var(--text-muted)",
-                              }}
-                            >
-                              {team.description}
-                            </div>
-                          )}
-                        </div>
-                      );
-                    },
-                  },
-                  {
-                    header: "Contact Phone",
-                    width: "14%",
-                    render: (team: any) =>
-                      team.phone ? (
-                        <div
-                          style={{
-                            display: "flex",
-                            alignItems: "center",
-                            gap: "5px",
-                            fontSize: "12.5px",
-                            fontWeight: 600,
-                            color: "var(--text-secondary)",
-                          }}
-                        >
-                          <Phone size={12} color="var(--accent-green)" />
-                          <span>{team.phone}</span>
-                        </div>
-                      ) : (
-                        <span
-                          style={{
-                            fontSize: "12px",
-                            color: "var(--text-muted)",
-                          }}
-                        >
-                          —
-                        </span>
-                      ),
-                  },
-                  {
-                    header: "City / Base",
-                    width: "11%",
-                    render: (team: any) => (
-                      <div
-                        style={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: "4px",
-                          fontSize: "13px",
-                        }}
-                      >
-                        <MapPin size={12} color="var(--accent-blue)" />
-                        <span>{team.city || "Karachi"}</span>
-                      </div>
-                    ),
-                  },
-                  {
-                    header: "Active Squad",
-                    width: "11%",
-                    style: { fontWeight: 600 },
-                    render: (team: any) => `${team.playerCount || 0} Players`,
-                  },
-                  {
-                    header: "Matches",
-                    width: "10%",
-                    style: { fontWeight: 600, color: "var(--accent-blue)" },
-                    render: (team: any) => `${team.matchCount || 0} Matches`,
-                  },
-                  {
-                    header: "Tournaments",
-                    width: "10%",
-                    style: { fontWeight: 600, color: "var(--accent-green)" },
-                    render: (team: any) =>
-                      `${team.tournamentCount || 0} Leagues`,
-                  },
-                  {
-                    header: "Actions",
-                    width: "12%",
-                    align: "right",
-                    render: (team: any) => (
-                      <div
-                        className="action-group"
-                        style={{ justifyContent: "flex-end" }}
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <Button
-                          variant="secondary"
-                          size="sm"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setManagingSquadTeam(team);
-                          }}
-                          title="Add Players to Team"
-                          icon={<Users size={13} color="var(--accent-green)" />}
-                        >
-                          <span>+ Players</span>
-                        </Button>
-                        <Button
-                          variant="secondary"
-                          size="sm"
-                          isIconOnly
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleEditOpen(team);
-                          }}
-                          title="Edit Team"
-                          icon={<Pencil size={14} color="var(--accent-blue)" />}
-                        />
-                        <Button
-                          variant="danger"
-                          size="sm"
-                          isIconOnly
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleDelete(team._id, team.name);
-                          }}
-                          title="Delete Team"
-                          icon={<Trash2 size={14} />}
-                        />
-                      </div>
-                    ),
-                  },
-                ]}
+                columns={getTeamColumns({ getTeamType, hasPlayedAgainstMyTeam, setManagingSquadTeam, handleEditOpen, handleDelete })}
               />
             </Card>
 
@@ -580,6 +261,10 @@ export default function TeamsPage() {
               totalPages={totalPages}
               totalItems={filteredTeams.length}
               pageSize={pageSize}
+              onPageSizeChange={(size) => {
+                setPageSize(size);
+                setCurrentPage(1);
+              }}
               onPageChange={setCurrentPage}
               itemName="Teams"
             />
@@ -598,9 +283,6 @@ export default function TeamsPage() {
                   return (
                     <Card
                       key={team._id}
-                      style={{
-                        borderTop: `4px solid ${team.primaryColor || "#0284c7"}`,
-                      }}
                     >
                       <CardHeader>
                         <div>
@@ -616,7 +298,7 @@ export default function TeamsPage() {
                               href={`/teams/${team._id}`}
                               style={{
                                 fontSize: "19px",
-                                fontWeight: 800,
+                                fontWeight: 700,
                                 color: "var(--text-primary)",
                                 textDecoration: "none",
                                 display: "flex",
@@ -625,10 +307,6 @@ export default function TeamsPage() {
                               }}
                             >
                               <span>{team.name}</span>
-                              <ExternalLink
-                                size={12}
-                                color="var(--accent-blue)"
-                              />
                             </Link>
                             <Badge
                               variant={isMyTeam ? "success" : "secondary"}
@@ -648,8 +326,7 @@ export default function TeamsPage() {
                               marginTop: "4px",
                             }}
                           >
-                            <MapPin size={12} />
-                            <span>{team.city || "Karachi"}</span>
+                            <span>{team.city || EMPTY_VALUE}</span>
                             <span>•</span>
                             <span
                               style={{
@@ -671,10 +348,6 @@ export default function TeamsPage() {
                                     color: "var(--text-primary)",
                                   }}
                                 >
-                                  <Phone
-                                    size={11}
-                                    color="var(--accent-green)"
-                                  />
                                   {team.phone}
                                 </span>
                               </>
@@ -747,7 +420,7 @@ export default function TeamsPage() {
                             <div
                               style={{
                                 fontSize: "17px",
-                                fontWeight: 800,
+                                fontWeight: 700,
                                 color: "var(--text-primary)",
                               }}
                             >
@@ -767,7 +440,7 @@ export default function TeamsPage() {
                             <div
                               style={{
                                 fontSize: "17px",
-                                fontWeight: 800,
+                                fontWeight: 700,
                                 color: "var(--accent-blue)",
                               }}
                             >
@@ -787,7 +460,7 @@ export default function TeamsPage() {
                             <div
                               style={{
                                 fontSize: "17px",
-                                fontWeight: 800,
+                                fontWeight: 700,
                                 color: "var(--accent-green)",
                               }}
                             >
@@ -801,7 +474,6 @@ export default function TeamsPage() {
                         <Button
                           variant="secondary"
                           size="sm"
-                          icon={<Plus size={13} color="var(--accent-green)" />}
                           onClick={() => setManagingSquadTeam(team)}
                         >
                           <span>Add Players</span>
@@ -810,7 +482,6 @@ export default function TeamsPage() {
                           <Button
                             variant="secondary"
                             size="sm"
-                            icon={<Eye size={12} color="var(--accent-blue)" />}
                           >
                             <span>Team Profile & Squad</span>
                           </Button>
@@ -827,6 +498,10 @@ export default function TeamsPage() {
               totalPages={totalPages}
               totalItems={filteredTeams.length}
               pageSize={pageSize}
+              onPageSizeChange={(size) => {
+                setPageSize(size);
+                setCurrentPage(1);
+              }}
               onPageChange={setCurrentPage}
               itemName="Teams"
             />

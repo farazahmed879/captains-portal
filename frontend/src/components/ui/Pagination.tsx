@@ -1,7 +1,7 @@
 import React from "react";
-import { ChevronLeftIcon, ChevronRightIcon } from "../icons";
 import { Button } from "./Button";
 import { CustomSelect } from "./Select";
+import { PAGINATION } from "../../constants";
 
 export interface PaginationProps {
   currentPage: number;
@@ -18,8 +18,8 @@ export const Pagination: React.FC<PaginationProps> = ({
   currentPage,
   totalPages,
   totalItems,
-  pageSize = 15,
-  pageSizeOptions = [5, 10, 20, 50],
+  pageSize = PAGINATION.defaultPageSize,
+  pageSizeOptions = [...PAGINATION.pageSizeOptions],
   onPageChange,
   onPageSizeChange,
   itemName = "Items",
@@ -51,8 +51,8 @@ export const Pagination: React.FC<PaginationProps> = ({
               color: "var(--text-secondary)",
             }}
           >
-            <span>Page:</span>
-            <div style={{ width: "68px" }}>
+            <span>Rows per page:</span>
+            <div style={{ width: "76px" }}>
               <CustomSelect
                 size="sm"
                 value={pageSize}
@@ -62,6 +62,7 @@ export const Pagination: React.FC<PaginationProps> = ({
                   label: String(opt),
                 }))}
                 title="Select rows per page limit"
+                searchable={false}
               />
             </div>
           </div>
@@ -91,7 +92,6 @@ export const Pagination: React.FC<PaginationProps> = ({
           size="sm"
           disabled={currentPage <= 1}
           onClick={() => onPageChange(currentPage - 1)}
-          icon={<ChevronLeftIcon size={14} />}
         >
           <span>Prev</span>
         </Button>
@@ -115,7 +115,6 @@ export const Pagination: React.FC<PaginationProps> = ({
           size="sm"
           disabled={currentPage >= totalPages}
           onClick={() => onPageChange(currentPage + 1)}
-          iconRight={<ChevronRightIcon size={14} />}
         >
           <span>Next</span>
         </Button>

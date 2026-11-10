@@ -9,14 +9,13 @@ import { Tournament } from '../../types';
 import { getTournamentColumns } from '../../columns';
 import { Header } from '../../components/Header';
 import { fetchApi } from '../../lib/api';
-import { formatDate } from '../../lib/format';
+import { formatDate, formatNumber } from '../../lib/format';
 import { confirmDelete, confirmBulkDelete, showToast } from '../../lib/alerts';
 import {
   Button,
   Badge,
   Input,
   Select,
-  Textarea,
   Modal,
   Card,
   DataTable,
@@ -25,24 +24,26 @@ import {
   CardGridSkeleton,
   BulkActionBar,
   GridSelectCheckbox,
+  ListToolbar,
 } from '../../components/ui';
 import {
-  PlusIcon,
-  SearchIcon,
-  ExternalLinkIcon,
-  EyeIcon,
   PencilIcon,
   TrashIcon,
-  MapPinIcon,
-  CalendarIcon,
 } from '../../components/icons';
 import { CreateTournamentModal } from '../../components/CreateTournamentModal';
 import { EditTournamentModal } from '../../components/EditTournamentModal';
+import { useIsMobile } from '../../lib/useMediaQuery';
+import { getTournamentStatusVariant } from '../../constants/badgeVariants';
+import {
+  withAllOption,
+  TOURNAMENT_STATUS_OPTIONS,
+  EMPTY_VALUE,
+} from '../../constants';
+import { usePageSize } from '../../lib/usePageSize';
 
 export default function TournamentsPage() {
   const router = useRouter();
   const queryClient = useQueryClient();
-  const [selectedTeamId, setSelectedTeamId] = useState<string>('');
 
   // Modals
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
@@ -51,10 +52,9 @@ export default function TournamentsPage() {
 
   // React Queries
   const tournamentsQuery = useQuery({
-    queryKey: ['tournaments', { teamId: selectedTeamId }],
+    queryKey: ['tournaments'],
     queryFn: () => {
-      const query = selectedTeamId ? `?teamId=${selectedTeamId}` : '';
-      return fetchApi<{ success: boolean; tournaments: any[] }>(`/tournaments${query}`);
+      return fetchApi<{ success: boolean; tournaments: any[] }>('/tournaments');
     },
   });
 
@@ -91,9 +91,10 @@ export default function TournamentsPage() {
     }
   };
 
-  const fNum = (val: number | undefined) => (val || 0).toLocaleString('en-US');
-
-  const [viewMode, setViewMode] = useState<'grid' | 'table'>('table');
+  const [preferredView, setViewMode] = useState<'grid' | 'table'>('table');
+  // Phones always show the list; the List/Grid switch is hidden there (globals.css).
+  const isMobile = useIsMobile();
+  const viewMode = isMobile ? 'table' : preferredView;
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [currentPage, setCurrentPage] = useState<number>(1);
@@ -120,7 +121,7 @@ export default function TournamentsPage() {
       setIsBulkDeleting(false);
     }
   };
-  const pageSize = 8;
+  const [pageSize, setPageSize] = usePageSize('tournaments');
 
   const filteredTournaments = tournaments.filter((t) => {
     const matchesSearch =
@@ -136,28 +137,13 @@ export default function TournamentsPage() {
     currentPage * pageSize
   );
 
-  const getStatusBadgeVariant = (status?: string) => {
-    switch (status?.toLowerCase()) {
-      case 'champions':
-        return 'gold' as const;
-      case 'ongoing':
-        return 'primary' as const;
-      case 'completed':
-        return 'success' as const;
-      default:
-        return 'warning' as const;
-    }
-  };
-
   const tournamentColumns = useMemo(
     () =>
       getTournamentColumns({
         onEdit: handleEditOpen,
         onDelete: handleDelete,
-        getStatusBadgeVariant,
-        fNum,
       }),
-    [fNum]
+    [handleEditOpen, handleDelete]
   );
 
   return (
@@ -165,59 +151,32 @@ export default function TournamentsPage() {
       <Header
         title="Tournaments & Leagues Financials"
         subtitle="Manage Tournament Entries, Prize Returns, Dedicated Sponsors & Edit/Delete Records"
-        selectedTeamId={selectedTeamId}
-        onTeamChange={(id) => {
-          setSelectedTeamId(id);
-          setCurrentPage(1);
-        }}
       />
 
       <div className="content-body">
         {/* Controls: Search, Status Filter, View Toggle, Add Button */}
-        <div className="filter-bar">
-          <div className="filter-bar-left">
-            <div className="filter-field filter-field-search" style={{ width: '260px' }}>
-              <Input
-                placeholder="Search tournaments or venues..."
-                value={searchQuery}
-                onChange={(e) => {
-                  setSearchQuery(e.target.value);
-                  setCurrentPage(1);
-                }}
-                icon={<SearchIcon size={14} />}
-              />
-            </div>
-
-            <div className="filter-field" style={{ width: '190px' }}>
-              <Select
-                value={statusFilter}
-                onChange={(e) => {
-                  setStatusFilter(e.target.value);
-                  setCurrentPage(1);
-                }}
-                options={[
-                  { value: 'all', label: 'All Statuses' },
-                  { value: 'ongoing', label: 'Ongoing Tournaments' },
-                  { value: 'champions', label: 'Champions (Won)' },
-                  { value: 'completed', label: 'Completed' },
-                ]}
-              />
-            </div>
-          </div>
-
-          <div className="filter-bar-right">
-            <ViewSwitcher viewMode={viewMode} onChange={setViewMode} />
-
-            <Button
-              variant="primary"
-              size="sm"
-              icon={<PlusIcon size={15} />}
-              onClick={() => setIsModalOpen(true)}
-            >
-              Add Tournament
-            </Button>
-          </div>
-        </div>
+        <ListToolbar
+          search={{
+            placeholder: 'Search tournaments or venues...',
+            value: searchQuery,
+            onChange: (value) => {
+              setSearchQuery(value);
+              setCurrentPage(1);
+            },
+          }}
+          filters={[
+            {
+              value: statusFilter,
+              onChange: (value) => {
+                setStatusFilter(value);
+                setCurrentPage(1);
+              },
+              options: withAllOption('All Statuses', TOURNAMENT_STATUS_OPTIONS, 'all'),
+            },
+          ]}
+          view={{ value: viewMode, onChange: setViewMode }}
+          add={{ label: 'Add Tournament', onClick: () => setIsModalOpen(true) }}
+        />
 
         <BulkActionBar
           selectedIds={selectedIds}
@@ -250,6 +209,10 @@ export default function TournamentsPage() {
             totalPages={totalPages}
             totalItems={filteredTournaments.length}
             pageSize={pageSize}
+            onPageSizeChange={(size) => {
+              setPageSize(size);
+              setCurrentPage(1);
+            }}
             onPageChange={setCurrentPage}
             itemName="Tournaments"
           />
@@ -278,7 +241,7 @@ export default function TournamentsPage() {
                     <div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
                         <Badge variant="purple">{trn.format}</Badge>
-                        <Badge variant={getStatusBadgeVariant(trn.status)}>
+                        <Badge variant={getTournamentStatusVariant(trn.status)}>
                           {trn.status?.toUpperCase()}
                         </Badge>
                       </div>
@@ -286,7 +249,7 @@ export default function TournamentsPage() {
                         href={`/tournaments/${trn._id}`}
                         style={{
                           fontSize: '19px',
-                          fontWeight: 800,
+                          fontWeight: 700,
                           color: 'var(--text-primary)',
                           textDecoration: 'none',
                           display: 'flex',
@@ -295,7 +258,6 @@ export default function TournamentsPage() {
                         }}
                       >
                         <span>{trn.name}</span>
-                        <ExternalLinkIcon size={12} color="var(--accent-blue)" />
                       </Link>
                       <div
                         style={{
@@ -307,10 +269,8 @@ export default function TournamentsPage() {
                           marginTop: '4px',
                         }}
                       >
-                        <MapPinIcon size={12} />
-                        <span>{trn.venue || 'Karachi Grounds'}</span>
+                        <span>{trn.venue || EMPTY_VALUE}</span>
                         <span>•</span>
-                        <CalendarIcon size={12} />
                         <span>{formatDate(trn.startDate)}</span>
                       </div>
                     </div>
@@ -375,32 +335,32 @@ export default function TournamentsPage() {
                       <div style={{ fontSize: '11px', color: 'var(--text-secondary)', textTransform: 'uppercase' }}>
                         Squad Fees
                       </div>
-                      <div style={{ fontSize: '15px', fontWeight: 800, color: 'var(--accent-green)' }}>
-                        Rs. {fNum(trn.financials?.totalFeesCollected || 0)}
+                      <div style={{ fontSize: '15px', fontWeight: 700, color: 'var(--accent-green)' }}>
+                        Rs. {formatNumber(trn.financials?.totalFeesCollected || 0)}
                       </div>
                     </div>
                     <div>
                       <div style={{ fontSize: '11px', color: 'var(--text-secondary)', textTransform: 'uppercase' }}>
                         Entry Fee
                       </div>
-                      <div style={{ fontSize: '15px', fontWeight: 800, color: 'var(--text-primary)' }}>
-                        Rs. {fNum(trn.financials?.entryFee || trn.entryFee)}
+                      <div style={{ fontSize: '15px', fontWeight: 700, color: 'var(--text-primary)' }}>
+                        Rs. {formatNumber(trn.financials?.entryFee || trn.entryFee)}
                       </div>
                     </div>
                     <div>
                       <div style={{ fontSize: '11px', color: 'var(--text-secondary)', textTransform: 'uppercase' }}>
                         Match Costs
                       </div>
-                      <div style={{ fontSize: '15px', fontWeight: 800, color: 'var(--accent-rose)' }}>
-                        Rs. {fNum(trn.financials?.matchExpenses)}
+                      <div style={{ fontSize: '15px', fontWeight: 700, color: 'var(--accent-rose)' }}>
+                        Rs. {formatNumber(trn.financials?.matchExpenses)}
                       </div>
                     </div>
                     <div>
                       <div style={{ fontSize: '11px', color: 'var(--text-secondary)', textTransform: 'uppercase' }}>
                         Prize Won
                       </div>
-                      <div style={{ fontSize: '15px', fontWeight: 800, color: 'var(--accent-amber)' }}>
-                        Rs. {fNum(trn.financials?.actualWinningPrizeWon || trn.actualWinningPrizeWon)}
+                      <div style={{ fontSize: '15px', fontWeight: 700, color: 'var(--accent-amber)' }}>
+                        Rs. {formatNumber(trn.financials?.actualWinningPrizeWon || trn.actualWinningPrizeWon)}
                       </div>
                     </div>
                     <div>
@@ -410,11 +370,11 @@ export default function TournamentsPage() {
                       <div
                         style={{
                           fontSize: '15px',
-                          fontWeight: 800,
+                          fontWeight: 700,
                           color: isProfitable ? 'var(--accent-green)' : 'var(--accent-rose)',
                         }}
                       >
-                        {isProfitable ? '+' : ''}Rs. {fNum(trn.financials?.netPnl)}
+                        {isProfitable ? '+' : ''}Rs. {formatNumber(trn.financials?.netPnl)}
                       </div>
                     </div>
                   </div>
@@ -430,7 +390,7 @@ export default function TournamentsPage() {
                     }}
                   >
                     <div>
-                      Team: <strong style={{ color: 'var(--text-primary)' }}>{trn.teamId?.name || 'Gulzar Cricket Team'}</strong>
+                      Team: <strong style={{ color: 'var(--text-primary)' }}>{trn.teamId?.name || EMPTY_VALUE}</strong>
                     </div>
                     <div>
                       Matches: <strong style={{ color: 'var(--accent-blue)' }}>{trn.matchesPlayed || 0} Matches Recorded</strong>
@@ -449,7 +409,6 @@ export default function TournamentsPage() {
                       <Button
                         variant="secondary"
                         size="sm"
-                        icon={<EyeIcon size={12} color="var(--accent-blue)" />}
                       >
                         View Tournament Profile & Matches
                       </Button>
@@ -466,6 +425,10 @@ export default function TournamentsPage() {
             totalPages={totalPages}
             totalItems={filteredTournaments.length}
             pageSize={pageSize}
+            onPageSizeChange={(size) => {
+              setPageSize(size);
+              setCurrentPage(1);
+            }}
             onPageChange={setCurrentPage}
             itemName="Tournaments"
           />

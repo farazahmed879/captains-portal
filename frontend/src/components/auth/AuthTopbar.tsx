@@ -1,6 +1,5 @@
 import React from 'react';
 import Link from 'next/link';
-import { ExternalLink } from 'lucide-react';
 import { ASSETS } from '../../constants';
 
 export interface AuthTopbarProps {
@@ -44,7 +43,6 @@ export const AuthTopbar: React.FC<AuthTopbarProps> = ({
           >
             <span>Need a hand?</span>
             <strong>Get help</strong>
-            <ExternalLink size={12} />
           </a>
         )}
       </div>

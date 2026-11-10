@@ -5,10 +5,11 @@ import {
   updateExpense,
   deleteExpense,
 } from '../controllers/expenseController';
-import { authenticate } from '../middlewares/auth';
+import { authenticate, requireWriteAccess } from '../middlewares/auth';
 
 const router = Router();
 router.use(authenticate);
+router.use(requireWriteAccess);
 
 router.get('/', getExpenses);
 router.post('/', createExpense);

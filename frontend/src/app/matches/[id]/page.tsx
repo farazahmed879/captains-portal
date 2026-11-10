@@ -7,20 +7,9 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { queryKeys } from '../../../lib/queryKeys';
 import { Header } from '../../../components/Header';
 import { fetchApi } from '../../../lib/api';
-import { formatDateWithDay } from '../../../lib/format';
+import { formatDateWithDay, formatNumber } from '../../../lib/format';
 import { confirmDelete, showToast } from '../../../lib/alerts';
-import {
-  Button,
-  Badge,
-  Input,
-  Select,
-  Textarea,
-  DatePicker,
-  Modal,
-  Card,
-  DataTable,
-
-} from '../../../components/ui';
+import { Button, Badge, Modal, Card } from '../../../components/ui';
 import { DetailPageSkeleton } from '../../../components/ui/Skeleton';
 import { EditMatchModal } from '../../../components/EditMatchModal';
 import { MatchExpenseModal } from '../../../components/MatchExpenseModal';
@@ -28,21 +17,11 @@ import { EditMomModal } from '../../../components/EditMomModal';
 import { EditPaymentModal } from '../../../components/EditPaymentModal';
 import { SquadFeesModal } from '../../../components/SquadFeesModal';
 import {
-  Calendar,
-  MapPin,
-  ArrowLeft,
-  DollarSign,
-  Receipt,
-  Users,
-  Plus,
-  Pencil,
-  Trash2,
-  CheckCircle2,
-  AlertCircle,
-  Clock,
   Award,
-  ExternalLink,
 } from '../../../components/icons';
+import { getMatchResultVariant } from '../../../constants/badgeVariants';
+import { EMPTY_VALUE } from '../../../constants';
+import { DetailNav } from '../../../components/DetailNav';
 
 export default function MatchDetailPage() {
   const params = useParams();
@@ -113,21 +92,6 @@ export default function MatchDetailPage() {
     }
   };
 
-  const handleMarkAllPaid = async () => {
-    try {
-      const res = await fetchApi<{ success: boolean; message?: string }>(
-        `/payments/matches/${id}/mark-all-paid`,
-        { method: 'PUT' }
-      );
-      if (res.success) {
-        showToast.success('All squad match fees marked as paid!');
-        invalidateData();
-      }
-    } catch (err: any) {
-      showToast.error(err?.message || 'Failed to update payments.');
-    }
-  };
-
   const handleDeletePayment = async (paymentId: string, playerName?: string) => {
     const confirmed = await confirmDelete(playerName ? `squad payment for "${playerName}"` : 'player payment record from match');
     if (!confirmed) return;
@@ -141,19 +105,6 @@ export default function MatchDetailPage() {
       }
     } catch (err) {
       showToast.error('Failed to remove player payment.');
-    }
-  };
-
-  const fNum = (val: number | undefined) => (val || 0).toLocaleString('en-US');
-
-  const getResultBadgeVariant = (result: string) => {
-    switch (result?.toLowerCase()) {
-      case 'won':
-        return 'success' as const;
-      case 'lost':
-        return 'danger' as const;
-      default:
-        return 'warning' as const;
     }
   };
 
@@ -174,16 +125,6 @@ export default function MatchDetailPage() {
     );
   }
 
-  const totalCollected = payments.reduce((acc, p) => acc + (p.feePaid || 0), 0);
-  const totalAssigned = payments.reduce((acc, p) => acc + (p.feeAssigned || 0), 0);
-  const totalPending = totalAssigned - totalCollected;
-  const matchExpenses = matchData.totalMatchExpense || 0;
-  const netMatchBalance = totalCollected - matchExpenses;
-  const isSurplus = netMatchBalance >= 0;
-
-  const paidCount = payments.filter((p) => p.paymentStatus === 'paid').length;
-  const pendingCount = payments.filter((p) => p.paymentStatus !== 'paid').length;
-
   return (
     <>
       <Header
@@ -192,72 +133,25 @@ export default function MatchDetailPage() {
       />
 
       <div className="content-body">
-        {/* Navigation & Actions */}
-        <div
-          style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            marginBottom: '20px',
-          }}
-        >
-          <Link href="/matches" passHref legacyBehavior>
-            <Button variant="secondary" size="sm" icon={<ArrowLeft size={14} />}>
-              Back to All Matches
-            </Button>
-          </Link>
-
-          <div className="action-group">
-            {totalPending > 0 && (
-              <Button
-                variant="success"
-                size="sm"
-                icon={<CheckCircle2 size={13} />}
-                onClick={handleMarkAllPaid}
-                title="Mark all pending squad player fees as paid"
-              >
-                Clear Player Dues
-              </Button>
-            )}
-            <Button
-              variant="secondary"
-              size="sm"
-              icon={<Receipt size={13} color="var(--accent-rose)" />}
-              onClick={() => setIsExpenseOpen(true)}
-              title="Record or update ground fee / match fee paid to organizer"
-            >
-              Match Fee
-            </Button>
-            <Button
-              variant="secondary"
-              size="sm"
-              icon={<Award size={13} color="#d97706" />}
-              onClick={() => setIsMomOpen(true)}
-              title="Record or update Man of the Match and organizer cash prize"
-            >
-              MOM Award {matchData?.momPrizeMoney ? `(Rs. ${fNum(matchData.momPrizeMoney)})` : ''}
-            </Button>
-            <Button
-              variant="secondary"
-              size="sm"
-              icon={<Pencil size={13} color="var(--accent-blue)" />}
-              onClick={() => setIsEditOpen(true)}
-            >
-              Edit Match
-            </Button>
-            <Button
-              variant="danger"
-              size="sm"
-              icon={<Trash2 size={13} />}
-              onClick={handleDeleteMatch}
-            >
-              Delete
-            </Button>
-          </div>
-        </div>
+        <DetailNav back={{ href: "/matches", label: "Back to All Matches" }}>
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => setIsEditOpen(true)}
+          >
+            Edit Match
+          </Button>
+          <Button
+            variant="danger"
+            size="sm"
+            onClick={handleDeleteMatch}
+          >
+            Delete
+          </Button>
+        </DetailNav>
 
         {/* Hero Card */}
-        <Card style={{ marginBottom: '24px' }}>
+        <Card className="detail-hero" style={{ marginBottom: '24px' }}>
           <div
             style={{
               display: 'flex',
@@ -278,7 +172,7 @@ export default function MatchDetailPage() {
                     href={`/tournaments/${matchData.tournamentId._id}`}
                     style={{ textDecoration: 'none' }}
                   >
-                    <Badge variant="purple" icon={<ExternalLink size={10} />}>
+                    <Badge variant="purple">
                       {matchData.tournamentId.name}
                     </Badge>
                   </Link>
@@ -288,7 +182,7 @@ export default function MatchDetailPage() {
                   <Badge variant="secondary">{matchData.tournamentStage}</Badge>
                 )}
 
-                <Badge variant={getResultBadgeVariant(matchData.result)}>
+                <Badge variant={getMatchResultVariant(matchData.result)}>
                   {matchData.result ? matchData.result.toUpperCase() : 'PENDING'}
                 </Badge>
               </div>
@@ -296,12 +190,12 @@ export default function MatchDetailPage() {
               <h1
                 style={{
                   fontSize: '26px',
-                  fontWeight: 800,
+                  fontWeight: 700,
                   color: 'var(--text-primary)',
                   marginBottom: '10px',
                 }}
               >
-                {matchData.teamId?.name || 'Gulzar Cricket Team'}{' '}
+                {matchData.teamId?.name || EMPTY_VALUE}{' '}
                 <span style={{ color: 'var(--accent-blue)', fontSize: '20px' }}>VS</span>{' '}
                 {matchData.opponentTeam}
               </h1>
@@ -347,37 +241,14 @@ export default function MatchDetailPage() {
                 }}
               >
                 <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                  <MapPin size={14} color="var(--accent-blue)" />
                   {matchData.venue || 'Standard Ground'}
                 </span>
                 <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                  <Calendar size={14} />
                   {formatDateWithDay(matchData.matchDate)}
                 </span>
                 <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                  <Clock size={14} />
                   {matchData.overs} Overs Match
                 </span>
-              </div>
-            </div>
-
-            {/* Match Net Financial KPI */}
-            <div style={{ textAlign: 'right' }}>
-              <div style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase' }}>
-                Net Match Cash Flow
-              </div>
-              <div
-                style={{
-                  fontSize: '28px',
-                  fontWeight: 900,
-                  fontFamily: 'Outfit, sans-serif',
-                  color: isSurplus ? 'var(--accent-green)' : 'var(--accent-rose)',
-                }}
-              >
-                {isSurplus ? '+' : ''}Rs. {fNum(netMatchBalance)}
-              </div>
-              <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
-                {isSurplus ? 'Match Surplus (Collected > Expense)' : 'Operating Deficit (Expense > Collected)'}
               </div>
             </div>
           </div>
@@ -388,8 +259,8 @@ export default function MatchDetailPage() {
               style={{
                 marginTop: '16px',
                 padding: '12px 16px',
-                background: 'linear-gradient(135deg, #fef3c7 0%, #fffbeb 100%)',
-                border: '1px solid #fde68a',
+                background: '#e2e8f0',
+                border: '1px solid #94a3b8',
                 borderRadius: '10px',
                 display: 'flex',
                 alignItems: 'center',
@@ -404,35 +275,34 @@ export default function MatchDetailPage() {
                     width: '36px',
                     height: '36px',
                     borderRadius: '8px',
-                    background: '#fde68a',
+                    background: '#94a3b8',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                   }}
                 >
-                  <Award size={20} color="#b45309" />
                 </div>
                 <div>
-                  <div style={{ fontSize: '13px', fontWeight: 800, color: '#92400e' }}>
+                  <div style={{ fontSize: '13px', fontWeight: 700, color: '#334155' }}>
                     Man of the Match:
                     <Link
                       href={`/players/${matchData.momPlayerId._id || matchData.momPlayerId}`}
-                      style={{ color: '#b45309', fontWeight: 800, marginLeft: '6px', textDecoration: 'underline' }}
+                      style={{ color: '#334155', fontWeight: 700, marginLeft: '6px', textDecoration: 'underline' }}
                     >
                       {matchData.momPlayerId.name || 'Player'}
                     </Link>
                     {matchData.momPlayerId.role && (
-                      <span style={{ fontSize: '12px', color: '#b45309', fontWeight: 500, marginLeft: '4px' }}>
+                      <span style={{ fontSize: '12px', color: '#334155', fontWeight: 500, marginLeft: '4px' }}>
                         ({matchData.momPlayerId.role.replace('_', ' ')})
                       </span>
                     )}
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '3px' }}>
-                    <span style={{ fontSize: '12px', fontWeight: 700, color: '#15803d' }}>
-                      Organizer Cash Prize: Rs. {fNum(matchData.momPrizeMoney || 0)}
+                    <span style={{ fontSize: '12px', fontWeight: 700, color: '#166534' }}>
+                      Organizer Cash Prize: Rs. {formatNumber(matchData.momPrizeMoney || 0)}
                     </span>
                     {matchData.momAwardDetails && (
-                      <span style={{ fontSize: '12px', color: '#78350f', fontWeight: 500 }}>
+                      <span style={{ fontSize: '12px', color: '#1e293b', fontWeight: 500 }}>
                         • {matchData.momAwardDetails}
                       </span>
                     )}
@@ -443,15 +313,14 @@ export default function MatchDetailPage() {
               <Button
                 variant="secondary"
                 size="sm"
-                icon={<Pencil size={11} color="#b45309" />}
                 onClick={() => setIsMomOpen(true)}
                 style={{
                   height: '28px',
                   fontSize: '11px',
                   padding: '0 10px',
-                  borderColor: '#fcd34d',
+                  borderColor: '#94a3b8',
                   background: '#ffffff',
-                  color: '#92400e',
+                  color: '#334155',
                 }}
               >
                 Edit MOM
@@ -471,7 +340,6 @@ export default function MatchDetailPage() {
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', color: '#64748b' }}>
-                <Award size={15} color="#94a3b8" />
                 <span>Won this match? Record organizer Man of the Match (MOM) cash prize.</span>
               </div>
               <Button

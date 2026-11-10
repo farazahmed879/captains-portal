@@ -27,14 +27,14 @@
   width: 42px;
   height: 42px;
   border-radius: 10px;
-  background: #e0f2fe;
-  border: 1px solid #bae6fd;
-  color: #0369a1;
+  background: #f1f5f9;
+  border: 1px solid #cbd5e1;
+  color: #334155;
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 14px;
-  font-weight: 800;
+  font-weight: 700;
   flex-shrink: 0;
 }
 
@@ -51,7 +51,7 @@
 
 .playerName {
   font-size: 15px;
-  font-weight: 800;
+  font-weight: 700;
   color: var(--text-primary);
 }
 
@@ -76,7 +76,7 @@
 .dueBadge {
   font-size: 11px;
   padding: 3px 8px;
-  font-weight: 800;
+  font-weight: 700;
 }
 
 .clearedBadge {
@@ -87,9 +87,9 @@
 .returnedBadge {
   font-size: 10px;
   font-weight: 700;
-  color: #b45309;
-  background: #fef3c7;
-  border: 1px solid #fde68a;
+  color: #334155;
+  background: #e2e8f0;
+  border: 1px solid #94a3b8;
   padding: 1px 6px;
   border-radius: 4px;
 }
@@ -120,9 +120,9 @@
 }
 
 .returnMoneyBtn {
-  background: #fef3c7 !important;
-  border: 1px solid #fde68a !important;
-  color: #b45309 !important;
+  background: #e2e8f0 !important;
+  border: 1px solid #94a3b8 !important;
+  color: #334155 !important;
   border-radius: 6px !important;
   padding: 4px 10px !important;
   font-weight: 700 !important;
@@ -178,13 +178,13 @@
   width: 28px;
   height: 28px;
   border-radius: 6px;
-  background: #e0f2fe;
-  color: #0369a1;
+  background: #f1f5f9;
+  color: #334155;
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 11px;
-  font-weight: 800;
+  font-weight: 700;
 }
 
 .debtorName {
@@ -205,7 +205,7 @@
 .debtorBadge {
   font-size: 10.5px;
   padding: 2px 7px;
-  font-weight: 800;
+  font-weight: 700;
 }
 
 .debtorPaidInfo {
@@ -215,6 +215,6 @@
 }
 
 .debtorReturnedInfo {
-  color: #b45309;
+  color: #334155;
   margin-left: 4px;
 }

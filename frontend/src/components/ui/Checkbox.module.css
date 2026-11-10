@@ -81,27 +81,27 @@
 
 /* Variant checked/indeterminate states */
 .primaryChecked {
-  background: #0284c7 !important;
-  border-color: #0284c7 !important;
-  box-shadow: 0 1px 3px rgba(2, 132, 199, 0.25) !important;
+  background: #475569 !important;
+  border-color: #475569 !important;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08) !important;
 }
 
 .successChecked {
-  background: #16a34a !important;
-  border-color: #16a34a !important;
-  box-shadow: 0 1px 3px rgba(22, 163, 74, 0.25) !important;
+  background: #15803d !important;
+  border-color: #15803d !important;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08) !important;
 }
 
 .warningChecked {
-  background: #d97706 !important;
-  border-color: #d97706 !important;
-  box-shadow: 0 1px 3px rgba(217, 119, 6, 0.25) !important;
+  background: #475569 !important;
+  border-color: #475569 !important;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08) !important;
 }
 
 .dangerChecked {
-  background: #e11d48 !important;
-  border-color: #e11d48 !important;
-  box-shadow: 0 1px 3px rgba(225, 29, 72, 0.25) !important;
+  background: #dc2626 !important;
+  border-color: #dc2626 !important;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08) !important;
 }
 
 .labelCol {

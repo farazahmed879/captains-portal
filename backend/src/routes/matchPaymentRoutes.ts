@@ -6,10 +6,11 @@ import {
   bulkUpdatePayments,
   markAllMatchPaymentsPaid,
 } from '../controllers/matchPaymentController';
-import { authenticate } from '../middlewares/auth';
+import { authenticate, requireWriteAccess } from '../middlewares/auth';
 
 const router = Router();
 router.use(authenticate);
+router.use(requireWriteAccess);
 
 router.post('/', createPayment);
 router.put('/bulk', bulkUpdatePayments);

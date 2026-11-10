@@ -1,10 +1,10 @@
 .blueIcon {
-  background: rgba(2, 132, 199, 0.1);
+  background: rgba(15, 23, 42, 0.08);
   color: var(--accent-blue);
 }
 
 .greenIcon {
-  background: rgba(16, 185, 129, 0.1);
+  background: rgba(15, 23, 42, 0.08);
   color: var(--accent-green);
 }
 
@@ -13,7 +13,7 @@
 }
 
 .amberIcon {
-  background: rgba(245, 158, 11, 0.1);
+  background: rgba(15, 23, 42, 0.08);
   color: var(--accent-amber);
 }
 
@@ -22,7 +22,7 @@
 }
 
 .roseIcon {
-  background: rgba(244, 63, 94, 0.1);
+  background: rgba(15, 23, 42, 0.08);
   color: var(--accent-rose);
 }
 
@@ -31,7 +31,7 @@
 }
 
 .purpleIcon {
-  background: rgba(124, 58, 237, 0.1);
+  background: rgba(15, 23, 42, 0.08);
   color: var(--accent-purple);
 }
 

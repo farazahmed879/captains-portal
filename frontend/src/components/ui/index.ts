@@ -25,3 +25,4 @@ export {
   DetailPageSkeleton,
 } from './Skeleton';
 export * from '../icons';
+export * from './ListToolbar';

@@ -1,5 +1,6 @@
 import { prisma } from '../config/prisma';
 import { Team } from '@prisma/client';
+import { SYSTEM_DEFAULTS } from '../constants';
 
 export class TeamRepository {
   async findById(id: string, tenantId?: string): Promise<Team | null> {
@@ -58,7 +59,7 @@ export class TeamRepository {
         shortName: data.shortName.toUpperCase(),
         teamType: data.teamType || 'my_team',
         phone: data.phone || undefined,
-        city: data.city || 'Karachi',
+        city: data.city || SYSTEM_DEFAULTS.CITY,
         primaryColor: data.primaryColor || '#0284c7',
         description: data.description,
         logo: data.logo,

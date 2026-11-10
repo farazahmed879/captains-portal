@@ -2,77 +2,49 @@ import React from 'react';
 import Link from 'next/link';
 import { Column } from '../components/ui/DataTable';
 import { Badge, Button } from '../components/ui';
-import { ExternalLink, Calendar, Users, Pencil, Trash2, CheckCircle2 } from '../components/icons';
+import {
+  Pencil,
+  Trash2,
+} from '../components/icons';
 import { Match, MatchPayment } from '../types';
-import { formatDate } from '../lib/format';
+import { formatDate, formatNumber } from '../lib/format';
+import { cellMain, cellSub, cellNum, cellOneLine, signedColor } from './cellStyles';
+import { getMatchResultVariant } from '../constants/badgeVariants';
 
 interface MatchColumnActions {
   onPayments: (id: string) => void;
   onEdit: (match: Match) => void;
   onDelete: (id: string, label: string) => void;
-  getResultBadgeVariant: (res?: string) => any;
-  fNum: (val: number | undefined) => string;
 }
 
 export const getMatchColumns = ({
   onPayments,
   onEdit,
   onDelete,
-  getResultBadgeVariant,
-  fNum,
 }: MatchColumnActions): Column<Match>[] => [
   {
-    header: 'Match & Tournament',
-    render: (m: any) => (
-      <div>
-        <div style={{ fontWeight: 700, fontSize: '13.5px' }}>
-          {m.tournamentId?.name || (m.matchType === 'tournament' ? 'Tournament Match' : 'Friendly')}
-        </div>
-        <div style={{ display: 'flex', gap: '6px', marginTop: '3px' }}>
-          <Badge variant="purple" style={{ fontSize: '10px' }}>
-            {m.tournamentStage || 'Match'}
-          </Badge>
-          <Badge variant="primary" style={{ fontSize: '10px' }}>
-            {m.overs} Overs
-          </Badge>
-        </div>
-      </div>
-    ),
-  },
-  {
-    header: 'Team vs Team',
+    header: 'Match',
     render: (m: any) => {
-      const myTeamName = m.teamId?.name || (typeof m.teamId === 'string' ? m.teamId : 'Our Team');
-      const oppName = m.opponentTeam || 'Opponent';
+      const context = [
+        m.tournamentId?.name || (m.matchType === 'tournament' ? 'Tournament' : 'Friendly'),
+        m.tournamentStage ? String(m.tournamentStage).replace(/_/g, ' ') : null,
+        m.teamId?.shortName || null,
+      ]
+        .filter(Boolean)
+        .join(' · ');
       return (
         <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
-            <span style={{ fontWeight: 700, fontSize: '13px', color: '#0f172a' }}>
-              {myTeamName}
-            </span>
-            <span
-              style={{
-                fontSize: '10px',
-                fontWeight: 800,
-                padding: '1px 5px',
-                borderRadius: '4px',
-                background: '#eff6ff',
-                color: '#0284c7',
-                border: '1px solid #bfdbfe',
-                letterSpacing: '0.04em',
-              }}
-            >
-              VS
-            </span>
-            <span style={{ fontWeight: 700, fontSize: '13px', color: '#0284c7' }}>
-              {oppName}
-            </span>
+          <Link
+            href={`/matches/${m._id}`}
+            onClick={(e) => e.stopPropagation()}
+            style={{ ...cellMain, ...cellOneLine, display: 'block', textDecoration: 'none' }}
+            title={`vs ${m.opponentTeam || 'Opponent'}`}
+          >
+            vs {m.opponentTeam || 'Opponent'}
+          </Link>
+          <div style={{ ...cellSub, ...cellOneLine, textTransform: 'capitalize' }} title={context}>
+            {context}
           </div>
-          {m.teamId?.shortName && (
-            <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>
-              {m.teamId.shortName}
-            </div>
-          )}
         </div>
       );
     },
@@ -81,150 +53,61 @@ export const getMatchColumns = ({
     header: 'Date & Venue',
     render: (m: any) => (
       <div>
-        <Link
-          href={`/matches/${m._id}`}
-          onClick={(e) => e.stopPropagation()}
-          style={{
-            fontWeight: 700,
-            color: 'var(--accent-blue)',
-            textDecoration: 'none',
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '4px',
-          }}
-        >
-          <span>{m.venue}</span>
-          <ExternalLink size={11} />
-        </Link>
-        <div
-          style={{
-            fontSize: '12px',
-            color: 'var(--text-muted)',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '4px',
-            marginTop: '2px',
-          }}
-        >
-          <Calendar size={12} />
-          <span>{formatDate(m.matchDate)}</span>
+        <div style={{ ...cellMain, fontWeight: 500, ...cellOneLine, maxWidth: '170px' }} title={m.venue || ''}>
+          {m.venue || '—'}
         </div>
+        <div style={cellSub}>{formatDate(m.matchDate)}</div>
       </div>
     ),
   },
   {
-    header: 'Match Costs',
-    render: (m: any) => {
-      const isTourney = Boolean(m.tournamentId || m.matchType === 'tournament');
-      const isReimb = isTourney && m.isReimbursed !== false && (m.groundCost > 0 || m.reimbursedAmount > 0);
-      return (
-        <div>
-          <div style={{ fontWeight: 700, color: 'var(--accent-rose)' }}>
-            Rs. {fNum(m.totalMatchExpense)}
-          </div>
-          <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-            Ground: Rs. {fNum(m.groundCost)} | Ref: Rs. {fNum(m.refreshmentCost)}
-          </div>
-          {isReimb && (
-            <div style={{ fontSize: '10px', color: '#15803d', fontWeight: 600, marginTop: '2px' }}>
-              🔄 Reimbursed in Entry Fee
-            </div>
-          )}
-        </div>
-      );
-    },
-  },
-  {
-    header: 'Squad Dues Status',
+    header: 'Match Cost',
+    align: 'right',
     render: (m: any) => (
-      <div>
-        <div style={{ fontWeight: 700, color: 'var(--accent-green)' }}>
-          Rs. {fNum(m.totalCollected)}{' '}
-          <span
-            style={{
-              fontSize: '11px',
-              color: 'var(--text-muted)',
-              fontWeight: 400,
-            }}
-          >
-            / Rs. {fNum(m.totalAssigned)}
-          </span>
-        </div>
-        <div
-          style={{
-            fontSize: '11px',
-            color: m.pendingFee > 0 ? 'var(--accent-rose)' : 'var(--accent-green)',
-          }}
-        >
-          {m.pendingFee > 0 ? `Rs. ${fNum(m.pendingFee)} Due` : '100% Cleared'}{' '}
-          ({m.paidPlayersCount}/{m.squadPlayerIds?.length || 0} players)
-        </div>
-      </div>
+      <span style={{ ...cellMain, ...cellNum }}>Rs. {formatNumber(m.totalMatchExpense || 0)}</span>
     ),
   },
   {
-    header: 'Profit / Loss',
+    header: 'Squad Fees',
+    align: 'right',
     render: (m: any) => {
-      const collected = m.totalCollected || 0;
-      const momPrize = (m.momPrizeMoney || 0) + (m.winningPrizeMoney || 0);
-      const expense = m.totalMatchExpense || m.groundCost || 0;
-      const pnl = collected + momPrize - expense;
-      const isProfit = pnl > 0;
-      const isLoss = pnl < 0;
+      const assigned = m.totalAssigned || 0;
+      const pending = m.pendingFee || 0;
+      const squad = m.squadPlayerIds?.length || 0;
       return (
-        <div>
-          <div
-            style={{
-              fontWeight: 700,
-              color: isProfit
-                ? 'var(--accent-green)'
-                : isLoss
-                ? 'var(--accent-rose)'
-                : 'var(--text-secondary)',
-            }}
-          >
-            {isProfit ? '+' : isLoss ? '-' : ''}Rs. {fNum(Math.abs(pnl))}
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexWrap: 'wrap', marginTop: '2px' }}>
-            {isProfit ? (
-              <Badge variant="success" style={{ fontSize: '9.5px', padding: '1px 5px' }}>
-                Profit
-              </Badge>
-            ) : isLoss ? (
-              <Badge variant="danger" style={{ fontSize: '9.5px', padding: '1px 5px' }}>
-                Loss
-              </Badge>
-            ) : (
-              <Badge variant="secondary" style={{ fontSize: '9.5px', padding: '1px 5px' }}>
-                Break-even
-              </Badge>
-            )}
-            {m.momPrizeMoney > 0 && (
-              <Badge variant="warning" style={{ fontSize: '9px', padding: '1px 4px' }}>
-                🏆 +Rs. {fNum(m.momPrizeMoney)}
-              </Badge>
-            )}
+        <div style={cellNum} title={`${m.paidPlayersCount || 0} of ${squad} players paid`}>
+          <div style={cellMain}>Rs. {formatNumber(m.totalCollected || 0)}</div>
+          <div style={{ ...cellSub, color: pending > 0 ? 'var(--accent-rose)' : cellSub.color }}>
+            {assigned === 0 ? 'No fees set' : pending > 0 ? `Rs. ${formatNumber(pending)} due` : `of Rs. ${formatNumber(assigned)}`}
           </div>
         </div>
       );
     },
   },
   {
-    header: 'Result / MOM',
+    header: 'Match P/L',
+    mobile: 'summary',
+    align: 'right',
+    render: (m: any) => {
+      const prize = (m.momPrizeMoney || 0) + (m.winningPrizeMoney || 0);
+      const pnl = (m.totalCollected || 0) + prize - (m.totalMatchExpense || m.groundCost || 0);
+      return (
+        <div style={cellNum}>
+          <div style={{ ...cellMain, color: signedColor(pnl) }}>
+            {pnl > 0 ? '+' : pnl < 0 ? '−' : ''}Rs. {formatNumber(Math.abs(pnl))}
+          </div>
+          {prize > 0 && <div style={cellSub}>incl. prize Rs. {formatNumber(prize)}</div>}
+        </div>
+      );
+    },
+  },
+  {
+    header: 'Result',
     render: (m: any) => (
       <div>
-        <Badge variant={getResultBadgeVariant(m.result)}>{m.result?.toUpperCase()}</Badge>
-        {m.winningPrizeMoney > 0 && (
-          <div
-            style={{
-              fontSize: '11px',
-              color: 'var(--accent-green)',
-              fontWeight: 600,
-              marginTop: '2px',
-            }}
-          >
-            +Rs. {fNum(m.winningPrizeMoney)}
-          </div>
+        <Badge variant={getMatchResultVariant(m.result)}>{m.result || 'upcoming'}</Badge>
+        {m.momPlayerId?.name && (
+          <div style={{ ...cellSub, whiteSpace: 'nowrap' }}>MOM: {m.momPlayerId.name}</div>
         )}
       </div>
     ),
@@ -235,23 +118,17 @@ export const getMatchColumns = ({
     render: (m: any) => (
       <div
         className="action-group"
-        style={{ justifyContent: 'flex-end' }}
+        style={{ justifyContent: 'flex-end', flexWrap: 'nowrap' }}
         onClick={(e) => e.stopPropagation()}
       >
-        <Button
-          variant="secondary"
-          size="sm"
-          icon={<Users size={14} />}
-          onClick={() => onPayments(m._id)}
-          title="Track Squad Player Fees"
-        >
+        <Button variant="secondary" size="sm" onClick={() => onPayments(m._id)} title="Track Squad Player Fees">
           Player Fee
         </Button>
         <Button
           variant="secondary"
           size="sm"
           isIconOnly
-          icon={<Pencil size={14} color="var(--accent-blue)" />}
+          icon={<Pencil size={14} />}
           onClick={() => onEdit(m)}
           title="Edit Match"
         />
@@ -260,9 +137,7 @@ export const getMatchColumns = ({
           size="sm"
           isIconOnly
           icon={<Trash2 size={14} />}
-          onClick={() =>
-            onDelete(m._id, `${m.tournamentId?.name || ''} - ${m.venue}`)
-          }
+          onClick={() => onDelete(m._id, `${m.tournamentId?.name || ''} - ${m.venue}`)}
           title="Delete Match"
         />
       </div>
@@ -273,13 +148,11 @@ export const getMatchColumns = ({
 interface SquadPaymentColumnActions {
   onQuickPay: (paymentId: string, fullFee: number) => void;
   onDelete: (paymentId: string, playerName?: string) => void;
-  fNum: (val: number | undefined) => string;
 }
 
 export const getMatchSquadPaymentColumns = ({
   onQuickPay,
   onDelete,
-  fNum,
 }: SquadPaymentColumnActions): Column<MatchPayment>[] => [
   {
     header: 'Player',
@@ -296,13 +169,13 @@ export const getMatchSquadPaymentColumns = ({
   },
   {
     header: 'Assigned',
-    render: (p: any) => <>Rs. {fNum(p.feeAssigned)}</>,
+    render: (p: any) => <>Rs. {formatNumber(p.feeAssigned)}</>,
   },
   {
     header: 'Paid',
     render: (p: any) => (
       <span style={{ color: 'var(--accent-green)', fontWeight: 700 }}>
-        Rs. {fNum(p.feePaid)}
+        Rs. {formatNumber(p.feePaid)}
       </span>
     ),
   },
@@ -331,7 +204,6 @@ export const getMatchSquadPaymentColumns = ({
           <Button
             variant="success"
             size="sm"
-            icon={<CheckCircle2 size={14} />}
             onClick={() => onQuickPay(p._id, p.feeAssigned)}
             title="Mark as Paid"
           >

@@ -1,5 +1,6 @@
 import { Schema, model, Document, Types } from 'mongoose';
 import bcrypt from 'bcryptjs';
+import { UserRole } from '../enums';
 
 export interface IUser extends Document {
   tenantId: Types.ObjectId;
@@ -35,8 +36,8 @@ const UserSchema = new Schema<IUser>(
     playerId: { type: Schema.Types.ObjectId, ref: 'Player' },
     role: {
       type: String,
-      enum: ['super_admin', 'captain', 'treasurer', 'viewer'],
-      default: 'captain',
+      enum: Object.values(UserRole),
+      default: UserRole.CAPTAIN,
     },
     avatar: { type: String },
     isActive: { type: Boolean, default: true },

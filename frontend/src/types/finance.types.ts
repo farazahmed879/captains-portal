@@ -7,6 +7,8 @@ export interface Expense {
   amount: number;
   expenseDate: string;
   description?: string;
+  paidBy?: string;
+  receiptUrl?: string;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -28,4 +30,17 @@ export interface EditExpenseFormValues {
   amount: number | '';
   expenseDate: string;
   description: string;
+}
+
+/** One line on the Invested / Returns / Profit & Loss pages (GET /dashboard/ledger/:kind). */
+export interface MoneyLedgerItem {
+  id: string;
+  date: string | null;
+  category: string;
+  description: string;
+  detail?: string;
+  tournament?: { id: string; name: string } | null;
+  link?: string | null;
+  amount: number;
+  direction?: 'in' | 'out';
 }

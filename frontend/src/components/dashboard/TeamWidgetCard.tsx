@@ -1,5 +1,6 @@
 import React from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { Badge, Button, SubCard, KpiCell, CustomSelect } from '../ui';
 import {
   ShieldIcon,
@@ -7,6 +8,7 @@ import {
 } from '../icons';
 import { DashboardWidgetWrapper } from './DashboardWidgetWrapper';
 import styles from './TeamWidgetCard.module.css';
+import { EMPTY_VALUE } from '../../constants';
 
 export interface TeamWidgetCardProps {
   teamsList: any[];
@@ -25,6 +27,7 @@ export const TeamWidgetCard: React.FC<TeamWidgetCardProps> = ({
   onSelectTeam,
   onRemove,
 }) => {
+  const router = useRouter();
   const teamOptions = [
     { value: 'all', label: 'All Teams' },
     ...teamsList.map((tm) => ({
@@ -73,8 +76,8 @@ export const TeamWidgetCard: React.FC<TeamWidgetCardProps> = ({
     <DashboardWidgetWrapper
       title="Club Teams & Squads"
       icon={<ShieldIcon size={16} />}
-      iconBg="#dcfce7"
-      iconColor="#15803d"
+      iconBg="#e2e8f0"
+      iconColor="#166534"
       selector={selectorDropdown}
       onRemove={onRemove}
       removeTitle="Remove Team Widget"
@@ -86,8 +89,10 @@ export const TeamWidgetCard: React.FC<TeamWidgetCardProps> = ({
           {/* Individual Team Header Card */}
           <SubCard
             padding="lg"
-            borderLeftColor={selectedTeam.primaryColor || '#0284c7'}
+            borderLeftColor="#e2e8f0"
             className={styles.teamHeaderCard}
+            onClick={() => router.push(`/teams/${selectedTeam._id}`)}
+            title={`Open ${selectedTeam.name}`}
           >
             <div>
               <div className={styles.teamTitleGroup}>
@@ -98,17 +103,13 @@ export const TeamWidgetCard: React.FC<TeamWidgetCardProps> = ({
                   variant="purple"
                   className={styles.teamShortNameBadge}
                   style={{
-                    background: selectedTeam.primaryColor
-                      ? `${selectedTeam.primaryColor}18`
-                      : undefined,
-                    color: selectedTeam.primaryColor || '#0284c7',
                   }}
                 >
                   {selectedTeam.shortName}
                 </Badge>
               </div>
               <div className={styles.teamSubText}>
-                Base City: {selectedTeam.city || 'Karachi'}
+                Base City: {selectedTeam.city || EMPTY_VALUE}
                 {selectedTeam.description && ` • ${selectedTeam.description}`}
               </div>
             </div>
@@ -140,8 +141,8 @@ export const TeamWidgetCard: React.FC<TeamWidgetCardProps> = ({
           >
             <span>
               Jersey Color:{' '}
-              <strong style={{ color: selectedTeam.primaryColor || '#0284c7' }}>
-                {selectedTeam.primaryColor || '#0284c7'}
+              <strong>
+                {selectedTeam.primaryColor || '#475569'}
               </strong>
             </span>
             <Button
@@ -187,10 +188,10 @@ export const TeamWidgetCard: React.FC<TeamWidgetCardProps> = ({
                   key={tm._id}
                   padding="md"
                   borderRadius="8px"
-                  borderLeftColor={tm.primaryColor || '#0284c7'}
-                  onClick={() => onSelectTeam(tm._id)}
+                  borderLeftColor="#e2e8f0"
+                  onClick={() => router.push(`/teams/${tm._id}`)}
                   className={styles.teamCard}
-                  title={`Click to spotlight ${tm.name}`}
+                  title={`Open ${tm.name}`}
                 >
                   <div>
                     <div className={styles.teamListTitleGroup}>
@@ -201,15 +202,13 @@ export const TeamWidgetCard: React.FC<TeamWidgetCardProps> = ({
                         variant="purple"
                         className={styles.teamListBadge}
                         style={{
-                          background: tm.primaryColor ? `${tm.primaryColor}18` : undefined,
-                          color: tm.primaryColor || '#0284c7',
                         }}
                       >
                         {tm.shortName}
                       </Badge>
                     </div>
                     <div className={styles.teamListCity}>
-                      Base: {tm.city || 'Karachi'}
+                      Base: {tm.city || EMPTY_VALUE}
                     </div>
                   </div>
 

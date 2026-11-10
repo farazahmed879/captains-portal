@@ -2,12 +2,13 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { userRepository, playerRepository } from '../repositories';
 import { ApiError } from '../utils/apiError';
-import { AUTH_CONSTANTS, MESSAGES } from '../constants';
+import { AUTH_CONSTANTS, MESSAGES, SYSTEM_DEFAULTS } from '../constants';
 import { UserRole } from '../enums';
+import { getJwtSecret } from '../config/jwt';
 
 export class AuthService {
   private generateToken(user: { id: string; tenantId: string; email: string; role: string; name: string }): string {
-    const secret = process.env.JWT_SECRET || 'captains_portal_super_secret_jwt_key_2026';
+    const secret = getJwtSecret();
     return jwt.sign(
       {
         id: user.id,
@@ -24,6 +25,9 @@ export class AuthService {
   async login(rawIdentifier: string, password?: string) {
     if (!rawIdentifier || !rawIdentifier.trim()) {
       throw ApiError.badRequest(MESSAGES.LOGIN_REQUIRED_IDENTIFIER);
+    }
+    if (!password) {
+      throw ApiError.badRequest('Password is required.');
     }
 
     const trimmed = rawIdentifier.trim();
@@ -43,7 +47,7 @@ export class AuthService {
         user = await userRepository.findByEmail(player.tenantId, playerEmail);
 
         if (!user) {
-          const hashedPassword = await bcrypt.hash(password || 'player123', AUTH_CONSTANTS.SALT_ROUNDS);
+          const hashedPassword = await bcrypt.hash(password, AUTH_CONSTANTS.SALT_ROUNDS);
           user = await userRepository.create({
             tenantId: player.tenantId,
             name: player.name,
@@ -66,12 +70,10 @@ export class AuthService {
       throw ApiError.forbidden(MESSAGES.ACCOUNT_SUSPENDED);
     }
 
-    // Verify Password
-    if (password) {
-      const isMatch = await bcrypt.compare(password, user.password);
-      if (!isMatch) {
-        throw ApiError.unauthorized(MESSAGES.LOGIN_INCORRECT_PASSWORD);
-      }
+    // Verify Password (always required)
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) {
+      throw ApiError.unauthorized(MESSAGES.LOGIN_INCORRECT_PASSWORD);
     }
 
     const token = this.generateToken(user);
@@ -187,8 +189,8 @@ export class AuthService {
     if (!tenant) {
       tenant = await prisma.tenant.create({
         data: {
-          name: data.teamName || 'Gulzar Cricket Club',
-          slug: (data.teamName || 'gulzar-cricket-club').toLowerCase().replace(/\s+/g, '-'),
+          name: data.teamName || SYSTEM_DEFAULTS.CLUB_NAME,
+          slug: (data.teamName || SYSTEM_DEFAULTS.CLUB_NAME).toLowerCase().replace(/\s+/g, '-'),
           isActive: true,
         },
       });
@@ -202,7 +204,8 @@ export class AuthService {
       email: userEmail,
       phone: data.phone ? data.phone.trim() : undefined,
       password: hashedPassword,
-      role: data.role || UserRole.CAPTAIN,
+      // Self-registration always creates a captain; roles are granted by admins only.
+      role: UserRole.CAPTAIN,
       isActive: true,
     });
 
@@ -221,6 +224,54 @@ export class AuthService {
     };
   }
 
+  /** Lets a signed-in user edit their own name, email and phone. Role and team are not editable here. */
+  async updateMe(userId: string, data: { name?: string; email?: string; phone?: string }) {
+    const user = await userRepository.findById(userId);
+    if (!user) throw ApiError.notFound(MESSAGES.USER_NOT_FOUND);
+
+    const name = (data.name ?? user.name).trim();
+    const email = (data.email ?? user.email).trim().toLowerCase();
+    const phone = (data.phone ?? user.phone ?? '').trim();
+
+    if (!name) throw ApiError.badRequest('Name is required.');
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      throw ApiError.badRequest('Please enter a valid email address.');
+    }
+
+    // Login matches email/phone across all accounts, so they must stay unique everywhere.
+    if (email !== user.email.toLowerCase()) {
+      const taken = await userRepository.findByIdentifier(email);
+      if (taken && taken.id !== userId) throw ApiError.conflict(MESSAGES.EMAIL_ALREADY_EXISTS);
+    }
+    if (phone && phone !== (user.phone || '')) {
+      const taken = await userRepository.findByIdentifier(phone);
+      if (taken && taken.id !== userId) throw ApiError.conflict(MESSAGES.PHONE_ALREADY_EXISTS);
+    }
+
+    await userRepository.update(userId, { name, email, phone: phone || null });
+    return this.getMe(userId);
+  }
+
+  /** Changes the signed-in user's password after confirming the current one. */
+  async changePassword(userId: string, currentPassword?: string, newPassword?: string) {
+    if (!currentPassword || !newPassword) {
+      throw ApiError.badRequest('Current and new password are required.');
+    }
+    if (newPassword.length < 6) {
+      throw ApiError.badRequest('New password must be at least 6 characters.');
+    }
+    const user = await userRepository.findById(userId);
+    if (!user) throw ApiError.notFound(MESSAGES.USER_NOT_FOUND);
+
+    const isMatch = await bcrypt.compare(currentPassword, user.password);
+    // 400, not 401: the client treats 401 as an expired session and signs the user out.
+    if (!isMatch) throw ApiError.badRequest('Current password is incorrect.');
+
+    const password = await bcrypt.hash(newPassword, AUTH_CONSTANTS.SALT_ROUNDS);
+    await userRepository.update(userId, { password });
+    return { message: 'Password updated.' };
+  }
+
   async updateDashboardSettings(userId: string, settings: any) {
     return userRepository.updateDashboardSettings(userId, settings);
   }
@@ -235,9 +286,7 @@ export class AuthService {
       throw ApiError.notFound(MESSAGES.USER_NOT_FOUND);
     }
 
-    const isMatch =
-      (await bcrypt.compare(password, user.password)) ||
-      password === user.password;
+    const isMatch = await bcrypt.compare(password, user.password);
 
     if (!isMatch) {
       throw ApiError.unauthorized(MESSAGES.LOGIN_INCORRECT_PASSWORD);

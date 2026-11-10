@@ -1,4 +1,6 @@
 import { Schema, model, Document, Types } from 'mongoose';
+import { TeamType } from '../enums';
+import { SYSTEM_DEFAULTS } from '../constants';
 
 export interface ITeam extends Document {
   tenantId: Types.ObjectId;
@@ -22,11 +24,11 @@ const TeamSchema = new Schema<ITeam>(
     captainId: { type: Schema.Types.ObjectId, ref: 'User', required: false },
     name: { type: String, required: true, trim: true },
     shortName: { type: String, required: true, uppercase: true, trim: true },
-    teamType: { type: String, default: 'my_team' },
+    teamType: { type: String, enum: Object.values(TeamType), default: TeamType.MY_TEAM },
     phone: { type: String, trim: true },
-    city: { type: String, default: 'Karachi' },
+    city: { type: String, default: SYSTEM_DEFAULTS.CITY },
     logo: { type: String },
-    primaryColor: { type: String, default: '#0284c7' },
+    primaryColor: { type: String, default: SYSTEM_DEFAULTS.PRIMARY_COLOR },
     description: { type: String },
     isActive: { type: Boolean, default: true },
   },

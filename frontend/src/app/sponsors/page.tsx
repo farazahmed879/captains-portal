@@ -16,46 +16,33 @@ import {
   Badge,
   Input,
   Select,
-  Textarea,
   Modal,
   Card,
-  Table,
-  TableHeader,
-  TableBody,
-  TableRow,
-  TableHead,
-  TableCell,
-  TableEmpty,
   DataTable,
   Pagination,
   ViewSwitcher,
   CardGridSkeleton,
   BulkActionBar,
   GridSelectCheckbox,
+  ListToolbar,
 } from '../../components/ui';
 import {
-  Handshake,
-  Plus,
-  DollarSign,
-  TrendingUp,
-  Building2,
-  Calendar,
-  CheckCircle2,
-  RotateCcw,
   Pencil,
   Trash2,
-  ExternalLink,
-  Eye,
   Search,
 } from '../../components/icons';
 import { SponsorTransactionModal, SponsorTxType } from '../../components/SponsorTransactionModal';
 import { CreateSponsorModal } from '../../components/CreateSponsorModal';
 import { EditSponsorModal } from '../../components/EditSponsorModal';
+import { useIsMobile } from '../../lib/useMediaQuery';
+import { formatNumber } from '../../lib/format';
+import { getSponsorStatusVariant } from '../../constants/badgeVariants';
+import { withAllOption, SPONSOR_CONTRACT_OPTIONS } from '../../constants';
+import { usePageSize } from '../../lib/usePageSize';
 
 export default function SponsorsPage() {
   const router = useRouter();
   const queryClient = useQueryClient();
-  const [selectedTeamId, setSelectedTeamId] = useState<string>('');
 
   // Modals
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
@@ -70,16 +57,15 @@ export default function SponsorsPage() {
 
   // React Queries
   const sponsorsQuery = useQuery({
-    queryKey: ['sponsors', { teamId: selectedTeamId }],
+    queryKey: ['sponsors'],
     queryFn: () => {
-      const query = selectedTeamId ? `?teamId=${selectedTeamId}` : '';
       return fetchApi<{
         success: boolean;
         totalInvested: number;
         totalReturnsPaid: number;
         netRetained: number;
         sponsors: any[];
-      }>(`/sponsors${query}`);
+      }>('/sponsors');
     },
   });
 
@@ -119,10 +105,10 @@ export default function SponsorsPage() {
     }
   };
 
-
-  const fNum = (val: number | undefined) => (val || 0).toLocaleString('en-US');
-
-  const [viewMode, setViewMode] = useState<'grid' | 'table'>('table');
+  const [preferredView, setViewMode] = useState<'grid' | 'table'>('table');
+  // Phones always show the list; the List/Grid switch is hidden there (globals.css).
+  const isMobile = useIsMobile();
+  const viewMode = isMobile ? 'table' : preferredView;
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [contractFilter, setContractFilter] = useState<string>('');
   const [currentPage, setCurrentPage] = useState<number>(1);
@@ -149,7 +135,7 @@ export default function SponsorsPage() {
       setIsBulkDeleting(false);
     }
   };
-  const pageSize = 8;
+  const [pageSize, setPageSize] = usePageSize('sponsors');
 
   const filteredSponsors = sponsors.filter(
     (s) => {
@@ -168,17 +154,6 @@ export default function SponsorsPage() {
     currentPage * pageSize
   );
 
-  const getStatusBadgeVariant = (status?: string) => {
-    switch (status?.toLowerCase()) {
-      case 'active':
-        return 'success' as const;
-      case 'completed':
-        return 'primary' as const;
-      default:
-        return 'warning' as const;
-    }
-  };
-
   const sponsorColumns = useMemo(
     () =>
       getSponsorColumns({
@@ -186,10 +161,8 @@ export default function SponsorsPage() {
         onPayout: (spons) => openTxModal(spons, 'payout'),
         onEdit: handleEditOpen,
         onDelete: handleDelete,
-        getStatusBadgeVariant,
-        fNum,
       }),
-    [fNum]
+    [openTxModal, handleEditOpen, handleDelete]
   );
 
   return (
@@ -197,11 +170,6 @@ export default function SponsorsPage() {
       <Header
         title="Sponsors & Brand Grants"
         subtitle="Manage Brand Sponsorships, Deliverables & Full Edit/Delete Capabilities"
-        selectedTeamId={selectedTeamId}
-        onTeamChange={(id) => {
-          setSelectedTeamId(id);
-          setCurrentPage(1);
-        }}
       />
 
       <div className="content-body">
@@ -210,74 +178,46 @@ export default function SponsorsPage() {
           <StatCard
             variant="blue"
             title="Total Sponsorship Inflow"
-            value={`Rs. ${fNum(totalInvested)}`}
+            value={`Rs. ${formatNumber(totalInvested)}`}
             subtitle="Brand Partners Contributions"
-            icon={<Handshake size={20} color="var(--accent-blue)" />}
           />
           <StatCard
             variant="rose"
             title="Payouts / Returns"
-            value={`Rs. ${fNum(totalReturnsPaid)}`}
+            value={`Rs. ${formatNumber(totalReturnsPaid)}`}
             subtitle="Prize shares returned to sponsors"
-            icon={<RotateCcw size={20} color="var(--accent-rose)" />}
           />
           <StatCard
             variant="emerald"
             title="Net Retained Team Fund"
-            value={`Rs. ${fNum(netRetained)}`}
+            value={`Rs. ${formatNumber(netRetained)}`}
             subtitle="Available club balance"
-            icon={<DollarSign size={20} color="var(--accent-green)" />}
           />
         </div>
 
         {/* Action & Filter Toolbar */}
-        <div className="filter-bar">
-          <div className="filter-bar-left">
-            <div className="filter-field filter-field-search" style={{ width: '260px' }}>
-              <Input
-                placeholder="Search sponsor or brand..."
-                value={searchQuery}
-                onChange={(e) => {
-                  setSearchQuery(e.target.value);
-                  setCurrentPage(1);
-                }}
-                icon={<Search size={14} />}
-              />
-            </div>
-
-            <div className="filter-field" style={{ width: '190px' }}>
-              <Select
-                value={contractFilter}
-                onChange={(e) => {
-                  setContractFilter(e.target.value);
-                  setCurrentPage(1);
-                }}
-                options={[
-                  { value: '', label: 'All Contracts' },
-                  { value: 'jersey_front', label: 'Jersey Front' },
-                  { value: 'jersey_back', label: 'Jersey Back' },
-                  { value: 'sleeve', label: 'Sleeve' },
-                  { value: 'tournament_banner', label: 'Tournament Banner' },
-                  { value: 'equipment_kit', label: 'Equipment & Kit' },
-                  { value: 'general_grant', label: 'General Grant' },
-                ]}
-              />
-            </div>
-          </div>
-
-          <div className="filter-bar-right">
-            <ViewSwitcher viewMode={viewMode} onChange={setViewMode} />
-
-            <Button
-              variant="primary"
-              size="sm"
-              icon={<Plus size={15} />}
-              onClick={() => setIsModalOpen(true)}
-            >
-              Add Brand Sponsor
-            </Button>
-          </div>
-        </div>
+        <ListToolbar
+          search={{
+            placeholder: 'Search sponsor or brand...',
+            value: searchQuery,
+            onChange: (value) => {
+              setSearchQuery(value);
+              setCurrentPage(1);
+            },
+          }}
+          filters={[
+            {
+              value: contractFilter,
+              onChange: (value) => {
+                setContractFilter(value);
+                setCurrentPage(1);
+              },
+              options: withAllOption('All Contracts', SPONSOR_CONTRACT_OPTIONS),
+            },
+          ]}
+          view={{ value: viewMode, onChange: setViewMode }}
+          add={{ label: 'Add Brand Sponsor', onClick: () => setIsModalOpen(true) }}
+        />
 
         <BulkActionBar
           selectedIds={selectedIds}
@@ -310,6 +250,10 @@ export default function SponsorsPage() {
             totalPages={totalPages}
             totalItems={filteredSponsors.length}
             pageSize={pageSize}
+            onPageSizeChange={(size) => {
+              setPageSize(size);
+              setCurrentPage(1);
+            }}
             onPageChange={setCurrentPage}
             itemName="Sponsors"
           />
@@ -343,7 +287,7 @@ export default function SponsorsPage() {
                       <Badge variant="purple" style={{ textTransform: 'capitalize' }}>
                         {spons.contractType.replace(/_/g, ' ')}
                       </Badge>
-                      <Badge variant={getStatusBadgeVariant(spons.status)}>
+                      <Badge variant={getSponsorStatusVariant(spons.status)}>
                         {spons.status.toUpperCase()}
                       </Badge>
                     </div>
@@ -351,7 +295,7 @@ export default function SponsorsPage() {
                       href={`/sponsors/${spons._id}`}
                       style={{
                         fontSize: '19px',
-                        fontWeight: 800,
+                        fontWeight: 700,
                         color: 'var(--text-primary)',
                         textDecoration: 'none',
                         display: 'flex',
@@ -360,7 +304,6 @@ export default function SponsorsPage() {
                       }}
                     >
                       <span>{spons.companyName || spons.sponsorName}</span>
-                      <ExternalLink size={12} color="var(--accent-blue)" />
                     </Link>
                     <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '2px' }}>
                       Contact: {spons.sponsorName}
@@ -391,8 +334,8 @@ export default function SponsorsPage() {
                   <div style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase' }}>
                     Amount Invested
                   </div>
-                  <div style={{ fontSize: '22px', fontWeight: 800, color: 'var(--accent-blue)' }}>
-                    Rs. {fNum(spons.amountInvested)}
+                  <div style={{ fontSize: '22px', fontWeight: 700, color: 'var(--accent-blue)' }}>
+                    Rs. {formatNumber(spons.amountInvested)}
                   </div>
                 </div>
 
@@ -423,7 +366,7 @@ export default function SponsorsPage() {
                   }}
                 >
                   <div>
-                    Returns Paid: <strong style={{ color: 'var(--accent-rose)' }}>Rs. {fNum(spons.returnsPaid)}</strong>
+                    Returns Paid: <strong style={{ color: 'var(--accent-rose)' }}>Rs. {formatNumber(spons.returnsPaid)}</strong>
                   </div>
 
                   <div className="action-group">
@@ -431,7 +374,6 @@ export default function SponsorsPage() {
                       <Button
                         variant="secondary"
                         size="sm"
-                        icon={<Eye size={12} color="var(--accent-blue)" />}
                       >
                         Profile
                       </Button>
@@ -439,7 +381,6 @@ export default function SponsorsPage() {
                     <Button
                       variant="success"
                       size="sm"
-                      icon={<Plus size={12} />}
                       onClick={() => openTxModal(spons, 'investment')}
                     >
                       Add Funds
@@ -447,7 +388,6 @@ export default function SponsorsPage() {
                     <Button
                       variant="secondary"
                       size="sm"
-                      icon={<RotateCcw size={12} />}
                       onClick={() => openTxModal(spons, 'payout')}
                     >
                       Payout
@@ -464,6 +404,10 @@ export default function SponsorsPage() {
             totalPages={totalPages}
             totalItems={filteredSponsors.length}
             pageSize={pageSize}
+            onPageSizeChange={(size) => {
+              setPageSize(size);
+              setCurrentPage(1);
+            }}
             onPageChange={setCurrentPage}
             itemName="Sponsors"
           />

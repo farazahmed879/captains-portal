@@ -3,12 +3,17 @@
 import React, { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { Modal } from './Modal';
-import { Input, Select, Button, Alert, DataTable, Badge, StatBadge } from './ui';
-import { Plus, CheckCircle2, AlertCircle } from './icons';
+import { Input, Select, Button, Alert, DataTable, StatBadge } from './ui';
+import {
+  Plus,
+  AlertCircle,
+} from './icons';
 import { fetchApi } from '../lib/api';
 import { confirmDuesClear, showToast } from '../lib/alerts';
 import { PAYMENT_METHOD_OPTIONS, PaymentMethod } from '../constants';
-import { formatCurrency, formatNumber, formatDate } from '../lib/format';
+import { formatCurrency, formatNumber } from '../lib/format';
+import { matchOptions } from '../lib/options';
+import { getPendingMatchFeeColumns } from '../columns/matchFeeColumns';
 
 interface MatchPaymentFormValues {
   matchId: string;
@@ -268,7 +273,6 @@ export const CollectMatchFeeModal: React.FC<CollectMatchFeeModalProps> = ({
                 <Button
                   variant="success"
                   size="sm"
-                  icon={<CheckCircle2 size={14} />}
                   onClick={handleClearAllPendingDues}
                 >
                   Clear All Pending ({formatCurrency(totalPending)})
@@ -285,62 +289,7 @@ export const CollectMatchFeeModal: React.FC<CollectMatchFeeModalProps> = ({
                 data={pendingMatches}
                 keyExtractor={(rec) => rec._id}
                 emptyMessage="No pending matches found."
-                columns={[
-                  {
-                    header: 'Match / Venue',
-                    render: (rec) => {
-                      const match = rec.matchId;
-                      return (
-                        <div>
-                          <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>
-                            vs {match?.opponentTeam || 'Opponent'}
-                          </div>
-                          <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-                            {match?.venue || 'Venue'} • {match?.matchDate ? formatDate(match.matchDate, '') : ''}
-                          </div>
-                        </div>
-                      );
-                    },
-                  },
-                  {
-                    header: 'Assigned',
-                    render: (rec) => formatCurrency(rec.feeAssigned),
-                  },
-                  {
-                    header: 'Paid',
-                    render: (rec) => (
-                      <span style={{ color: 'var(--accent-green)', fontWeight: 600 }}>
-                        {formatCurrency(rec.feePaid)}
-                      </span>
-                    ),
-                  },
-                  {
-                    header: 'Balance',
-                    render: (rec) => {
-                      const bal = (rec.feeAssigned || 0) - (rec.feePaid || 0);
-                      return (
-                        <span style={{ color: 'var(--accent-rose)', fontWeight: 700 }}>
-                          {formatCurrency(bal)}
-                        </span>
-                      );
-                    },
-                  },
-                  {
-                    header: 'Action',
-                    align: 'right',
-                    render: (rec) => (
-                      <Button
-                        variant="success"
-                        size="sm"
-                        icon={<CheckCircle2 size={13} />}
-                        onClick={() => handleQuickPayMatch(rec._id, rec.feeAssigned)}
-                        title="Mark Cleared"
-                      >
-                        Mark Paid
-                      </Button>
-                    ),
-                  },
-                ]}
+                columns={getPendingMatchFeeColumns({ handleQuickPayMatch })}
               />
             )}
           </div>
@@ -350,7 +299,7 @@ export const CollectMatchFeeModal: React.FC<CollectMatchFeeModalProps> = ({
             style={{
               padding: '16px',
               background: '#f0f9ff',
-              border: '1px solid #bae6fd',
+              border: '1px solid #cbd5e1',
               borderRadius: '10px',
             }}
           >
@@ -385,13 +334,7 @@ export const CollectMatchFeeModal: React.FC<CollectMatchFeeModalProps> = ({
                       setValue('feePaid', fee);
                     }
                   }}
-                  options={[
-                    { value: '', label: '— Choose Match —' },
-                    ...allMatches.map((m) => ({
-                      value: m._id,
-                      label: `vs ${m.opponentTeam} (${formatDate(m.matchDate)}) - ${m.venue || ''}`,
-                    })),
-                  ]}
+                  options={matchOptions(allMatches, '— Choose Match —')}
                 />
                 <Select
                   label="Payment Method"

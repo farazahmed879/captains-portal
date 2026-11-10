@@ -6,7 +6,7 @@ import { queryKeys } from "../../lib/queryKeys";
 import { Header } from "../../components/Header";
 import { StatCard } from "../../components/StatCard";
 import { fetchApi } from "../../lib/api";
-import { formatDate } from "../../lib/format";
+import { formatDate, formatNumber } from "../../lib/format";
 import { confirmDelete, confirmBulkDelete, showToast } from "../../lib/alerts";
 import {
   Button,
@@ -19,23 +19,26 @@ import {
   ViewSwitcher,
   BulkActionBar,
   GridSelectCheckbox,
+  ListToolbar,
 } from "../../components/ui";
 import {
-  Receipt,
-  Plus,
-  Calendar,
-  Tag,
-  TrendingDown,
   Trash2,
   Pencil,
   Search,
 } from "../../components/icons";
 import { CreateExpenseModal } from "../../components/CreateExpenseModal";
 import { EditExpenseModal } from "../../components/EditExpenseModal";
+import { useIsMobile } from "../../lib/useMediaQuery";
+import {
+  withAllOption,
+  EXPENSE_CATEGORY_OPTIONS,
+  ExpenseCategory,
+} from "../../constants";
+import { getExpenseColumns } from "../../columns/expenseColumns";
+import { usePageSize } from "../../lib/usePageSize";
 
 export default function FinancesPage() {
   const queryClient = useQueryClient();
-  const [selectedTeamId, setSelectedTeamId] = useState<string>("");
   const [categoryFilter, setCategoryFilter] = useState<string>("");
 
   // Modals
@@ -47,11 +50,10 @@ export default function FinancesPage() {
   const expensesQuery = useQuery({
     queryKey: [
       "expenses",
-      { teamId: selectedTeamId, category: categoryFilter },
+      { category: categoryFilter },
     ],
     queryFn: () => {
-      let query = `?teamId=${selectedTeamId}`;
-      if (categoryFilter) query += `&category=${categoryFilter}`;
+      const query = categoryFilter ? `?category=${categoryFilter}` : '';
       return fetchApi<{
         success: boolean;
         totalAmount: number;
@@ -75,6 +77,8 @@ export default function FinancesPage() {
   const expenses = expensesQuery.data?.expenses || [];
   const totalAmount = expensesQuery.data?.totalAmount || 0;
   const categoryTotals = expensesQuery.data?.categoryTotals || {};
+  const countIn = (category: ExpenseCategory) => expenses.filter((e) => e.category === category).length;
+  const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`;
   const teams = teamsQuery.data?.teams || [];
   const tournaments = tournamentsQuery.data?.tournaments || [];
   const loading =
@@ -108,9 +112,10 @@ export default function FinancesPage() {
     }
   };
 
-  const fNum = (val: number | undefined) => (val || 0).toLocaleString("en-US");
-
-  const [viewMode, setViewMode] = useState<"table" | "grid">("table");
+  const [preferredView, setViewMode] = useState<"table" | "grid">("table");
+  // Phones always show the list; the List/Grid switch is hidden there (globals.css).
+  const isMobile = useIsMobile();
+  const viewMode = isMobile ? "table" : preferredView;
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
@@ -142,7 +147,7 @@ export default function FinancesPage() {
       setIsBulkDeleting(false);
     }
   };
-  const pageSize = 12;
+  const [pageSize, setPageSize] = usePageSize('expenses');
 
   const filteredExpenses = expenses.filter(
     (exp) =>
@@ -164,11 +169,6 @@ export default function FinancesPage() {
       <Header
         title="Team Expenditures & Financial Ledger"
         subtitle="Manage Kits Manufacturing, Caps, Floppies, Marketing & Edit/Delete Expenses"
-        selectedTeamId={selectedTeamId}
-        onTeamChange={(id) => {
-          setSelectedTeamId(id);
-          setCurrentPage(1);
-        }}
       />
 
       <div className="content-body">
@@ -177,79 +177,46 @@ export default function FinancesPage() {
           <StatCard
             variant="rose"
             title="Total Expenditures"
-            value={`Rs. ${fNum(totalAmount)}`}
-            subtitle="Normalized Outflow from Sheet"
-            icon={<TrendingDown size={20} color="var(--accent-rose)" />}
+            value={`Rs. ${formatNumber(totalAmount)}`}
+            subtitle={plural(expenses.length, "expense")}
           />
           <StatCard
             variant="blue"
             title="Kits & Uniforms"
-            value={`Rs. ${fNum(categoryTotals.kit_jerseys)}`}
-            subtitle="23 Players Customized Sets"
-            icon={<Receipt size={20} color="var(--accent-blue)" />}
+            value={`Rs. ${formatNumber(categoryTotals[ExpenseCategory.KIT_JERSEYS])}`}
+            subtitle={plural(countIn(ExpenseCategory.KIT_JERSEYS), "purchase")}
           />
           <StatCard
             variant="purple"
-            title="Caps, Floppies & Media"
-            value={`Rs. ${fNum((categoryTotals.equipment || 0) + (categoryTotals.other || 0))}`}
-            subtitle="Caps Rs 6,000 + Marketing Rs 3,000"
-            icon={<Tag size={20} color="var(--accent-purple)" />}
+            title="Equipment & Other"
+            value={`Rs. ${formatNumber((categoryTotals[ExpenseCategory.EQUIPMENT] || 0) + (categoryTotals[ExpenseCategory.OTHER] || 0))}`}
+            subtitle={`Equipment Rs. ${formatNumber(categoryTotals[ExpenseCategory.EQUIPMENT])} · Other Rs. ${formatNumber(categoryTotals[ExpenseCategory.OTHER])}`}
           />
         </div>
 
         {/* Filter & Toolbar */}
-        <div className="filter-bar">
-          <div
-            style={{
-              display: "flex",
-              gap: "10px",
-              alignItems: "center",
-              flexWrap: "wrap",
-            }}
-          >
-            <div style={{ width: "220px" }}>
-              <Input
-                placeholder="Search expense title..."
-                value={searchQuery}
-                onChange={(e) => {
-                  setSearchQuery(e.target.value);
-                  setCurrentPage(1);
-                }}
-                icon={<Search size={14} />}
-              />
-            </div>
-
-            <div style={{ width: "180px" }}>
-              <Select
-                value={categoryFilter}
-                onChange={(e) => {
-                  setCategoryFilter(e.target.value);
-                  setCurrentPage(1);
-                }}
-                options={[
-                  { value: "", label: "All Categories" },
-                  { value: "kit_jerseys", label: "Jerseys & Kits" },
-                  { value: "equipment", label: "Caps & Gear" },
-                  { value: "tournament_entry_fee", label: "Tournament Fee" },
-                  { value: "other", label: "Marketing & Media" },
-                ]}
-              />
-            </div>
-          </div>
-
-          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-            <ViewSwitcher viewMode={viewMode} onChange={setViewMode} />
-
-            <Button
-              variant="primary"
-              size="sm"
-              icon={<Plus size={15} />}
-              onClick={() => setIsModalOpen(true)}
-            >
-              Add Expense
-            </Button>
-          </div>
-        </div>
+        <ListToolbar
+          search={{
+            placeholder: 'Search expense title...',
+            value: searchQuery,
+            onChange: (value) => {
+              setSearchQuery(value);
+              setCurrentPage(1);
+            },
+          }}
+          filters={[
+            {
+              value: categoryFilter,
+              onChange: (value) => {
+                setCategoryFilter(value);
+                setCurrentPage(1);
+              },
+              options: withAllOption('All Categories', EXPENSE_CATEGORY_OPTIONS),
+            },
+          ]}
+          view={{ value: viewMode, onChange: setViewMode }}
+          add={{ label: 'Add Expense', onClick: () => setIsModalOpen(true) }}
+        />
 
         <BulkActionBar
           selectedIds={selectedIds}
@@ -273,118 +240,7 @@ export default function FinancesPage() {
               selectable
               selectedIds={selectedIds}
               onSelectionChange={setSelectedIds}
-              columns={[
-                {
-                  header: "Date",
-                  render: (exp) => (
-                    <div
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "5px",
-                        whiteSpace: "nowrap",
-                      }}
-                    >
-                      <Calendar size={12} color="var(--text-muted)" />
-                      <span>
-                        {formatDate(exp.expenseDate)}
-                      </span>
-                    </div>
-                  ),
-                },
-                {
-                  header: "Title & Description",
-                  render: (exp) => (
-                    <div>
-                      <div
-                        style={{
-                          fontWeight: 700,
-                          color: "var(--text-primary)",
-                        }}
-                      >
-                        {exp.title}
-                      </div>
-                      {exp.description && (
-                        <div
-                          style={{
-                            fontSize: "11px",
-                            color: "var(--text-muted)",
-                            marginTop: "2px",
-                          }}
-                        >
-                          {exp.description}
-                        </div>
-                      )}
-                    </div>
-                  ),
-                },
-                {
-                  header: "Category",
-                  render: (exp) => (
-                    <Badge
-                      variant="primary"
-                      style={{ textTransform: "capitalize" }}
-                    >
-                      {exp.category?.replace(/_/g, " ")}
-                    </Badge>
-                  ),
-                },
-                {
-                  header: "Paid By",
-                  render: (exp) => (
-                    <span style={{ color: "var(--text-secondary)" }}>
-                      {exp.paidBy || "Captain Faraz"}
-                    </span>
-                  ),
-                },
-                {
-                  header: "Amount",
-                  render: (exp) => (
-                    <span
-                      style={{
-                        fontSize: "15px",
-                        fontWeight: 800,
-                        color: "var(--accent-rose)",
-                      }}
-                    >
-                      Rs. {fNum(exp.amount)}
-                    </span>
-                  ),
-                },
-                {
-                  header: "Actions",
-                  align: "right",
-                  render: (exp) => (
-                    <div
-                      className="action-group"
-                      style={{ justifyContent: "flex-end" }}
-                    >
-                      <Button
-                        variant="secondary"
-                        size="sm"
-                        isIconOnly
-                        icon={<Pencil size={14} color="var(--accent-blue)" />}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleEditOpen(exp);
-                        }}
-                        title="Edit Expense"
-                      />
-                      <Button
-                        variant="danger"
-                        size="sm"
-                        isIconOnly
-                        icon={<Trash2 size={14} />}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleDelete(exp._id, exp.title);
-                        }}
-                        title="Delete Expense"
-                      />
-                    </div>
-                  ),
-                },
-              ]}
+              columns={getExpenseColumns({ handleEditOpen, handleDelete })}
             />
 
             <Pagination
@@ -392,6 +248,10 @@ export default function FinancesPage() {
               totalPages={totalPages}
               totalItems={filteredExpenses.length}
               pageSize={pageSize}
+              onPageSizeChange={(size) => {
+                setPageSize(size);
+                setCurrentPage(1);
+              }}
               onPageChange={setCurrentPage}
               itemName="Expenses"
             />
@@ -452,7 +312,7 @@ export default function FinancesPage() {
                   <h3
                     style={{
                       fontSize: "16px",
-                      fontWeight: 800,
+                      fontWeight: 700,
                       color: "var(--text-primary)",
                       marginBottom: "4px",
                     }}
@@ -504,11 +364,11 @@ export default function FinancesPage() {
                       <div
                         style={{
                           fontSize: "18px",
-                          fontWeight: 800,
-                          color: "var(--accent-rose)",
+                          fontWeight: 600,
+                          color: "var(--text-primary)",
                         }}
                       >
-                        Rs. {fNum(exp.amount)}
+                        Rs. {formatNumber(exp.amount)}
                       </div>
                       <div
                         style={{ fontSize: "11px", color: "var(--text-muted)" }}
@@ -526,6 +386,10 @@ export default function FinancesPage() {
               totalPages={totalPages}
               totalItems={filteredExpenses.length}
               pageSize={pageSize}
+              onPageSizeChange={(size) => {
+                setPageSize(size);
+                setCurrentPage(1);
+              }}
               onPageChange={setCurrentPage}
               itemName="Expenses"
             />

@@ -7,6 +7,10 @@ import { connectDB } from './config/db';
 import { connectPrisma } from './config/prisma';
 import { errorHandler } from './middlewares/errorHandler';
 import { setupSwagger } from './config/swagger';
+import { getJwtSecret } from './config/jwt';
+
+// Fail fast: refuse to start without a signing secret rather than run with a guessable one.
+getJwtSecret();
 
 import authRoutes from './routes/authRoutes';
 import teamRoutes from './routes/teamRoutes';

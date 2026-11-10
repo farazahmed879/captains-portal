@@ -1,4 +1,5 @@
 import { Schema, model, Document, Types } from 'mongoose';
+import { PlayerRole, BattingStyle, BowlingStyle } from '../enums';
 
 export interface IPlayer extends Document {
   tenantId: Types.ObjectId;
@@ -27,18 +28,18 @@ const PlayerSchema = new Schema<IPlayer>(
     email: { type: String, lowercase: true, trim: true },
     role: {
       type: String,
-      enum: ['batsman', 'bowler', 'all_rounder', 'wicket_keeper'],
-      default: 'all_rounder',
+      enum: Object.values(PlayerRole),
+      default: PlayerRole.ALL_ROUNDER,
     },
     battingStyle: {
       type: String,
-      enum: ['right_hand', 'left_hand'],
-      default: 'right_hand',
+      enum: Object.values(BattingStyle),
+      default: BattingStyle.RIGHT_HAND,
     },
     bowlingStyle: {
       type: String,
-      enum: ['right_arm_fast', 'right_arm_medium', 'right_arm_spin', 'left_arm_fast', 'left_arm_spin', 'none'],
-      default: 'right_arm_medium',
+      enum: Object.values(BowlingStyle),
+      default: BowlingStyle.RIGHT_ARM_MEDIUM,
     },
     jerseyNumber: { type: Number },
     profilePhoto: { type: String },

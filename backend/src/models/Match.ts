@@ -1,4 +1,5 @@
 import { Schema, model, Document, Types } from 'mongoose';
+import { MatchType, MatchStage, MatchResult } from '../enums';
 
 export interface IMatch extends Document {
   tenantId: Types.ObjectId;
@@ -49,15 +50,15 @@ const MatchSchema = new Schema<IMatch>(
     teamId: { type: Schema.Types.ObjectId, ref: 'Team', required: true, index: true },
     matchType: {
       type: String,
-      enum: ['friendly', 'tournament'],
+      enum: Object.values(MatchType),
       required: true,
-      default: 'friendly',
+      default: MatchType.FRIENDLY,
     },
     tournamentId: { type: Schema.Types.ObjectId, ref: 'Tournament' },
     tournamentStage: {
       type: String,
-      enum: ['group', 'quarter_final', 'semi_final', 'final', 'regular'],
-      default: 'regular',
+      enum: Object.values(MatchStage),
+      default: MatchStage.REGULAR,
     },
     matchDate: { type: Date, required: true },
     opponentTeam: { type: String, required: true, trim: true },
@@ -79,8 +80,8 @@ const MatchSchema = new Schema<IMatch>(
 
     result: {
       type: String,
-      enum: ['won', 'lost', 'draw', 'tied', 'upcoming', 'cancelled'],
-      default: 'upcoming',
+      enum: Object.values(MatchResult),
+      default: MatchResult.UPCOMING,
     },
     teamScore: { type: String, trim: true },
     opponentScore: { type: String, trim: true },

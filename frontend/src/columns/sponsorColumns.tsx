@@ -2,18 +2,21 @@ import React from 'react';
 import Link from 'next/link';
 import { Column } from '../components/ui/DataTable';
 import { Badge, Button } from '../components/ui';
-import { ExternalLink, Plus, RotateCcw, Pencil, Trash2, Trophy } from '../components/icons';
+import {
+  Pencil,
+  Trash2,
+} from '../components/icons';
 import { Sponsor, SponsorTransaction } from '../types';
-import { paymentMethodLabel, SponsorTxType } from '../components/SponsorTransactionModal';
-import { formatDate } from '../lib/format';
+import { paymentMethodLabel } from '../components/SponsorTransactionModal';
+import { formatDate, formatNumber } from '../lib/format';
+import { cellMain, cellSub, cellNum, cellOneLine } from './cellStyles';
+import { getSponsorStatusVariant } from '../constants/badgeVariants';
 
 interface SponsorColumnActions {
   onAddFunds: (sponsor: Sponsor) => void;
   onPayout: (sponsor: Sponsor) => void;
   onEdit: (sponsor: Sponsor) => void;
   onDelete: (id: string, name: string) => void;
-  getStatusBadgeVariant: (status?: string) => any;
-  fNum: (val: number | undefined) => string;
 }
 
 export const getSponsorColumns = ({
@@ -21,82 +24,64 @@ export const getSponsorColumns = ({
   onPayout,
   onEdit,
   onDelete,
-  getStatusBadgeVariant,
-  fNum,
 }: SponsorColumnActions): Column<Sponsor>[] => [
   {
-    header: 'Sponsor / Brand',
+    header: 'Sponsor',
     render: (spons: any) => (
-      <div>
+      <div style={{ minWidth: 0 }}>
         <Link
           href={`/sponsors/${spons._id}`}
           onClick={(e) => e.stopPropagation()}
-          style={{
-            fontWeight: 700,
-            color: 'var(--text-primary)',
-            textDecoration: 'none',
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '5px',
-          }}
+          style={{ ...cellMain, ...cellOneLine, display: 'block', textDecoration: 'none' }}
+          title={spons.companyName || spons.sponsorName}
         >
-          <span>{spons.companyName || spons.sponsorName}</span>
-          <ExternalLink size={11} color="var(--accent-blue)" />
+          {spons.companyName || spons.sponsorName}
         </Link>
-        <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-          Contact: {spons.sponsorName}
+        <div style={{ ...cellSub, whiteSpace: 'nowrap', textTransform: 'capitalize' }}>
+          {(spons.contractType || 'general_grant').replace(/_/g, ' ')}
         </div>
       </div>
     ),
   },
   {
-    header: 'Contract Type',
+    header: 'Invested',
+    align: 'right',
     render: (spons: any) => (
-      <Badge variant="purple" style={{ textTransform: 'capitalize' }}>
-        {spons.contractType?.replace(/_/g, ' ') || 'General Grant'}
-      </Badge>
+      <span style={{ ...cellMain, ...cellNum }}>Rs. {formatNumber(spons.amountInvested)}</span>
     ),
   },
   {
-    header: 'Invested Inflow',
-    style: { fontWeight: 700, color: 'var(--accent-blue)' },
-    render: (spons: any) => `Rs. ${fNum(spons.amountInvested)}`,
-  },
-  {
-    header: 'Returns Paid',
-    style: { fontWeight: 600, color: 'var(--accent-rose)' },
-    render: (spons: any) => `Rs. ${fNum(spons.returnsPaid)}`,
+    header: 'Paid Back',
+    align: 'right',
+    render: (spons: any) => (
+      <span style={{ ...cellNum, ...(spons.returnsPaid ? cellMain : { color: 'var(--text-muted)' }) }}>
+        {spons.returnsPaid ? `Rs. ${formatNumber(spons.returnsPaid)}` : '—'}
+      </span>
+    ),
   },
   {
     header: 'Net Retained',
-    style: { fontWeight: 700, color: 'var(--accent-green)' },
+    mobile: 'summary',
+    align: 'right',
     render: (spons: any) => {
       const net = (spons.amountInvested || 0) - (spons.returnsPaid || 0);
-      return `Rs. ${fNum(net)}`;
+      return <span style={{ ...cellMain, ...cellNum }}>Rs. {formatNumber(net)}</span>;
     },
-  },
-  {
-    header: 'Deliverables',
-    style: { fontSize: '12px', color: 'var(--text-secondary)', maxWidth: '200px' },
-    render: (spons: any) => spons.deliverablesAgreed || 'General sponsorship',
   },
   {
     header: 'Status',
     render: (spons: any) => (
-      <Badge variant={getStatusBadgeVariant(spons.status)}>
-        {spons.status?.toUpperCase() || 'ACTIVE'}
-      </Badge>
+      <Badge variant={getSponsorStatusVariant(spons.status)}>{spons.status || 'active'}</Badge>
     ),
   },
   {
     header: 'Actions',
     align: 'right',
     render: (spons: any) => (
-      <div className="action-group" style={{ justifyContent: 'flex-end' }}>
+      <div className="action-group" style={{ justifyContent: 'flex-end', flexWrap: 'nowrap' }}>
         <Button
-          variant="success"
+          variant="secondary"
           size="sm"
-          icon={<Plus size={14} />}
           onClick={(e) => {
             e.stopPropagation();
             onAddFunds(spons);
@@ -108,7 +93,6 @@ export const getSponsorColumns = ({
         <Button
           variant="secondary"
           size="sm"
-          icon={<RotateCcw size={14} />}
           onClick={(e) => {
             e.stopPropagation();
             onPayout(spons);
@@ -147,13 +131,11 @@ export const getSponsorColumns = ({
 interface SponsorTxColumnActions {
   onEdit: (tx: SponsorTransaction) => void;
   onDelete: (tx: SponsorTransaction) => void;
-  fNum: (val: number | undefined) => string;
 }
 
 export const getSponsorTransactionColumns = ({
   onEdit,
   onDelete,
-  fNum,
 }: SponsorTxColumnActions): Column<SponsorTransaction>[] => [
   {
     header: 'Date',
@@ -189,7 +171,6 @@ export const getSponsorTransactionColumns = ({
           {t.notes || (isIn ? 'Sponsorship funds received' : 'Return paid to sponsor')}
           {t.tournamentId?.name && (
             <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '2px' }}>
-              <Trophy size={11} color="var(--accent-blue)" />
               <Link href={`/tournaments/${t.tournamentId._id}`} style={{ color: 'var(--accent-blue)' }}>
                 {t.tournamentId.name}
               </Link>
@@ -216,14 +197,14 @@ export const getSponsorTransactionColumns = ({
     width: '11%',
     align: 'right',
     style: { fontWeight: 700, color: 'var(--accent-green)' },
-    render: (t: any) => (t.type === 'investment' ? `+ Rs. ${fNum(t.amount)}` : '—'),
+    render: (t: any) => (t.type === 'investment' ? `+ Rs. ${formatNumber(t.amount)}` : '—'),
   },
   {
     header: 'Outflow',
     width: '11%',
     align: 'right',
     style: { fontWeight: 700, color: 'var(--accent-rose)' },
-    render: (t: any) => (t.type !== 'investment' ? `− Rs. ${fNum(t.amount)}` : '—'),
+    render: (t: any) => (t.type !== 'investment' ? `− Rs. ${formatNumber(t.amount)}` : '—'),
   },
   {
     header: 'Balance',
@@ -232,11 +213,11 @@ export const getSponsorTransactionColumns = ({
     render: (t: any) => (
       <span
         style={{
-          fontWeight: 800,
+          fontWeight: 700,
           color: t.balance < 0 ? 'var(--accent-rose)' : 'var(--text-primary)',
         }}
       >
-        Rs. {fNum(t.balance)}
+        Rs. {formatNumber(t.balance)}
       </span>
     ),
   },

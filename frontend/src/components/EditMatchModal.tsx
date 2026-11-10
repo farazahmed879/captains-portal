@@ -355,7 +355,8 @@ export const EditMatchModal: React.FC<EditMatchModalProps> = ({
           }}
         >
           <DatePicker
-            label="Match Date *"
+            label="Match Date"
+            required
             value={currentDate}
             onChange={(e) => setValue("matchDate", e.target.value)}
           />

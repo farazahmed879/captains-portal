@@ -1,14 +1,14 @@
 import React from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { Badge, Button, SubCard, KpiCell, CustomSelect } from '../ui';
 import {
-  TrophyIcon,
-  MapPinIcon,
-  ChevronRightIcon,
+  TrophyIcon, ChevronRightIcon
 } from '../icons';
 import { DashboardWidgetWrapper } from './DashboardWidgetWrapper';
-import { formatCurrency } from './types';
 import styles from './TournamentWidgetCard.module.css';
+import { formatNumber } from '../../lib/format';
+import { EMPTY_VALUE } from '../../constants';
 
 export interface TournamentWidgetCardProps {
   tournamentsList: any[];
@@ -27,6 +27,7 @@ export const TournamentWidgetCard: React.FC<TournamentWidgetCardProps> = ({
   onSelectTournament,
   onRemove,
 }) => {
+  const router = useRouter();
   const tournamentOptions = [
     { value: 'all', label: 'All Tournaments' },
     ...tournamentsList.map((t) => ({ value: t._id, label: t.name })),
@@ -72,8 +73,8 @@ export const TournamentWidgetCard: React.FC<TournamentWidgetCardProps> = ({
     <DashboardWidgetWrapper
       title="Tournaments & Leagues"
       icon={<TrophyIcon size={16} />}
-      iconBg="#fef3c7"
-      iconColor="#b45309"
+      iconBg="#e2e8f0"
+      iconColor="#334155"
       selector={selectorDropdown}
       onRemove={onRemove}
       removeTitle="Remove Tournament Widget"
@@ -83,7 +84,12 @@ export const TournamentWidgetCard: React.FC<TournamentWidgetCardProps> = ({
       {selectedTournament ? (
         <div className={styles.tournamentSpotlightWrapper}>
           {/* Individual Tournament Header Card */}
-          <SubCard padding="lg" className={styles.tournamentHeaderCard}>
+          <SubCard
+            padding="lg"
+            className={styles.tournamentHeaderCard}
+            onClick={() => router.push(`/tournaments/${selectedTournament._id}`)}
+            title={`Open ${selectedTournament.name}`}
+          >
             <div>
               <div className={styles.badgeRow}>
                 <Badge variant="purple" className={styles.formatBadge}>
@@ -106,8 +112,7 @@ export const TournamentWidgetCard: React.FC<TournamentWidgetCardProps> = ({
                 {selectedTournament.name}
               </div>
               <div className={styles.venueRow}>
-                <MapPinIcon size={11} />
-                <span>{selectedTournament.venue || 'Karachi Grounds'}</span>
+                <span>{selectedTournament.venue || EMPTY_VALUE}</span>
               </div>
             </div>
 
@@ -123,7 +128,7 @@ export const TournamentWidgetCard: React.FC<TournamentWidgetCardProps> = ({
                 }`}
               >
                 {(selectedTournament.financials?.netPnl ?? 0) >= 0 ? '+' : ''}
-                Rs. {formatCurrency(selectedTournament.financials?.netPnl ?? 0)}
+                Rs. {formatNumber(selectedTournament.financials?.netPnl ?? 0)}
               </div>
             </div>
           </SubCard>
@@ -132,12 +137,12 @@ export const TournamentWidgetCard: React.FC<TournamentWidgetCardProps> = ({
           <div className={`r-grid-4 ${styles.kpiGrid4}`}>
             <KpiCell
               label="Entry Fee"
-              value={`Rs. ${formatCurrency(selectedTournament.entryFee || 0)}`}
+              value={`Rs. ${formatNumber(selectedTournament.entryFee || 0)}`}
               valueColor="var(--accent-rose)"
             />
             <KpiCell
               label="Match Costs"
-              value={`Rs. ${formatCurrency(
+              value={`Rs. ${formatNumber(
                 selectedTournament.financials?.matchExpenses ??
                   selectedTournament.financials?.totalMatchExpenses ??
                   0
@@ -145,7 +150,7 @@ export const TournamentWidgetCard: React.FC<TournamentWidgetCardProps> = ({
             />
             <KpiCell
               label="Prize Won"
-              value={`Rs. ${formatCurrency(
+              value={`Rs. ${formatNumber(
                 selectedTournament.financials?.actualWinningPrizeWon ||
                   selectedTournament.actualWinningPrizeWon ||
                   0
@@ -166,7 +171,7 @@ export const TournamentWidgetCard: React.FC<TournamentWidgetCardProps> = ({
             className={styles.secondaryInfoBar}
           >
             <span>
-              Team: <strong>{selectedTournament.teamId?.name || 'Gulzar Cricket Team'}</strong>
+              Team: <strong>{selectedTournament.teamId?.name || EMPTY_VALUE}</strong>
             </span>
             <Button
               variant="secondary"
@@ -194,7 +199,7 @@ export const TournamentWidgetCard: React.FC<TournamentWidgetCardProps> = ({
             />
             <KpiCell
               label="Prize Returns"
-              value={`Rs. ${formatCurrency(stats?.finances?.totalPrizeMoney)}`}
+              value={`Rs. ${formatNumber(stats?.finances?.totalPrizeMoney)}`}
               valueColor="var(--accent-green)"
             />
             <KpiCell
@@ -219,9 +224,9 @@ export const TournamentWidgetCard: React.FC<TournamentWidgetCardProps> = ({
                     key={trn._id}
                     padding="md"
                     borderRadius="8px"
-                    onClick={() => onSelectTournament(trn._id)}
+                    onClick={() => router.push(`/tournaments/${trn._id}`)}
                     className={styles.tournamentCard}
-                    title={`Click to spotlight ${trn.name}`}
+                    title={`Open ${trn.name}`}
                   >
                     <div>
                       <div className={styles.badgeRow}>
@@ -236,8 +241,7 @@ export const TournamentWidgetCard: React.FC<TournamentWidgetCardProps> = ({
                         </Badge>
                       </div>
                       <div className={styles.venueRow}>
-                        <MapPinIcon size={11} />
-                        <span>{trn.venue || 'Karachi Grounds'}</span>
+                        <span>{trn.venue || EMPTY_VALUE}</span>
                       </div>
                     </div>
 
@@ -259,7 +263,7 @@ export const TournamentWidgetCard: React.FC<TournamentWidgetCardProps> = ({
                           isProfitable ? styles.roiPositive : styles.roiNegative
                         }`}
                       >
-                        {isProfitable ? '+' : ''}Rs. {formatCurrency(netPnl)} ROI
+                        {isProfitable ? '+' : ''}Rs. {formatNumber(netPnl)} ROI
                       </div>
                     </div>
                   </SubCard>

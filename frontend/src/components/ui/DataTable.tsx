@@ -1,7 +1,9 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { ChevronDown } from 'lucide-react';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell, TableEmpty } from './Table';
 import { TableSkeletonRows } from './Skeleton';
 import { Checkbox } from './Checkbox';
+import { useIsMobile } from '../../lib/useMediaQuery';
 
 export interface Column<T> {
   header: React.ReactNode;
@@ -10,6 +12,13 @@ export interface Column<T> {
   width?: string | number;
   className?: string;
   style?: React.CSSProperties;
+  /**
+   * Role in the phone layout (an expandable list): 'primary' is the always-visible title,
+   * 'summary' the always-visible figure on the right, 'actions' the buttons shown when a row
+   * is expanded, 'hidden' leaves the column out. Defaults: first column is primary, the first
+   * right-aligned column is the summary, a column headed "Action(s)" is the actions.
+   */
+  mobile?: 'primary' | 'summary' | 'actions' | 'hidden';
 }
 
 export interface DataTableProps<T> {
@@ -82,6 +91,114 @@ export function DataTable<T>({
   const totalColumnsCount =
     columns.length + (isSelectable ? 1 : 0) + (showSerialNumber ? 1 : 0);
 
+  const isMobile = useIsMobile();
+  const [openKeys, setOpenKeys] = useState<Set<string>>(new Set());
+
+  if (isMobile) {
+    const headerText = (c: Column<T>) => (typeof c.header === 'string' ? c.header.trim() : '');
+    const isActionsCol = (c: Column<T>) => c.mobile === 'actions' || /^actions?$/i.test(headerText(c));
+    const shown = columns.filter((c) => c.mobile !== 'hidden');
+    const actionsCol = shown.find(isActionsCol);
+    const dataCols = shown.filter((c) => !isActionsCol(c));
+    const primary = dataCols.find((c) => c.mobile === 'primary') || dataCols[0];
+    const summary =
+      dataCols.find((c) => c.mobile === 'summary') ||
+      dataCols.find((c) => c !== primary && c.align === 'right');
+    const details = dataCols.filter((c) => c !== primary && c !== summary);
+
+    const toggle = (key: string) =>
+      setOpenKeys((prev) => {
+        const next = new Set(prev);
+        if (next.has(key)) next.delete(key);
+        else next.add(key);
+        return next;
+      });
+
+    return (
+      <div className={`mlist ${className}`.trim()} style={style}>
+        {loading ? (
+          Array.from({ length: 5 }).map((_, i) => (
+            <div key={i} className="mlist-item">
+              <div className="mlist-head">
+                <div className="mlist-skeleton" />
+              </div>
+            </div>
+          ))
+        ) : data.length === 0 ? (
+          <div className="mlist-empty">{emptyMessage}</div>
+        ) : (
+          data.map((item, index) => {
+            const key = String(getKey(item, index));
+            const isOpen = openKeys.has(key);
+            const isSelected = isSelectable && selectedIds.includes(key);
+            return (
+              <div
+                key={key}
+                className={`mlist-item ${isOpen ? 'is-open' : ''} ${isSelected ? 'is-selected' : ''} ${
+                  rowClassName ? rowClassName(item, index) : ''
+                }`.trim()}
+              >
+                <div
+                  className="mlist-head"
+                  role="button"
+                  tabIndex={0}
+                  aria-expanded={isOpen}
+                  onClick={() => toggle(key)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      toggle(key);
+                    }
+                  }}
+                >
+                  {isSelectable && (
+                    <span className="mlist-check" onClick={(e) => e.stopPropagation()}>
+                      <Checkbox
+                        size="md"
+                        checked={isSelected}
+                        onChange={() => handleToggleRow(key)}
+                        aria-label={`Select row ${key}`}
+                        variant="danger"
+                      />
+                    </span>
+                  )}
+                  <div className="mlist-primary">{primary ? primary.render(item, index) : null}</div>
+                  {summary && <div className="mlist-summary">{summary.render(item, index)}</div>}
+                  <ChevronDown size={16} className="mlist-chevron" aria-hidden />
+                </div>
+
+                {isOpen && (
+                  <div className="mlist-body">
+                    {details.map((col, i) => (
+                      <div key={i} className="mlist-field">
+                        <div className="mlist-label">{col.header}</div>
+                        <div className="mlist-value">{col.render(item, index)}</div>
+                      </div>
+                    ))}
+                    {(actionsCol || onRowClick) && (
+                      <div className="mlist-actions" onClick={(e) => e.stopPropagation()}>
+                        {onRowClick && (
+                          <button
+                            type="button"
+                            className="btn btn-secondary btn-sm"
+                            onClick={() => onRowClick(item, index)}
+                          >
+                            Open
+                          </button>
+                        )}
+                        {actionsCol?.render(item, index)}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })
+        )}
+      </div>
+    );
+  }
+
   return (
     <Table className={className} style={style}>
       <TableHeader>
@@ -117,10 +234,10 @@ export function DataTable<T>({
               key={idx}
               align={col.align || 'left'}
               className={col.className}
+              // Headers share one style; a column's cell styling (colours, weights) stays on its cells.
               style={{
                 textAlign: col.align || 'left',
                 width: col.width,
-                ...col.style,
               }}
             >
               {col.header}
@@ -146,7 +263,7 @@ export function DataTable<T>({
                 onClick={onRowClick ? () => onRowClick(item, index) : undefined}
                 style={{
                   cursor: onRowClick ? 'pointer' : undefined,
-                  background: isSelected ? '#fff1f2' : undefined,
+                  background: isSelected ? '#f8fafc' : undefined,
                 }}
               >
                 {isSelectable && (

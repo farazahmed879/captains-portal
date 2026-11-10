@@ -7,17 +7,7 @@ import { confirmDelete, confirmBulkDelete, showToast } from "../lib/alerts";
 import { BulkActionBar } from "./ui";
 import { useAuth } from "../lib/auth";
 import { CheckCircle2, AlertCircle, X } from "lucide-react";
-import {
-  ManagedUser,
-  UsersApiResponse,
-  RoleFilterType,
-  ActionFeedback,
-  UserRoleHeader,
-  UserRoleStats,
-  UserRoleToolbar,
-  UserRoleTable,
-  AddUserModal,
-} from "./user-management";
+import { ManagedUser, UsersApiResponse, RoleFilterType, ActionFeedback, UserRoleHeader, UserRoleToolbar, UserRoleTable, AddUserModal } from "./user-management";
 
 export const UserRoleManagement: React.FC = () => {
   const { user: currentUser } = useAuth();

@@ -3,15 +3,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
 import {
-  ChevronDown,
-  ChevronRight,
-  Check,
-  Shield,
-  ShieldCheck,
-  User,
-  SlidersHorizontal,
-  Crown,
-  Lock,
+  ChevronDown, ChevronRight, Check, Shield, ShieldCheck, User, SlidersHorizontal, Crown, Lock
 } from "lucide-react";
 import styles from "./RoleSelectDropdown.module.css";
 
@@ -34,9 +26,9 @@ export const ROLE_CONFIGS: Record<UserRoleType, RoleConfig> = {
     label: "Admin",
     tag: "Operations",
     description: "System administration and operational management",
-    color: "#ea580c",
-    bgColor: "#fff7ed",
-    borderColor: "#fed7aa",
+    color: "#475569",
+    bgColor: "#f8fafc",
+    borderColor: "#cbd5e1",
     icon: ShieldCheck,
   },
   captain: {
@@ -44,9 +36,9 @@ export const ROLE_CONFIGS: Record<UserRoleType, RoleConfig> = {
     label: "Team Captain",
     tag: "Squad Lead",
     description: "Full squad, match scorecards & ledger control",
-    color: "#0284c7",
+    color: "#475569",
     bgColor: "#f0f9ff",
-    borderColor: "#bae6fd",
+    borderColor: "#cbd5e1",
     icon: Shield,
   },
   viewer: {
@@ -54,9 +46,9 @@ export const ROLE_CONFIGS: Record<UserRoleType, RoleConfig> = {
     label: "Normal Player",
     tag: "Player",
     description: "Personal dues balance, scorecard & match viewer",
-    color: "#16a34a",
-    bgColor: "#f0fdf4",
-    borderColor: "#bbf7d0",
+    color: "#15803d",
+    bgColor: "#f8fafc",
+    borderColor: "#cbd5e1",
     icon: User,
   },
   treasurer: {
@@ -64,9 +56,9 @@ export const ROLE_CONFIGS: Record<UserRoleType, RoleConfig> = {
     label: "Treasurer",
     tag: "Finances",
     description: "Financial ledger, dues & expense tracking",
-    color: "#d97706",
-    bgColor: "#fffbeb",
-    borderColor: "#fde68a",
+    color: "#475569",
+    bgColor: "#f8fafc",
+    borderColor: "#94a3b8",
     icon: SlidersHorizontal,
   },
   super_admin: {
@@ -74,9 +66,9 @@ export const ROLE_CONFIGS: Record<UserRoleType, RoleConfig> = {
     label: "Super Admin",
     tag: "Full Control",
     description: "Unrestricted administrative platform access",
-    color: "#7c3aed",
-    bgColor: "#faf5ff",
-    borderColor: "#e9d5ff",
+    color: "#64748b",
+    bgColor: "#f8fafc",
+    borderColor: "#e2e8f0",
     icon: Crown,
   },
 };
@@ -215,7 +207,6 @@ export const RoleSelectDropdown: React.FC<RoleSelectDropdownProps> = ({
       {/* Header */}
       <div className={styles.menuHeader}>
         <div className={styles.menuHeaderTitleRow}>
-          <Shield size={12} className={styles.menuHeaderIcon} />
           <span className={styles.menuHeaderTitle}>Select System Role</span>
         </div>
         <span className={styles.menuHeaderBadge}>{ROLE_LIST.length} Roles</span>

@@ -9,6 +9,7 @@ import { prisma } from "../config/prisma";
 import { ApiError } from "../utils/apiError";
 import { MESSAGES } from "../constants";
 import { UserRole } from "../enums";
+import { stripProtectedFields } from "../utils/tenantGuard";
 
 export class TeamService {
   async getTeams(tenantId: string, _user: { id: string; role: string }) {
@@ -206,12 +207,12 @@ export class TeamService {
       throw ApiError.badRequest(MESSAGES.TEAM_NAME_REQUIRED);
     }
 
-    const { playerIds, ...teamData } = data;
+    const { playerIds, captainId: _ignoredCaptainId, ...teamData } = stripProtectedFields(data as any) as typeof data & { captainId?: string };
 
     const team = await teamRepository.create({
+      ...teamData,
       tenantId,
       captainId,
-      ...teamData,
     });
 
     if (Array.isArray(playerIds) && playerIds.length > 0) {
@@ -292,7 +293,8 @@ export class TeamService {
     };
   }
 
-  async updateTeam(id: string, tenantId: string, data: any) {
+  async updateTeam(id: string, tenantId: string, rawData: any) {
+    const { captainId: _ignoredCaptainId, ...data } = stripProtectedFields(rawData);
     const updated = await teamRepository.update(id, tenantId, data);
     if (!updated) {
       throw ApiError.notFound(MESSAGES.TEAM_NOT_FOUND);

@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { LogOut, LogIn } from 'lucide-react';
 import { Button, Avatar } from '../ui';
 
 export interface TopbarUserMenuProps {
@@ -30,7 +29,6 @@ export const TopbarUserMenu: React.FC<TopbarUserMenuProps> = ({
         size="sm"
         id="header-login-btn"
         onClick={() => router.push('/login')}
-        icon={<LogIn size={13} />}
         style={{ fontWeight: 700 }}
       >
         <span>Sign In</span>
@@ -54,7 +52,7 @@ export const TopbarUserMenu: React.FC<TopbarUserMenuProps> = ({
           className="header-user-avatar"
         />
         <div className="header-user-meta">
-          <span className="header-user-name">{user?.name || 'Faraz (Captain)'}</span>
+          <span className="header-user-name">{user?.name || ''}</span>
           <span className="header-user-role">
             {user?.role?.replace('_', ' ') || 'Super Admin'}
           </span>
@@ -70,7 +68,6 @@ export const TopbarUserMenu: React.FC<TopbarUserMenuProps> = ({
         className="header-logout-btn"
         title="Log out of Captains Portal"
         aria-label="Logout"
-        icon={<LogOut size={13} />}
       >
         <span className="btn-label">Logout</span>
       </Button>

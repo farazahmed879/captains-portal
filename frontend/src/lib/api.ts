@@ -16,6 +16,16 @@ export async function fetchApi<T>(endpoint: string, options: RequestInit = {}): 
       cache: 'no-store',
     });
 
+    // A stored token that the API rejects (expired, user suspended/deleted) is useless:
+    // clear the session and go to login. Login/register 401s are just wrong credentials.
+    if (res.status === 401 && token && !endpoint.startsWith('/auth/login') && !endpoint.startsWith('/auth/register')) {
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('token');
+        localStorage.removeItem('cp_user');
+        if (window.location.pathname !== '/login') window.location.href = '/login';
+      }
+    }
+
     const data = await res.json();
     return data;
   } catch (err: any) {

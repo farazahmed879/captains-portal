@@ -60,6 +60,7 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
     const triggerRef = useRef<HTMLButtonElement | null>(null);
     const dropdownRef = useRef<HTMLDivElement | null>(null);
     const searchInputRef = useRef<HTMLInputElement | null>(null);
+    const [activeIndex, setActiveIndex] = useState(-1);
 
     const [isOpen, setIsOpen] = useState(false);
     const [mounted, setMounted] = useState(false);
@@ -148,9 +149,8 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
       return [];
     }, [propOptions, children]);
 
-    // Determine if search input should be visible (explicit flag or auto-enabled when > 7 options)
-    const isSearchActive =
-      searchable === true || (searchable !== false && parsedOptions.length > 7);
+    // Every select is searchable unless a caller opts out with searchable={false}
+    const isSearchActive = searchable !== false;
 
     // Filtered options based on search query
     const filteredOptions = useMemo(() => {
@@ -223,6 +223,7 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
     useEffect(() => {
       if (isOpen) {
         setSearchQuery("");
+        setActiveIndex(-1);
         if (isSearchActive) {
           const timer = setTimeout(() => {
             searchInputRef.current?.focus();
@@ -306,12 +307,30 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
               className={styles.searchInput}
               placeholder={searchPlaceholder}
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                setActiveIndex(0);
+              }}
               onClick={(e) => e.stopPropagation()}
               onKeyDown={(e) => {
                 e.stopPropagation();
+                const enabled = filteredOptions.filter((o) => !o.disabled);
                 if (e.key === "Escape") {
                   setIsOpen(false);
+                } else if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+                  e.preventDefault();
+                  if (!enabled.length) return;
+                  const current = enabled.indexOf(filteredOptions[activeIndex]);
+                  const next = e.key === "ArrowDown" ? current + 1 : current - 1;
+                  const wrapped = enabled[(next + enabled.length) % enabled.length];
+                  setActiveIndex(filteredOptions.indexOf(wrapped));
+                } else if (e.key === "Enter") {
+                  e.preventDefault(); // don't submit the surrounding form
+                  const target =
+                    (activeIndex >= 0 && filteredOptions[activeIndex] && !filteredOptions[activeIndex].disabled
+                      ? filteredOptions[activeIndex]
+                      : enabled[0]);
+                  if (target) handleSelectOption(target);
                 }
               }}
             />
@@ -339,8 +358,9 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
               {searchQuery ? `No results for "${searchQuery}"` : "No options available"}
             </div>
           ) : (
-            filteredOptions.map((opt) => {
+            filteredOptions.map((opt, index) => {
               const isSelected = String(opt.value) === String(currentValue);
+              const isActive = index === activeIndex;
 
               return (
                 <button
@@ -348,7 +368,9 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
                   type="button"
                   className={`${styles.dropdownItem} ${
                     isSelected ? styles.selected : ""
-                  }`}
+                  } ${isActive ? styles.active : ""}`}
+                  ref={isActive ? (el) => el?.scrollIntoView({ block: "nearest" }) : undefined}
+                  onMouseEnter={() => setActiveIndex(index)}
                   disabled={opt.disabled}
                   onClick={() => handleSelectOption(opt)}
                   role="option"

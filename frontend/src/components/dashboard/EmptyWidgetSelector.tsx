@@ -2,9 +2,6 @@ import React from 'react';
 import { Button } from '../ui';
 import {
   LayoutDashboardIcon,
-  UsersIcon,
-  TrophyIcon,
-  ShieldIcon,
   HandshakeIcon,
   PlusIcon,
 } from '../icons';
@@ -37,7 +34,6 @@ export const EmptyWidgetSelector: React.FC<EmptyWidgetSelectorProps> = ({
         <div className="widget-selector-card">
           <div className="widget-selector-header">
             <div className={`widget-selector-icon ${styles.playerIcon}`}>
-              <UsersIcon size={18} />
             </div>
             <div className="widget-selector-name">Player Widget</div>
           </div>
@@ -48,7 +44,6 @@ export const EmptyWidgetSelector: React.FC<EmptyWidgetSelectorProps> = ({
           <Button
             variant="primary"
             size="sm"
-            icon={<PlusIcon size={13} />}
             onClick={() => onToggleWidget('players')}
             className={styles.cardAddButton}
           >
@@ -60,7 +55,6 @@ export const EmptyWidgetSelector: React.FC<EmptyWidgetSelectorProps> = ({
         <div className="widget-selector-card">
           <div className="widget-selector-header">
             <div className={`widget-selector-icon ${styles.tournamentIcon}`}>
-              <TrophyIcon size={18} />
             </div>
             <div className="widget-selector-name">Tournament Widget</div>
           </div>
@@ -71,7 +65,6 @@ export const EmptyWidgetSelector: React.FC<EmptyWidgetSelectorProps> = ({
           <Button
             variant="primary"
             size="sm"
-            icon={<PlusIcon size={13} />}
             onClick={() => onToggleWidget('tournaments')}
             className={styles.cardAddButton}
           >
@@ -83,7 +76,6 @@ export const EmptyWidgetSelector: React.FC<EmptyWidgetSelectorProps> = ({
         <div className="widget-selector-card">
           <div className="widget-selector-header">
             <div className={`widget-selector-icon ${styles.teamIcon}`}>
-              <ShieldIcon size={18} />
             </div>
             <div className="widget-selector-name">Team Widget</div>
           </div>
@@ -94,7 +86,6 @@ export const EmptyWidgetSelector: React.FC<EmptyWidgetSelectorProps> = ({
           <Button
             variant="primary"
             size="sm"
-            icon={<PlusIcon size={13} />}
             onClick={() => onToggleWidget('teams')}
             className={styles.cardAddButton}
           >
@@ -117,7 +108,6 @@ export const EmptyWidgetSelector: React.FC<EmptyWidgetSelectorProps> = ({
           <Button
             variant="primary"
             size="sm"
-            icon={<PlusIcon size={13} />}
             onClick={() => onToggleWidget('sponsors')}
             className={styles.cardAddButton}
           >

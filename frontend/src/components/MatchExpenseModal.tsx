@@ -3,8 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { Modal } from './Modal';
-import { Input, Textarea, Button, Alert } from './ui';
-import { ReceiptIcon, Building2, Calendar, CheckCircle2 } from './icons';
+import { Input, Button, Alert } from './ui';
 import { fetchApi } from '../lib/api';
 import { showToast } from '../lib/alerts';
 import { formatCurrency, formatNumber, formatDate } from '../lib/format';
@@ -178,7 +177,6 @@ export const MatchExpenseModal: React.FC<MatchExpenseModalProps> = ({
             variant="primary"
             onClick={handleSubmit(onSubmit)}
             loading={isSubmitting}
-            icon={<ReceiptIcon size={14} />}
           >
             Save Match Fee
           </Button>
@@ -206,14 +204,14 @@ export const MatchExpenseModal: React.FC<MatchExpenseModalProps> = ({
               vs {opponentName}
             </div>
             <div style={{ color: 'var(--text-muted)', fontSize: '11.5px', marginTop: '2px' }}>
-              📍 {venueName} {matchDate ? `· 📅 ${matchDate}` : ''}
+              {venueName} {matchDate ? `· ${matchDate}` : ''}
             </div>
           </div>
           <div style={{ textAlign: 'right' }}>
             <div style={{ fontSize: '10.5px', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 600 }}>
               Total Match Expense
             </div>
-            <div style={{ fontSize: '15px', fontWeight: 800, color: 'var(--accent-rose)' }}>
+            <div style={{ fontSize: '15px', fontWeight: 700, color: 'var(--accent-rose)' }}>
               {formatCurrency(totalExpense)}
             </div>
           </div>
@@ -240,8 +238,8 @@ export const MatchExpenseModal: React.FC<MatchExpenseModalProps> = ({
           <div
             style={{
               padding: '12px 14px',
-              background: watchedIsReimbursed ? '#f0fdf4' : '#f8fafc',
-              border: `1.5px solid ${watchedIsReimbursed ? '#86efac' : '#e2e8f0'}`,
+              background: watchedIsReimbursed ? '#f8fafc' : '#f8fafc',
+              border: `1.5px solid ${watchedIsReimbursed ? '#15803d' : '#e2e8f0'}`,
               borderRadius: '10px',
               display: 'flex',
               flexDirection: 'column',
@@ -258,7 +256,7 @@ export const MatchExpenseModal: React.FC<MatchExpenseModalProps> = ({
                   height: '18px',
                   marginTop: '2px',
                   cursor: 'pointer',
-                  accentColor: '#16a34a',
+                  accentColor: '#15803d',
                 }}
                 {...register('isReimbursed')}
               />
@@ -291,7 +289,7 @@ export const MatchExpenseModal: React.FC<MatchExpenseModalProps> = ({
               <div
                 style={{
                   paddingTop: '8px',
-                  borderTop: '1px dashed #bbf7d0',
+                  borderTop: '1px dashed #cbd5e1',
                   display: 'flex',
                   flexDirection: 'column',
                   gap: '8px',
@@ -337,17 +335,17 @@ export const MatchExpenseModal: React.FC<MatchExpenseModalProps> = ({
                   style={{
                     fontSize: '11px',
                     fontWeight: 600,
-                    color: '#15803d',
+                    color: '#166534',
                     display: 'flex',
                     alignItems: 'center',
                     gap: '5px',
-                    background: '#dcfce7',
+                    background: '#e2e8f0',
                     padding: '6px 10px',
                     borderRadius: '6px',
                   }}
                 >
                   <span>
-                    ✓ Rs.{' '}
+                    Rs.{' '}
                     {formatNumber(
                       Number(watchedReimbursedAmount) ||
                         watchedGround ||
@@ -447,18 +445,18 @@ export const MatchExpenseModal: React.FC<MatchExpenseModalProps> = ({
         <div
           style={{
             padding: '10px 14px',
-            background: '#ecfdf5',
-            border: '1px solid #a7f3d0',
+            background: '#f8fafc',
+            border: '1px solid #cbd5e1',
             borderRadius: '8px',
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center',
           }}
         >
-          <div style={{ fontSize: '12.5px', color: '#065f46', fontWeight: 600 }}>
+          <div style={{ fontSize: '12.5px', color: '#166534', fontWeight: 600 }}>
             Total Ground & Match Cost:
           </div>
-          <div style={{ fontSize: '16px', fontWeight: 800, color: '#047857' }}>
+          <div style={{ fontSize: '16px', fontWeight: 700, color: '#166534' }}>
             Rs. {formatNumber(totalExpense)}
           </div>
         </div>

@@ -66,7 +66,7 @@ export const CardTitle: React.FC<React.HTMLAttributes<HTMLHeadingElement>> = ({
       className={className}
       style={{
         fontSize: '18px',
-        fontWeight: 800,
+        fontWeight: 700,
         color: 'var(--text-primary)',
         margin: 0,
         ...style,

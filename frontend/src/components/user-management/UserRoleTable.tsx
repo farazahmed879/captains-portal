@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 import { AlertCircle, Users } from 'lucide-react';
 import { Button, DataTable, Pagination } from '../ui';
-import { getUserRoleColumns } from './userRoleColumns';
+import { getUserRoleColumns } from '../../columns/userRoleColumns';
 import { ManagedUser } from './types';
 
 export interface UserRoleTableProps {
@@ -80,7 +80,7 @@ export const UserRoleTable: React.FC<UserRoleTableProps> = ({
     <div className="admin-table-card">
       {isError ? (
         <div className="admin-table-error">
-          <AlertCircle size={24} color="#f43f5e" />
+          <AlertCircle size={24} color="#dc2626" />
           <p>Could not fetch user directory from server.</p>
           <Button variant="secondary" size="sm" onClick={onRetry}>
             Try Again
@@ -95,7 +95,6 @@ export const UserRoleTable: React.FC<UserRoleTableProps> = ({
             emptyMessage="No users found matching your search and role filters."
             emptyIcon={
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
-                <Users size={32} color="#94a3b8" />
                 <Button
                   variant="secondary"
                   size="sm"

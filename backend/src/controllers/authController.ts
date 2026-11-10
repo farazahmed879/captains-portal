@@ -55,3 +55,15 @@ export const updateDashboardSettings = asyncHandler(async (req: AuthRequest, res
     settings: updated.dashboardSettings,
   });
 });
+
+export const updateMe = asyncHandler(async (req: AuthRequest, res: Response) => {
+  const { name, email, phone } = req.body;
+  const user = await authService.updateMe(req.user!.id, { name, email, phone });
+  res.status(HTTP_STATUS.OK).json({ success: true, message: 'Profile updated.', user });
+});
+
+export const changePassword = asyncHandler(async (req: AuthRequest, res: Response) => {
+  const { currentPassword, newPassword } = req.body;
+  const result = await authService.changePassword(req.user!.id, currentPassword, newPassword);
+  res.status(HTTP_STATUS.OK).json({ success: true, ...result });
+});

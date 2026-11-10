@@ -11,12 +11,10 @@ export type BadgeVariant =
 
 export interface BadgeProps extends React.HTMLAttributes<HTMLSpanElement> {
   variant?: BadgeVariant;
-  icon?: React.ReactNode;
 }
 
 export const Badge: React.FC<BadgeProps> = ({
   variant = 'secondary',
-  icon,
   children,
   className = '',
   style,
@@ -44,7 +42,6 @@ export const Badge: React.FC<BadgeProps> = ({
 
   return (
     <span className={`badge ${getVariantClass()} ${className}`.trim()} style={style} {...props}>
-      {icon && <span style={{ display: 'inline-flex', alignItems: 'center' }}>{icon}</span>}
       {children}
     </span>
   );

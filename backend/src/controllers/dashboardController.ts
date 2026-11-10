@@ -21,3 +21,18 @@ export const getDashboardStats = asyncHandler(async (req: AuthRequest, res: Resp
     ...result,
   });
 });
+
+/** Itemised list behind the dashboard's Total Invested / Total Returns / Net Profit-Loss cards. */
+export const getMoneyLedger = asyncHandler(async (req: AuthRequest, res: Response) => {
+  const kind = req.params.kind;
+  if (kind !== 'invested' && kind !== 'returns' && kind !== 'pnl') {
+    res.status(HTTP_STATUS.BAD_REQUEST).json({ success: false, message: 'Unknown ledger type' });
+    return;
+  }
+  const result = await dashboardService.getMoneyLedger(
+    req.user!.tenantId,
+    { id: req.user!.id, role: req.user!.role },
+    kind
+  );
+  res.status(HTTP_STATUS.OK).json({ success: true, ...result });
+});

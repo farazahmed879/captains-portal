@@ -3,7 +3,6 @@
 import React from 'react';
 import { Button } from './Button';
 import { Checkbox } from './Checkbox';
-import { Trash2, CloseIcon } from '../icons';
 
 export interface BulkActionBarProps {
   selectedIds: string[];
@@ -54,6 +53,7 @@ export const BulkActionBar: React.FC<BulkActionBarProps> = ({
 
   return (
     <div
+      className="bulk-action-bar"
       style={{
         display: 'flex',
         alignItems: 'center',
@@ -63,10 +63,10 @@ export const BulkActionBar: React.FC<BulkActionBarProps> = ({
         padding: selectedIds.length > 0 ? '10px 16px' : '7px 14px',
         marginBottom: '12px',
         borderRadius: '10px',
-        background: selectedIds.length > 0 ? '#fff1f2' : '#f8fafc',
+        background: selectedIds.length > 0 ? '#f8fafc' : '#f8fafc',
         border:
           selectedIds.length > 0
-            ? '1px solid #fecdd3'
+            ? '1px solid #e2e8f0'
             : '1px solid var(--border-color)',
         transition: 'all 0.15s ease',
       }}
@@ -112,10 +112,10 @@ export const BulkActionBar: React.FC<BulkActionBarProps> = ({
               gap: '6px',
               padding: '3px 10px',
               borderRadius: '999px',
-              background: '#ffe4e6',
-              color: '#be123c',
+              background: '#f1f5f9',
+              color: '#dc2626',
               fontSize: '12px',
-              fontWeight: 800,
+              fontWeight: 700,
             }}
           >
             {selectedIds.length} {selectedIds.length === 1 ? itemLabel.replace(/s$/i, '') : itemLabel} Selected
@@ -131,7 +131,6 @@ export const BulkActionBar: React.FC<BulkActionBarProps> = ({
             size="sm"
             onClick={clearSelection}
             disabled={deleting}
-            icon={<CloseIcon size={12} />}
           >
             Clear
           </Button>
@@ -141,11 +140,10 @@ export const BulkActionBar: React.FC<BulkActionBarProps> = ({
             size="sm"
             loading={deleting}
             onClick={onBulkDelete}
-            icon={<Trash2 size={14} />}
             style={{
-              background: '#e11d48',
+              background: '#dc2626',
               color: '#ffffff',
-              borderColor: '#e11d48',
+              borderColor: '#dc2626',
               fontWeight: 700,
             }}
           >

@@ -4,7 +4,9 @@ import React, { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { Modal } from './Modal';
 import { Input, Select, Button, Alert } from './ui';
-import { Award, Trophy, DollarSign } from 'lucide-react';
+import {
+  Award,
+} from 'lucide-react';
 import { fetchApi } from '../lib/api';
 import { showToast } from '../lib/alerts';
 import { formatCurrency } from '../lib/format';
@@ -120,7 +122,6 @@ export const EditMomModal: React.FC<EditMomModalProps> = ({
             variant="primary"
             onClick={handleSubmit(onSubmit)}
             loading={isSubmitting}
-            icon={<Award size={14} />}
           >
             Save MOM Award
           </Button>
@@ -134,8 +135,8 @@ export const EditMomModal: React.FC<EditMomModalProps> = ({
         <div
           style={{
             padding: '12px 14px',
-            background: '#fef3c7',
-            border: '1px solid #fde68a',
+            background: '#e2e8f0',
+            border: '1px solid #94a3b8',
             borderRadius: '8px',
             display: 'flex',
             alignItems: 'center',
@@ -147,20 +148,19 @@ export const EditMomModal: React.FC<EditMomModalProps> = ({
               width: '36px',
               height: '36px',
               borderRadius: '8px',
-              background: '#fde68a',
+              background: '#94a3b8',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               flexShrink: 0,
             }}
           >
-            <Trophy size={20} color="#d97706" />
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: '13px', fontWeight: 800, color: '#92400e' }}>
+            <div style={{ fontSize: '13px', fontWeight: 700, color: '#334155' }}>
               Organizer MOM Cash Prize
             </div>
-            <div style={{ fontSize: '11.5px', color: '#b45309', marginTop: '2px' }}>
+            <div style={{ fontSize: '11.5px', color: '#334155', marginTop: '2px' }}>
               Cash prize awarded to the best player by the tournament organizers.
             </div>
           </div>
@@ -207,8 +207,8 @@ export const EditMomModal: React.FC<EditMomModalProps> = ({
           <div
             style={{
               padding: '10px 14px',
-              background: '#f0fdf4',
-              border: '1px solid #bbf7d0',
+              background: '#f8fafc',
+              border: '1px solid #cbd5e1',
               borderRadius: '8px',
               display: 'flex',
               justifyContent: 'space-between',
@@ -219,7 +219,7 @@ export const EditMomModal: React.FC<EditMomModalProps> = ({
             <div style={{ color: '#166534', fontWeight: 600 }}>
               MOM Prize Awarded:
             </div>
-            <div style={{ fontSize: '15px', fontWeight: 800, color: '#15803d' }}>
+            <div style={{ fontSize: '15px', fontWeight: 700, color: '#166534' }}>
               Rs. {formatCurrency(watchedPrize)}
             </div>
           </div>

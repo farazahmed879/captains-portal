@@ -1,8 +1,10 @@
 'use client';
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { fetchApi } from './api';
+
+const PUBLIC_PATHS = ['/login', '/register'];
 
 export interface UserSession {
   id: string;
@@ -30,6 +32,8 @@ interface AuthContextType {
   login: (phoneOrEmail: string, password?: string) => Promise<{ success: boolean; message?: string }>;
   register: (data: { name: string; phone?: string; email?: string; password: string; teamName?: string }) => Promise<{ success: boolean; message?: string }>;
   logout: () => void;
+  /** Re-reads the signed-in user from the API (e.g. after editing the profile). */
+  refreshUser: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -40,6 +44,7 @@ const AuthContext = createContext<AuthContextType>({
   login: async () => ({ success: false }),
   register: async () => ({ success: false }),
   logout: () => {},
+  refreshUser: async () => {},
 });
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -168,6 +173,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const refreshUser = async () => {
+    const res = await fetchApi<{ success: boolean; user: any }>('/auth/me');
+    if (res.success && res.user) {
+      const u: UserSession = {
+        id: res.user._id || res.user.id,
+        name: res.user.name,
+        email: res.user.email,
+        phone: res.user.phone || '',
+        role: res.user.role,
+        tenantId: res.user.tenantId,
+        playerId: res.user.playerId,
+        player: res.user.player,
+      };
+      setUser(u);
+      localStorage.setItem('cp_user', JSON.stringify(u));
+    }
+  };
+
   const logout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('cp_user');
@@ -175,6 +198,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setUser(null);
     router.push('/login');
   };
+
+  // Send signed-out visitors to the login page (the API rejects requests without a token).
+  const pathname = usePathname();
+  useEffect(() => {
+    if (isLoading || token) return;
+    if (PUBLIC_PATHS.includes(pathname)) return;
+    router.replace('/login');
+  }, [isLoading, token, pathname, router]);
 
   return (
     <AuthContext.Provider
@@ -186,6 +217,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         login,
         register: registerUser,
         logout,
+        refreshUser,
       }}
     >
       {children}

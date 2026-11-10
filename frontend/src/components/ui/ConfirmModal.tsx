@@ -1,7 +1,11 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { CloseIcon, Trash2, AlertCircle, CheckCircle2, Shield, ShieldAlert } from '../icons';
+import {
+  CloseIcon,
+  Trash2,
+  AlertCircle,
+} from '../icons';
 import { Button } from './Button';
 import { fetchApi } from '../../lib/api';
 
@@ -132,9 +136,9 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
                 alignItems: 'center',
                 justifyContent: 'center',
                 flexShrink: 0,
-                background: isDanger ? '#ffe4e6' : '#e0f2fe',
-                color: isDanger ? '#e11d48' : '#0284c7',
-                border: isDanger ? '1px solid #fecdd3' : '1px solid #bae6fd',
+                background: isDanger ? '#f1f5f9' : '#f1f5f9',
+                color: isDanger ? '#dc2626' : '#475569',
+                border: isDanger ? '1px solid #e2e8f0' : '1px solid #cbd5e1',
               }}
             >
               {isDanger ? <Trash2 size={20} /> : <AlertCircle size={20} />}
@@ -167,8 +171,8 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
               style={{
                 padding: '13px 15px',
                 borderRadius: '10px',
-                background: isDanger ? '#fff1f2' : '#f8fafc',
-                border: isDanger ? '1px solid #fecdd3' : '1px solid var(--border-color)',
+                background: isDanger ? '#f8fafc' : '#f8fafc',
+                border: isDanger ? '1px solid #e2e8f0' : '1px solid var(--border-color)',
                 color: 'var(--text-secondary)',
                 fontSize: '13.5px',
                 lineHeight: 1.55,
@@ -202,11 +206,11 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
                     Type{' '}
                     <code
                       style={{
-                        background: '#ffe4e6',
-                        color: '#e11d48',
+                        background: '#f1f5f9',
+                        color: '#dc2626',
                         padding: '2px 6px',
                         borderRadius: '4px',
-                        fontWeight: 800,
+                        fontWeight: 700,
                         fontSize: '12px',
                         userSelect: 'all',
                       }}
@@ -232,8 +236,8 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
                       borderColor:
                         deleteWord.length > 0
                           ? isWordMatched
-                            ? '#10b981'
-                            : '#fda4af'
+                            ? '#15803d'
+                            : '#cbd5e1'
                           : undefined,
                     }}
                   />
@@ -251,7 +255,6 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
                       marginBottom: '6px',
                     }}
                   >
-                    <Shield size={12} color="var(--text-secondary)" />
                     <span>Enter your password</span>
                   </label>
                   <input
@@ -276,14 +279,13 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
                       gap: '6px',
                       padding: '8px 10px',
                       borderRadius: '6px',
-                      background: '#ffe4e6',
-                      border: '1px solid #fecdd3',
-                      color: '#be123c',
+                      background: '#f1f5f9',
+                      border: '1px solid #e2e8f0',
+                      color: '#dc2626',
                       fontSize: '12px',
                       fontWeight: 600,
                     }}
                   >
-                    <ShieldAlert size={14} style={{ flexShrink: 0 }} />
                     <span>{error}</span>
                   </div>
                 )}
@@ -315,14 +317,13 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
               variant={isDanger ? 'danger' : 'primary'}
               loading={isBusy}
               disabled={!canSubmit || isBusy}
-              icon={isDanger ? <Trash2 size={14} /> : <CheckCircle2 size={14} />}
               style={
                 isDanger
                   ? {
-                      background: canSubmit ? '#e11d48' : '#fda4af',
+                      background: canSubmit ? '#dc2626' : '#cbd5e1',
                       color: '#ffffff',
-                      borderColor: canSubmit ? '#e11d48' : '#fda4af',
-                      boxShadow: canSubmit ? '0 2px 8px rgba(225, 29, 72, 0.25)' : 'none',
+                      borderColor: canSubmit ? '#dc2626' : '#cbd5e1',
+                      boxShadow: canSubmit ? '0 2px 8px rgba(15, 23, 42, 0.08)' : 'none',
                       cursor: canSubmit && !isBusy ? 'pointer' : 'not-allowed',
                     }
                   : undefined

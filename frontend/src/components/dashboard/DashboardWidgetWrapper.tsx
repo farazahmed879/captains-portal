@@ -19,8 +19,8 @@ export interface DashboardWidgetWrapperProps {
 export const DashboardWidgetWrapper: React.FC<DashboardWidgetWrapperProps> = ({
   title,
   icon,
-  iconBg = '#e0f2fe',
-  iconColor = '#0369a1',
+  iconBg = '#f1f5f9',
+  iconColor = '#334155',
   selector,
   onRemove,
   removeTitle = 'Remove Widget',

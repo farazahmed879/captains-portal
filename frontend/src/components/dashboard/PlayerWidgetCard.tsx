@@ -1,10 +1,14 @@
 import React from "react";
 import Link from "next/link";
+import { useRouter } from 'next/navigation';
 import { Badge, Button, SubCard, KpiCell, CustomSelect } from "../ui";
-import { UsersIcon, CheckCircleIcon, ChevronRightIcon } from "../icons";
+import {
+  UsersIcon,
+  ChevronRightIcon,
+} from "../icons";
 import { DashboardWidgetWrapper } from "./DashboardWidgetWrapper";
-import { formatCurrency } from "./types";
 import styles from "./PlayerWidgetCard.module.css";
+import { formatNumber } from "../../lib/format";
 
 export interface PlayerWidgetCardProps {
   playersList: any[];
@@ -25,6 +29,7 @@ export const PlayerWidgetCard: React.FC<PlayerWidgetCardProps> = ({
   onRemove,
   onOpenReturnModal,
 }) => {
+  const router = useRouter();
   const playerOptions = [
     { value: "all", label: "All Players (Overview)" },
     ...playersList.map((p) => ({
@@ -79,8 +84,8 @@ export const PlayerWidgetCard: React.FC<PlayerWidgetCardProps> = ({
     <DashboardWidgetWrapper
       title="Player Squad & Dues"
       icon={<UsersIcon size={16} />}
-      iconBg="#e0f2fe"
-      iconColor="#0369a1"
+      iconBg="#f1f5f9"
+      iconColor="#334155"
       selector={selectorDropdown}
       onRemove={onRemove}
       removeTitle="Remove Player Widget"
@@ -90,7 +95,11 @@ export const PlayerWidgetCard: React.FC<PlayerWidgetCardProps> = ({
       {selectedPlayer ? (
         <div className={styles.playerSpotlightWrapper}>
           {/* Individual Player Card */}
-          <SubCard padding="lg">
+          <SubCard
+            padding="lg"
+            onClick={() => router.push(`/players/${selectedPlayer._id}`)}
+            title={`Open ${selectedPlayer.name}`}
+          >
             <div className={styles.playerHeaderLeft}>
               <div className={styles.playerAvatar}>
                 {selectedPlayer.jerseyNumber !== undefined &&
@@ -116,12 +125,11 @@ export const PlayerWidgetCard: React.FC<PlayerWidgetCardProps> = ({
             <div className={styles.playerHeaderRight}>
               {(selectedPlayer.pendingDue || 0) > 0 ? (
                 <Badge variant="danger" className={styles.dueBadge}>
-                  Rs. {formatCurrency(selectedPlayer.pendingDue)} Due
+                  Rs. {formatNumber(selectedPlayer.pendingDue)} Due
                 </Badge>
               ) : (
                 <Badge
                   variant="success"
-                  icon={<CheckCircleIcon size={11} />}
                   className={styles.clearedBadge}
                 >
                   Fully Cleared
@@ -133,7 +141,7 @@ export const PlayerWidgetCard: React.FC<PlayerWidgetCardProps> = ({
                   className={styles.returnedBadge}
                   title="Total funds returned/refunded to this player from winnings/sponsors"
                 >
-                  Rs. {formatCurrency(selectedPlayer.totalReturned)} Returned
+                  Rs. {formatNumber(selectedPlayer.totalReturned)} Returned
                 </span>
               )}
             </div>
@@ -153,17 +161,17 @@ export const PlayerWidgetCard: React.FC<PlayerWidgetCardProps> = ({
             />
             <KpiCell
               label="Fee Assigned"
-              value={`Rs. ${formatCurrency(selectedPlayer.totalFeeAssigned)}`}
+              value={`Rs. ${formatNumber(selectedPlayer.totalFeeAssigned)}`}
               valueColor="var(--text-primary)"
             />
             <KpiCell
               label="Fee Paid"
-              value={`Rs. ${formatCurrency(selectedPlayer.totalFeePaid)}`}
+              value={`Rs. ${formatNumber(selectedPlayer.totalFeePaid)}`}
               valueColor="var(--accent-green)"
             />
             <KpiCell
               label="Returned / Refund"
-              value={`Rs. ${formatCurrency(selectedPlayer.totalReturned || 0)}`}
+              value={`Rs. ${formatNumber(selectedPlayer.totalReturned || 0)}`}
               valueColor={
                 (selectedPlayer.totalReturned || 0) > 0
                   ? "var(--accent-amber)"
@@ -172,7 +180,7 @@ export const PlayerWidgetCard: React.FC<PlayerWidgetCardProps> = ({
             />
             <KpiCell
               label="Outstanding Due"
-              value={`Rs. ${formatCurrency(selectedPlayer.pendingDue || 0)}`}
+              value={`Rs. ${formatNumber(selectedPlayer.pendingDue || 0)}`}
               valueColor={
                 (selectedPlayer.pendingDue || 0) > 0
                   ? "var(--accent-rose)"
@@ -230,17 +238,17 @@ export const PlayerWidgetCard: React.FC<PlayerWidgetCardProps> = ({
             />
             <KpiCell
               label="Assigned"
-              value={`Rs. ${formatCurrency(stats?.finances?.totalFeeAssigned)}`}
+              value={`Rs. ${formatNumber(stats?.finances?.totalFeeAssigned)}`}
               valueColor="var(--text-primary)"
             />
             <KpiCell
               label="Collected"
-              value={`Rs. ${formatCurrency(stats?.finances?.totalFeeCollected)}`}
+              value={`Rs. ${formatNumber(stats?.finances?.totalFeeCollected)}`}
               valueColor="var(--accent-green)"
             />
             <KpiCell
               label="Uncollected"
-              value={`Rs. ${formatCurrency(stats?.finances?.totalPendingDues)}`}
+              value={`Rs. ${formatNumber(stats?.finances?.totalPendingDues)}`}
               valueColor="var(--accent-rose)"
             />
           </div>
@@ -257,8 +265,8 @@ export const PlayerWidgetCard: React.FC<PlayerWidgetCardProps> = ({
                   key={pl.id}
                   padding="md"
                   borderRadius="8px"
-                  onClick={() => onSelectPlayer(pl.id)}
-                  title={`Click to spotlight ${pl.name}`}
+                  onClick={() => router.push(`/players/${pl.id}`)}
+                  title={`Open ${pl.name}`}
                   className={styles.debtorCard}
                 >
                   <div className={styles.debtorLeft}>
@@ -275,14 +283,14 @@ export const PlayerWidgetCard: React.FC<PlayerWidgetCardProps> = ({
 
                   <div className={styles.debtorRight}>
                     <Badge variant="danger" className={styles.debtorBadge}>
-                      Rs. {formatCurrency(pl.pending)} Due
+                      Rs. {formatNumber(pl.pending)} Due
                     </Badge>
                     <div className={styles.debtorPaidInfo}>
-                      Paid: Rs. {formatCurrency(pl.paid)} /{" "}
-                      {formatCurrency(pl.assigned)}
+                      Paid: Rs. {formatNumber(pl.paid)} /{" "}
+                      {formatNumber(pl.assigned)}
                       {(pl.returned || 0) > 0 && (
                         <span className={styles.debtorReturnedInfo}>
-                          • Ret: Rs. {formatCurrency(pl.returned)}
+                          • Ret: Rs. {formatNumber(pl.returned)}
                         </span>
                       )}
                     </div>

@@ -1,12 +1,6 @@
 import React from 'react';
 import {
-  Crown,
-  Shield,
-  ShieldCheck,
   User,
-  SlidersHorizontal,
-  Phone,
-  Mail,
   Trash2,
 } from 'lucide-react';
 import { Button, Avatar } from '../ui';
@@ -56,13 +50,11 @@ export const UserRoleTableRow: React.FC<UserRoleTableRowProps> = ({
             <div className="admin-user-sub">
               {u.phone && (
                 <span className="admin-user-contact">
-                  <Phone size={11} />
                   <span>{u.phone}</span>
                 </span>
               )}
               {u.email && (
                 <span className="admin-user-contact">
-                  <Mail size={11} />
                   <span>{u.email}</span>
                 </span>
               )}
@@ -74,11 +66,8 @@ export const UserRoleTableRow: React.FC<UserRoleTableRowProps> = ({
       {/* 2. Current Role Badge */}
       <td>
         <div className={`admin-role-badge ${u.role}`}>
-          {u.role === 'super_admin' && <Crown size={12} />}
-          {u.role === 'admin' && <ShieldCheck size={12} />}
-          {u.role === 'captain' && <Shield size={12} />}
-          {u.role === 'viewer' && <User size={12} />}
-          {u.role === 'treasurer' && <SlidersHorizontal size={12} />}
+          
+          
           <span>{u.roleLabel}</span>
         </div>
       </td>

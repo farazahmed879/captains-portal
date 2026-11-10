@@ -136,7 +136,8 @@ export const CreateExpenseModal: React.FC<CreateExpenseModalProps> = ({
           />
 
           <DatePicker
-            label="Date *"
+            label="Date"
+            required
             value={currentDate}
             onChange={(e) => setValue('expenseDate', e.target.value)}
           />

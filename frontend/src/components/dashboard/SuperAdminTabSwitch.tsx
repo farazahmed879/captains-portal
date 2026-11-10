@@ -1,6 +1,5 @@
 import React from "react";
 import { Button } from "../ui";
-import { LayoutDashboardIcon, ShieldIcon, UsersIcon } from "../icons";
 
 export interface SuperAdminTabSwitchProps {
   adminTab: "overview" | "users";

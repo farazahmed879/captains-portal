@@ -3,60 +3,28 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { useForm } from 'react-hook-form';
+
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { queryKeys } from '../../../lib/queryKeys';
 import { Header } from '../../../components/Header';
 import { fetchApi } from '../../../lib/api';
-import { formatDate } from '../../../lib/format';
+import { formatDate, formatNumber, formatLabel } from '../../../lib/format';
 import { confirmDelete, confirmDuesClear, showToast } from '../../../lib/alerts';
+import { Button, Badge, Modal, DataTable, Avatar, ViewSwitcher } from '../../../components/ui';
 import {
-  Button,
-  Badge,
-  Input,
-  Select,
-  Textarea,
-  Modal,
-  Card,
-  DataTable,
-  Pagination,
-  Avatar,
-  StatBadge,
-  ViewSwitcher,
-} from '../../../components/ui';
-import {
-  UserIcon,
-  PhoneIcon,
-  MailIcon,
-  ArrowLeftIcon,
-  DollarIcon,
-  AwardIcon,
-  SwordsIcon,
   PencilIcon,
-  TrashIcon,
-  CheckCircleIcon,
-  AlertCircleIcon,
-  ShirtIcon,
-  CalendarIcon,
-  ExternalLinkIcon,
   Search,
   Filter,
-  CheckCircle2,
-  Clock,
-  Sparkles,
 } from '../../../components/icons';
 import { DetailPageSkeleton } from '../../../components/ui/Skeleton';
 import { PlayerReturnModal } from '../../../components/PlayerReturnModal';
 import { EditPlayerModal } from '../../../components/EditPlayerModal';
 import { EditPaymentModal } from '../../../components/EditPaymentModal';
-import {
-  getPlayerReturnSourceLabel,
-  getPaymentMethodLabel,
-  PLAYER_ROLE_OPTIONS,
-  BATTING_STYLE_OPTIONS,
-  BOWLING_STYLE_OPTIONS,
-} from '../../../constants';
-import { formatCurrency, formatNumber, formatLabel } from '../../../lib/format';
+
+import { useIsMobile } from '../../../lib/useMediaQuery';
+import { getPlayerReturnColumns, getPlayerMatchFeeColumns } from '../../../columns/playerDetailColumns';
+import { DetailNav } from '../../../components/DetailNav';
+import { SegmentedTabs } from '../../../components/ui';
 
 type LedgerStatusFilter = 'all' | 'pending' | 'cleared' | 'mom';
 
@@ -67,7 +35,10 @@ export default function PlayerProfilePage() {
   const queryClient = useQueryClient();
 
   // Tournament-Wise Ledger States
-  const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
+  const [preferredView, setViewMode] = useState<'grid' | 'table'>('grid');
+  // Phones always show the list; the List/Grid switch is hidden there (globals.css).
+  const isMobile = useIsMobile();
+  const viewMode = isMobile ? 'table' : preferredView;
   const [tourneyFilterTab, setTourneyFilterTab] = useState<'all' | 'due' | 'cleared'>('all');
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>({});
@@ -150,7 +121,7 @@ export default function PlayerProfilePage() {
   const handleClearAllPendingDues = async () => {
     const pendingList = matchHistory.filter((p: any) => p.paymentStatus !== 'paid');
     if (pendingList.length === 0) return;
-    const confirmed = await confirmDuesClear(pendingList.length, fNum(pendingDue), player.name);
+    const confirmed = await confirmDuesClear(pendingList.length, formatNumber(pendingDue), player.name);
     if (!confirmed) return;
     try {
       const updates = pendingList.map((p: any) => ({
@@ -172,9 +143,6 @@ export default function PlayerProfilePage() {
     }
   };
 
-  const fNum = formatNumber;
-  const formatStyle = formatLabel;
-
   // Filtered & sorted ledger matches
   const matchHistory: any[] = data?.ledger?.matchHistory || [];
   const momAwards: any[] = data?.ledger?.momAwards || [];
@@ -187,7 +155,7 @@ export default function PlayerProfilePage() {
   const player = data?.player;
 
   const handleDeleteReturn = async (returnId: string, amount?: number) => {
-    const label = amount ? `return record of Rs. ${fNum(amount)}` : 'return record';
+    const label = amount ? `return record of Rs. ${formatNumber(amount)}` : 'return record';
     const confirmed = await confirmDelete(label, 'Are you sure you want to delete this payout/return record?');
     if (!confirmed) return;
     try {
@@ -255,7 +223,7 @@ export default function PlayerProfilePage() {
   const handleClearGroupPendingDues = async (grp: TournamentGroup) => {
     const pendingList = grp.matches.filter((p: any) => p.paymentStatus !== 'paid');
     if (pendingList.length === 0) return;
-    const confirmed = await confirmDuesClear(pendingList.length, fNum(grp.pendingDue), grp.name);
+    const confirmed = await confirmDuesClear(pendingList.length, formatNumber(grp.pendingDue), grp.name);
     if (!confirmed) return;
     try {
       const updates = pendingList.map((p: any) => ({
@@ -416,41 +384,29 @@ export default function PlayerProfilePage() {
       />
 
       <div className="player-detail-compact-container">
-        {/* Top Navigation & Action Row */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <Link href="/players" className="btn btn-secondary btn-sm compact-back-btn">
-            <ArrowLeftIcon size={13} />
-            <span>Back to Players</span>
-          </Link>
-
-          <div className="action-group" style={{ gap: '6px' }}>
-            <Button
-              variant="secondary"
-              size="sm"
-              icon={<DollarIcon size={12} />}
-              onClick={() => setIsReturnOpen(true)}
-              style={{ fontWeight: 700, background: '#fef3c7', borderColor: '#fde68a', color: '#b45309' }}
-            >
-              Return / Payout Money
-            </Button>
-            <Button
-              variant="secondary"
-              size="sm"
-              icon={<PencilIcon size={12} color="var(--accent-blue)" />}
-              onClick={() => setIsEditOpen(true)}
-            >
-              Edit Profile
-            </Button>
-            <Button
-              variant="danger"
-              size="sm"
-              icon={<TrashIcon size={12} />}
-              onClick={handleDeletePlayer}
-            >
-              Deactivate
-            </Button>
-          </div>
-        </div>
+        <DetailNav back={{ href: "/players", label: "Back to Players" }}>
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => setIsReturnOpen(true)}
+          >
+            Return / Payout Money
+          </Button>
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => setIsEditOpen(true)}
+          >
+            Edit Profile
+          </Button>
+          <Button
+            variant="danger"
+            size="sm"
+            onClick={handleDeletePlayer}
+          >
+            Deactivate
+          </Button>
+        </DetailNav>
 
         {/* Single Integrated Player Overview & KPI Banner */}
         <div className="player-profile-unified-card">
@@ -465,17 +421,11 @@ export default function PlayerProfilePage() {
               <div className="player-unified-title-row">
                 <h1 className="player-unified-name">{player.name}</h1>
                 <Badge variant="purple" style={{ textTransform: 'capitalize', fontSize: '11px' }}>
-                  {formatStyle(player.role)}
+                  {formatLabel(player.role)}
                 </Badge>
-                <span className="compact-team-tag">Gulzar CC</span>
                 {momAwards.length > 0 && (
-                  <Badge variant="warning" icon={<AwardIcon size={10} />} style={{ fontSize: '10.5px' }}>
+                  <Badge variant="warning" style={{ fontSize: '10.5px' }}>
                     {momAwards.length} MOM
-                  </Badge>
-                )}
-                {totalReturned > 0 && (
-                  <Badge variant="warning" style={{ fontSize: '10.5px', background: '#fef3c7', color: '#b45309', border: '1px solid #fde68a' }}>
-                    Rs. {fNum(totalReturned)} Returned
                   </Badge>
                 )}
               </div>
@@ -483,13 +433,12 @@ export default function PlayerProfilePage() {
               <div className="player-unified-meta-row">
                 {player.phone && (
                   <span>
-                    <PhoneIcon size={11} color="var(--accent-blue)" style={{ marginRight: '4px', verticalAlign: '-1px' }} />
                     <strong>{player.phone}</strong>
                   </span>
                 )}
                 {player.email && <span>{player.email}</span>}
-                {player.battingStyle && <span>{formatStyle(player.battingStyle)}</span>}
-                {player.bowlingStyle && <span>{formatStyle(player.bowlingStyle)}</span>}
+                {player.battingStyle && <span>{formatLabel(player.battingStyle)}</span>}
+                {player.bowlingStyle && <span>{formatLabel(player.bowlingStyle)}</span>}
                 {(player.kitSizeChest || player.kitSizeTrouser) && (
                   <span className="compact-kit-badge">
                     Kit: Chest {player.kitSizeChest || '-'} / Trouser {player.kitSizeTrouser || '-'}
@@ -515,23 +464,23 @@ export default function PlayerProfilePage() {
 
             <div className="kpi-chip">
               <span className="kpi-chip-label">Fee Assigned</span>
-              <span className="kpi-chip-val">Rs. {fNum(totalAssigned)}</span>
+              <span className="kpi-chip-val">Rs. {formatNumber(totalAssigned)}</span>
             </div>
 
             <div className="kpi-chip kpi-chip-paid">
               <span className="kpi-chip-label">Fee Paid</span>
-              <span className="kpi-chip-val">Rs. {fNum(totalPaid)}</span>
+              <span className="kpi-chip-val">Rs. {formatNumber(totalPaid)}</span>
             </div>
 
-            <div className="kpi-chip" style={{ background: '#fef3c7', borderColor: '#fde68a' }}>
-              <span className="kpi-chip-label" style={{ color: '#b45309' }}>Returned</span>
-              <span className="kpi-chip-val" style={{ color: '#b45309' }}>Rs. {fNum(totalReturned)}</span>
+            <div className="kpi-chip" style={{ background: '#e2e8f0', borderColor: '#94a3b8' }}>
+              <span className="kpi-chip-label" style={{ color: '#334155' }}>Returned</span>
+              <span className="kpi-chip-val" style={{ color: '#334155' }}>Rs. {formatNumber(totalReturned)}</span>
             </div>
 
             <div className={`kpi-chip ${isCleared ? 'kpi-chip-cleared' : 'kpi-chip-due'}`}>
               <span className="kpi-chip-label">Balance Due</span>
               <span className="kpi-chip-val">
-                {isCleared ? 'CLEARED' : `Rs. ${fNum(pendingDue)}`}
+                {isCleared ? 'CLEARED' : `Rs. ${formatNumber(pendingDue)}`}
               </span>
             </div>
           </div>
@@ -556,7 +505,7 @@ export default function PlayerProfilePage() {
             {/* Left: Section Title & Quick Status Tabs */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
               <div>
-                <h2 style={{ fontSize: '15px', fontWeight: 800, color: 'var(--text-primary)', margin: 0 }}>
+                <h2 style={{ fontSize: '15px', fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>
                   Tournament Ledgers ({tournamentGroups.length})
                 </h2>
                 <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>
@@ -565,29 +514,15 @@ export default function PlayerProfilePage() {
               </div>
 
               {/* Status Tabs */}
-              <div className="ledger-tab-group" style={{ marginLeft: '6px' }}>
-                <button
-                  type="button"
-                  className={`ledger-tab ${tourneyFilterTab === 'all' ? 'active' : ''}`}
-                  onClick={() => setTourneyFilterTab('all')}
-                >
-                  All ({tournamentGroups.length})
-                </button>
-                <button
-                  type="button"
-                  className={`ledger-tab tab-pending ${tourneyFilterTab === 'due' ? 'active' : ''}`}
-                  onClick={() => setTourneyFilterTab('due')}
-                >
-                  Pending Due ({groupsWithDue})
-                </button>
-                <button
-                  type="button"
-                  className={`ledger-tab tab-cleared ${tourneyFilterTab === 'cleared' ? 'active' : ''}`}
-                  onClick={() => setTourneyFilterTab('cleared')}
-                >
-                  Cleared ({groupsCleared})
-                </button>
-              </div>
+              <SegmentedTabs
+                value={tourneyFilterTab}
+                onChange={setTourneyFilterTab}
+                tabs={[
+                  { value: 'all', label: 'All', count: tournamentGroups.length },
+                  { value: 'due', label: 'Pending Due', count: groupsWithDue, tone: 'pending' },
+                  { value: 'cleared', label: 'Cleared', count: groupsCleared, tone: 'cleared' },
+                ]}
+              />
             </div>
 
             {/* Right: Search + Collapse/Expand + Clear All Dues */}
@@ -646,11 +581,10 @@ export default function PlayerProfilePage() {
                 <Button
                   variant="success"
                   size="sm"
-                  icon={<CheckCircleIcon size={12} />}
                   onClick={handleClearAllPendingDues}
                   style={{ padding: '4px 10px', fontSize: '11px', whiteSpace: 'nowrap' }}
                 >
-                  Clear All (Rs. {fNum(pendingDue)})
+                  Clear All (Rs. {formatNumber(pendingDue)})
                 </Button>
               )}
             </div>
@@ -697,7 +631,6 @@ export default function PlayerProfilePage() {
                             {!grp.isFriendly ? (
                               <Link href={`/tournaments/${grp.id}`} className="tourney-box-name">
                                 <span>{grp.name}</span>
-                                <ExternalLinkIcon size={12} color="var(--accent-blue)" />
                               </Link>
                             ) : (
                               <span className="tourney-box-name">{grp.name}</span>
@@ -710,25 +643,6 @@ export default function PlayerProfilePage() {
                               {grp.year && <span className="tourney-pill-tag">Season {grp.year}</span>}
                             </div>
                           </div>
-                        </div>
-
-                        <div>
-                          {!isAllPaid ? (
-                            <Badge
-                              variant="danger"
-                              style={{ fontWeight: 800, fontSize: '11px', padding: '3px 8px' }}
-                            >
-                              Rs. {fNum(grp.pendingDue)} Due
-                            </Badge>
-                          ) : (
-                            <Badge
-                              variant="success"
-                              icon={<CheckCircle2 size={11} />}
-                              style={{ fontSize: '11px', padding: '3px 8px' }}
-                            >
-                              Cleared
-                            </Badge>
-                          )}
                         </div>
                       </div>
 
@@ -750,30 +664,15 @@ export default function PlayerProfilePage() {
                                 grp.tourneyFinancials.netPnl >= 0 ? 'roi-profit' : 'roi-loss'
                               }`}
                             >
-                              {grp.tourneyFinancials.netPnl >= 0 ? '+' : ''}Rs. {fNum(grp.tourneyFinancials.netPnl)}{' '}
+                              {grp.tourneyFinancials.netPnl >= 0 ? '+' : ''}Rs. {formatNumber(grp.tourneyFinancials.netPnl)}{' '}
                               {grp.tourneyFinancials.netPnl >= 0 ? 'Profit' : 'Loss'}
                             </span>
-                            {grp.tourneyFinancials.totalReturns > 0 && (
+                            {((grp.tourneyFinancials.actualWinningPrizeWon || 0) + (grp.tourneyFinancials.matchPrizeWon || 0)) > 0 && (
                               <span style={{ fontSize: '11px', color: 'var(--accent-blue)', fontWeight: 600 }}>
-                                Prize: Rs. {fNum(grp.tourneyFinancials.totalReturns)}
+                                Prize: Rs. {formatNumber(((grp.tourneyFinancials.actualWinningPrizeWon || 0) + (grp.tourneyFinancials.matchPrizeWon || 0)))}
                               </span>
                             )}
                           </div>
-                          <Link
-                            href={`/tournaments/${grp.id}`}
-                            style={{
-                              fontSize: '11px',
-                              color: 'var(--accent-blue)',
-                              fontWeight: 700,
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              gap: '3px',
-                              textDecoration: 'none',
-                            }}
-                          >
-                            <span>Tournament Ledger</span>
-                            <ExternalLinkIcon size={10} />
-                          </Link>
                         </div>
                       )}
                     </div>
@@ -819,7 +718,6 @@ export default function PlayerProfilePage() {
                                     {match ? (
                                       <Link href={`/matches/${match._id}`} className="tourney-match-opponent">
                                         <span>vs {match.opponentTeam || 'Opponent'}</span>
-                                        <ExternalLinkIcon size={10} color="var(--accent-blue)" />
                                       </Link>
                                     ) : (
                                       <span style={{ fontWeight: 700 }}>Match</span>
@@ -835,7 +733,6 @@ export default function PlayerProfilePage() {
                                     {isMOM && (
                                       <Badge
                                         variant="warning"
-                                        icon={<AwardIcon size={10} />}
                                         style={{ fontSize: '9.5px', padding: '1px 5px' }}
                                       >
                                         MOM
@@ -871,15 +768,15 @@ export default function PlayerProfilePage() {
                                 <div style={{ textAlign: 'right' }}>
                                   <div
                                     style={{
-                                      fontWeight: 800,
+                                      fontWeight: 700,
                                       fontSize: '12px',
                                       color: isPaid ? 'var(--accent-green)' : 'var(--accent-rose)',
                                     }}
                                   >
-                                    {isPaid ? `Rs. ${fNum(rec.feePaid)}` : `Rs. ${fNum(matchDue)} Due`}
+                                    {isPaid ? `Rs. ${formatNumber(rec.feePaid)}` : `Rs. ${formatNumber(matchDue)} Due`}
                                   </div>
                                   <div style={{ fontSize: '10px', color: 'var(--text-muted)' }}>
-                                    Fee: Rs. {fNum(rec.feeAssigned)}
+                                    Fee: Rs. {formatNumber(rec.feeAssigned)}
                                   </div>
                                 </div>
 
@@ -888,7 +785,6 @@ export default function PlayerProfilePage() {
                                     <Button
                                       variant="success"
                                       size="sm"
-                                      icon={<CheckCircle2 size={11} />}
                                       onClick={() => handleQuickMarkPaid(rec._id, rec.feeAssigned)}
                                       title="Mark Match Fee as Paid"
                                       style={{ height: '26px', padding: '0 7px', fontSize: '11px' }}
@@ -917,25 +813,25 @@ export default function PlayerProfilePage() {
                       <div className="tourney-payment-grid">
                         <div className="tourney-pay-tile">
                           <span className="tourney-pay-label">Assigned</span>
-                          <span className="tourney-pay-val">Rs. {fNum(grp.totalAssigned)}</span>
+                          <span className="tourney-pay-val">Rs. {formatNumber(grp.totalAssigned)}</span>
                         </div>
 
                         <div className="tourney-pay-tile">
                           <span className="tourney-pay-label">Paid</span>
-                          <span className="tourney-pay-val paid">Rs. {fNum(grp.totalPaid)}</span>
+                          <span className="tourney-pay-val paid">Rs. {formatNumber(grp.totalPaid)}</span>
                         </div>
 
                         <div className="tourney-pay-tile">
                           <span className="tourney-pay-label">Returned</span>
                           <span className={`tourney-pay-val ${grp.totalReturned > 0 ? 'returned' : ''}`}>
-                            Rs. {fNum(grp.totalReturned)}
+                            Rs. {formatNumber(grp.totalReturned)}
                           </span>
                         </div>
 
                         <div className={`tourney-pay-tile ${grp.pendingDue > 0 ? 'tile-due' : 'tile-cleared'}`}>
                           <span className="tourney-pay-label">Due</span>
                           <span className={`tourney-pay-val ${grp.pendingDue > 0 ? 'due' : 'paid'}`}>
-                            Rs. {fNum(grp.pendingDue)}
+                            Rs. {formatNumber(grp.pendingDue)}
                           </span>
                         </div>
                       </div>
@@ -944,8 +840,8 @@ export default function PlayerProfilePage() {
                       <div className="tourney-box-footer-actions">
                         <div>
                           {grp.returns.length > 0 && (
-                            <span style={{ fontSize: '11px', color: '#b45309', fontWeight: 600 }}>
-                              ★ Rs. {fNum(grp.totalReturned)} returned/prize
+                            <span style={{ fontSize: '11px', color: '#334155', fontWeight: 600 }}>
+                              Rs. {formatNumber(grp.totalReturned)} returned/prize
                             </span>
                           )}
                         </div>
@@ -955,11 +851,10 @@ export default function PlayerProfilePage() {
                             <Button
                               variant="success"
                               size="sm"
-                              icon={<CheckCircle2 size={13} />}
                               onClick={() => handleClearGroupPendingDues(grp)}
                               style={{ fontWeight: 700 }}
                             >
-                              Clear Dues (Rs. {fNum(grp.pendingDue)})
+                              Clear Dues (Rs. {formatNumber(grp.pendingDue)})
                             </Button>
                           )}
                         </div>
@@ -979,7 +874,7 @@ export default function PlayerProfilePage() {
                   key={grp.id}
                   className="compact-ledger-card"
                   style={{
-                    border: grp.pendingDue > 0 ? '1px solid #fecaca' : '1px solid var(--border-color)',
+                    border: grp.pendingDue > 0 ? '1px solid #e2e8f0' : '1px solid var(--border-color)',
                     borderRadius: '12px',
                     boxShadow: '0 2px 5px rgba(15, 23, 42, 0.04)',
                     overflow: 'hidden',
@@ -1008,14 +903,14 @@ export default function PlayerProfilePage() {
                           width: '36px',
                           height: '36px',
                           borderRadius: '8px',
-                          background: grp.isFriendly ? '#f1f5f9' : '#e0f2fe',
-                          color: grp.isFriendly ? '#475569' : '#0369a1',
+                          background: grp.isFriendly ? '#f1f5f9' : '#f1f5f9',
+                          color: grp.isFriendly ? '#475569' : '#334155',
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'center',
                           fontSize: '16px',
                           flexShrink: 0,
-                          border: grp.isFriendly ? '1px solid #e2e8f0' : '1px solid #bae6fd',
+                          border: grp.isFriendly ? '1px solid #e2e8f0' : '1px solid #cbd5e1',
                         }}
                       >
                         {grp.isFriendly ? 'F' : 'T'}
@@ -1025,7 +920,7 @@ export default function PlayerProfilePage() {
                           <h3
                             style={{
                               fontSize: '14.5px',
-                              fontWeight: 800,
+                              fontWeight: 700,
                               color: 'var(--text-primary)',
                               margin: 0,
                             }}
@@ -1049,14 +944,14 @@ export default function PlayerProfilePage() {
                               style={{
                                 fontSize: '10.5px',
                                 fontWeight: 700,
-                                background: '#fef3c7',
-                                border: '1px solid #fde68a',
-                                color: '#b45309',
+                                background: '#e2e8f0',
+                                border: '1px solid #94a3b8',
+                                color: '#334155',
                                 padding: '2px 8px',
                                 borderRadius: '6px',
                               }}
                             >
-                              Rs. {fNum(grp.totalReturned)} Returned / Prize
+                              Rs. {formatNumber(grp.totalReturned)} Returned / Prize
                             </span>
                           )}
                         </div>
@@ -1087,24 +982,24 @@ export default function PlayerProfilePage() {
                         }}
                       >
                         <span style={{ color: 'var(--text-muted)' }}>
-                          Assigned: <strong style={{ color: 'var(--text-primary)' }}>Rs. {fNum(grp.totalAssigned)}</strong>
+                          Assigned: <strong style={{ color: 'var(--text-primary)' }}>Rs. {formatNumber(grp.totalAssigned)}</strong>
                         </span>
                         <span style={{ color: '#cbd5e1' }}>•</span>
                         <span style={{ color: 'var(--text-muted)' }}>
-                          Paid: <strong style={{ color: 'var(--accent-green)' }}>Rs. {fNum(grp.totalPaid)}</strong>
+                          Paid: <strong style={{ color: 'var(--accent-green)' }}>Rs. {formatNumber(grp.totalPaid)}</strong>
                         </span>
                         <span style={{ color: '#cbd5e1' }}>•</span>
                         <span style={{ color: 'var(--text-muted)' }}>
                           Return:{' '}
                           <strong
                             style={{
-                              color: grp.totalReturned > 0 ? '#b45309' : 'var(--text-muted)',
-                              background: grp.totalReturned > 0 ? '#fef3c7' : 'transparent',
+                              color: grp.totalReturned > 0 ? '#334155' : 'var(--text-muted)',
+                              background: grp.totalReturned > 0 ? '#e2e8f0' : 'transparent',
                               padding: grp.totalReturned > 0 ? '1px 5px' : '0',
                               borderRadius: '4px',
                             }}
                           >
-                            Rs. {fNum(grp.totalReturned)}
+                            Rs. {formatNumber(grp.totalReturned)}
                           </strong>
                         </span>
                         {!grp.isFriendly && grp.tourneyFinancials && (
@@ -1114,14 +1009,14 @@ export default function PlayerProfilePage() {
                               Profit / Loss:{' '}
                               <strong
                                 style={{
-                                  color: grp.tourneyFinancials.netPnl >= 0 ? '#15803d' : '#b91c1c',
-                                  background: grp.tourneyFinancials.netPnl >= 0 ? '#dcfce7' : '#fee2e2',
+                                  color: grp.tourneyFinancials.netPnl >= 0 ? '#166534' : '#dc2626',
+                                  background: grp.tourneyFinancials.netPnl >= 0 ? '#e2e8f0' : '#f1f5f9',
                                   padding: '1px 6px',
                                   borderRadius: '4px',
                                   fontSize: '11px',
                                 }}
                               >
-                                {grp.tourneyFinancials.netPnl >= 0 ? '+' : ''}Rs. {fNum(grp.tourneyFinancials.netPnl)}
+                                {grp.tourneyFinancials.netPnl >= 0 ? '+' : ''}Rs. {formatNumber(grp.tourneyFinancials.netPnl)}
                                 <span
                                   style={{
                                     fontSize: '9.5px',
@@ -1135,13 +1030,13 @@ export default function PlayerProfilePage() {
                                 </span>
                               </strong>
                             </span>
-                            {grp.tourneyFinancials.totalReturns > 0 && (
+                            {((grp.tourneyFinancials.actualWinningPrizeWon || 0) + (grp.tourneyFinancials.matchPrizeWon || 0)) > 0 && (
                               <>
                                 <span style={{ color: '#cbd5e1' }}>•</span>
                                 <span style={{ color: 'var(--text-muted)' }}>
-                                  Tourney Prize:{' '}
-                                  <strong style={{ color: '#0369a1' }}>
-                                    Rs. {fNum(grp.tourneyFinancials.totalReturns)}
+                                  Prize:{' '}
+                                  <strong style={{ color: '#334155' }}>
+                                    Rs. {formatNumber(((grp.tourneyFinancials.actualWinningPrizeWon || 0) + (grp.tourneyFinancials.matchPrizeWon || 0)))}
                                   </strong>
                                 </span>
                               </>
@@ -1154,14 +1049,13 @@ export default function PlayerProfilePage() {
                         {grp.pendingDue > 0 ? (
                           <Badge
                             variant="danger"
-                            style={{ fontSize: '11px', padding: '3px 9px', fontWeight: 800 }}
+                            style={{ fontSize: '11px', padding: '3px 9px', fontWeight: 700 }}
                           >
-                            Rs. {fNum(grp.pendingDue)} Due
+                            Rs. {formatNumber(grp.pendingDue)} Due
                           </Badge>
                         ) : (
                           <Badge
                             variant="success"
-                            icon={<CheckCircleIcon size={11} />}
                             style={{ fontSize: '11px', padding: '3px 9px' }}
                           >
                             Fully Cleared
@@ -1221,32 +1115,10 @@ export default function PlayerProfilePage() {
                     >
                       <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
                         <span style={{ color: 'var(--text-secondary)' }}>
-                          <strong>Total Invested:</strong> Rs. {fNum(grp.tourneyFinancials.totalInvested)}{' '}
+                          <strong>Total Invested:</strong> Rs. {formatNumber(grp.tourneyFinancials.totalInvested)}{' '}
                           <span style={{ color: '#94a3b8', fontSize: '10.5px' }}>
-                            (Entry: Rs. {fNum(grp.tourneyFinancials.entryFee)} + Expenses: Rs. {fNum(grp.tourneyFinancials.tournamentExpenses + grp.tourneyFinancials.matchExpenses)})
+                            (Entry: Rs. {formatNumber(grp.tourneyFinancials.entryFee)} + Expenses: Rs. {formatNumber(grp.tourneyFinancials.tournamentExpenses + grp.tourneyFinancials.matchExpenses)})
                           </span>
-                        </span>
-                        <span style={{ color: '#cbd5e1' }}>|</span>
-                        <span style={{ color: 'var(--text-secondary)' }}>
-                          <strong>Total Returns:</strong>{' '}
-                          <strong style={{ color: grp.tourneyFinancials.totalReturns > 0 ? '#0284c7' : 'inherit' }}>
-                            Rs. {fNum(grp.tourneyFinancials.totalReturns)}
-                          </strong>{' '}
-                          <span style={{ color: '#94a3b8', fontSize: '10.5px' }}>
-                            (Prize: Rs. {fNum(grp.tourneyFinancials.actualWinningPrizeWon || 0)} + Sponsors: Rs. {fNum(grp.tourneyFinancials.sponsorFunds || 0)})
-                          </span>
-                        </span>
-                        <span style={{ color: '#cbd5e1' }}>|</span>
-                        <span>
-                          <strong>Net P&L:</strong>{' '}
-                          <strong
-                            style={{
-                              color: grp.tourneyFinancials.netPnl >= 0 ? '#15803d' : '#b91c1c',
-                            }}
-                          >
-                            {grp.tourneyFinancials.netPnl >= 0 ? '+' : ''}Rs. {fNum(grp.tourneyFinancials.netPnl)}{' '}
-                            ({grp.tourneyFinancials.netPnl >= 0 ? 'Net Profit' : 'Net Loss'})
-                          </strong>
                         </span>
                       </div>
 
@@ -1263,7 +1135,6 @@ export default function PlayerProfilePage() {
                         }}
                       >
                         <span>Full Tournament ROI Ledger</span>
-                        <ExternalLinkIcon size={10} />
                       </Link>
                     </div>
                   )}
@@ -1280,145 +1151,7 @@ export default function PlayerProfilePage() {
                           return due > 0 ? 'row-pending-due' : '';
                         }}
                         emptyMessage="No matches recorded for this tournament."
-                        columns={[
-                          {
-                            header: 'Match & Stage',
-                            width: '32%',
-                            render: (rec: any) => {
-                              const match = rec.matchId;
-                              const isMOM = momAwards.some((a) => a.matchId?._id === match?._id);
-                              return (
-                                <div className="cell-match-row">
-                                  {match ? (
-                                    <Link href={`/matches/${match._id}`} className="cell-match-link">
-                                      <span>vs {match.opponentTeam || 'Opponent'}</span>
-                                      <ExternalLinkIcon size={10} color="var(--accent-blue)" />
-                                    </Link>
-                                  ) : (
-                                    <span style={{ color: 'var(--text-muted)' }}>Match</span>
-                                  )}
-
-                                  {match?.tournamentStage && match.tournamentStage !== 'regular' && (
-                                    <span className="badge-tourney-pill" style={{ textTransform: 'capitalize' }}>
-                                      {match.tournamentStage.replace(/_/g, ' ')}
-                                    </span>
-                                  )}
-
-                                  {match?.teamId?.name && (
-                                    <span className="badge-team-pill" title="Team">
-                                      {match.teamId.shortName || match.teamId.name}
-                                    </span>
-                                  )}
-
-                                  {isMOM && (
-                                    <span className="badge-mom-pill" title="Man of the Match">
-                                      <AwardIcon size={10} />
-                                      MOM
-                                    </span>
-                                  )}
-
-                                  {match?.result && (
-                                    <span
-                                      className={`cell-match-result ${
-                                        match.result === 'won' ? 'res-won' : 'res-lost'
-                                      }`}
-                                    >
-                                      {match.result.toUpperCase()}
-                                    </span>
-                                  )}
-                                </div>
-                              );
-                            },
-                          },
-                          {
-                            header: 'Date',
-                            width: '12%',
-                            className: 'cell-date',
-                            render: (rec: any) =>
-                              rec.matchId?.matchDate
-                                ? formatDate(rec.matchId.matchDate, 'N/A')
-                                : 'N/A',
-                          },
-                          {
-                            header: 'Fee Assigned',
-                            width: '12%',
-                            className: 'cell-mono',
-                            render: (rec: any) => `Rs. ${fNum(rec.feeAssigned)}`,
-                          },
-                          {
-                            header: 'Fee Paid',
-                            width: '12%',
-                            className: 'cell-mono cell-paid',
-                            render: (rec: any) => `Rs. ${fNum(rec.feePaid)}`,
-                          },
-                          {
-                            header: 'Due',
-                            width: '11%',
-                            className: 'cell-mono',
-                            render: (rec: any) => {
-                              const due = (rec.feeAssigned || 0) - (rec.feePaid || 0);
-                              return due > 0 ? (
-                                <span className="cell-due-val">Rs. {fNum(due)}</span>
-                              ) : (
-                                <span className="cell-zero-due">Rs. 0</span>
-                              );
-                            },
-                          },
-                          {
-                            header: 'Status',
-                            width: '10%',
-                            render: (rec: any) => {
-                              const isPaid = rec.paymentStatus === 'paid';
-                              return (
-                                <Badge
-                                  variant={
-                                    isPaid
-                                      ? 'success'
-                                      : rec.paymentStatus === 'partial'
-                                      ? 'warning'
-                                      : 'danger'
-                                  }
-                                  style={{ fontSize: '10.5px', padding: '2px 7px' }}
-                                >
-                                  {rec.paymentStatus.toUpperCase()}
-                                </Badge>
-                              );
-                            },
-                          },
-                          {
-                            header: 'Actions',
-                            width: '11%',
-                            align: 'right',
-                            render: (rec: any) => {
-                              const isPaid = rec.paymentStatus === 'paid';
-                              return (
-                                <div className="action-group" style={{ justifyContent: 'flex-end', gap: '4px' }}>
-                                  {!isPaid && (
-                                    <Button
-                                      variant="success"
-                                      size="sm"
-                                      icon={<CheckCircleIcon size={11} />}
-                                      onClick={() => handleQuickMarkPaid(rec._id, rec.feeAssigned)}
-                                      title="Mark Fully Paid"
-                                      style={{ height: '26px', padding: '0 8px', fontSize: '11px' }}
-                                    >
-                                      Paid
-                                    </Button>
-                                  )}
-                                  <Button
-                                    variant="secondary"
-                                    size="sm"
-                                    icon={<PencilIcon size={11} />}
-                                    onClick={() => setEditingPayment(rec)}
-                                    style={{ height: '26px', padding: '0 8px', fontSize: '11px' }}
-                                  >
-                                    Edit
-                                  </Button>
-                                </div>
-                              );
-                            },
-                          },
-                        ]}
+                        columns={getPlayerMatchFeeColumns({ momAwards, handleQuickMarkPaid, setEditingPayment })}
                       />
                     </div>
                   )}
@@ -1428,19 +1161,19 @@ export default function PlayerProfilePage() {
                     <div
                       style={{
                         padding: '8px 16px',
-                        background: '#fefce8',
-                        borderTop: '1px solid #fef08a',
+                        background: '#f1f5f9',
+                        borderTop: '1px solid #94a3b8',
                         fontSize: '11.5px',
-                        color: '#854d0e',
+                        color: '#334155',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'space-between',
                       }}
                     >
                       <span>
-                        <strong>Tournament Payouts & Returns:</strong> Rs. {fNum(grp.totalReturned)} returned/distributed to {player.name} for this tournament.
+                        <strong>Tournament Payouts & Returns:</strong> Rs. {formatNumber(grp.totalReturned)} returned/distributed to {player.name} for this tournament.
                       </span>
-                      <span style={{ fontSize: '11px', color: '#a16207' }}>
+                      <span style={{ fontSize: '11px', color: '#334155' }}>
                         {grp.returns.length} {grp.returns.length === 1 ? 'record' : 'records'}
                       </span>
                     </div>
@@ -1463,7 +1196,7 @@ export default function PlayerProfilePage() {
             }}
           >
             <div>
-              <h2 style={{ fontSize: '15px', fontWeight: 800, color: 'var(--text-primary)', margin: 0 }}>
+              <h2 style={{ fontSize: '15px', fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>
                 Returns, Refunds & Payouts
               </h2>
               <div style={{ fontSize: '11.5px', color: 'var(--text-muted)', marginTop: '2px' }}>
@@ -1474,9 +1207,8 @@ export default function PlayerProfilePage() {
             <Button
               variant="secondary"
               size="sm"
-              icon={<DollarIcon size={12} />}
               onClick={() => setIsReturnOpen(true)}
-              style={{ fontWeight: 700, background: '#fef3c7', borderColor: '#fde68a', color: '#b45309' }}
+              style={{ fontWeight: 700, background: '#e2e8f0', borderColor: '#94a3b8', color: '#334155' }}
             >
               Issue Return / Refund
             </Button>
@@ -1487,82 +1219,7 @@ export default function PlayerProfilePage() {
               data={playerReturns}
               keyExtractor={(ret: any) => ret._id}
               emptyMessage="No return or payout records for this player yet."
-              columns={[
-                {
-                  header: 'Date',
-                  width: '14%',
-                  render: (ret: any) => (
-                    <span style={{ fontSize: '12px' }}>
-                      {ret.returnDate ? formatDate(ret.returnDate, '-') : '-'}
-                    </span>
-                  ),
-                },
-                {
-                  header: 'Category / Source',
-                  width: '20%',
-                  render: (ret: any) => (
-                    <Badge
-                      variant={
-                        ret.source === 'winning_prize'
-                          ? 'warning'
-                          : ret.source === 'sponsorship'
-                          ? 'purple'
-                          : 'primary'
-                      }
-                      style={{ textTransform: 'capitalize', fontSize: '10.5px' }}
-                    >
-                      {getPlayerReturnSourceLabel(ret.source)}
-                    </Badge>
-                  ),
-                },
-                {
-                  header: 'Amount Returned',
-                  width: '16%',
-                  style: { fontWeight: 800, color: '#b45309', fontSize: '13px' },
-                  render: (ret: any) => `Rs. ${fNum(ret.amount)}`,
-                },
-                {
-                  header: 'Method',
-                  width: '14%',
-                  render: (ret: any) => (
-                    <span style={{ fontSize: '11.5px' }}>
-                      {getPaymentMethodLabel(ret.paymentMethod)}
-                    </span>
-                  ),
-                },
-                {
-                  header: 'Tournament / Notes',
-                  width: '24%',
-                  render: (ret: any) => (
-                    <span style={{ fontSize: '11.5px', color: 'var(--text-secondary)' }}>
-                      {ret.tournamentId?.name ? (
-                        <span style={{ fontWeight: 600, color: 'var(--accent-purple)', marginRight: '6px' }}>
-                          [{ret.tournamentId.name}]
-                        </span>
-                      ) : null}
-                      {ret.notes || '-'}
-                    </span>
-                  ),
-                },
-                {
-                  header: 'Action',
-                  width: '12%',
-                  align: 'right',
-                  render: (ret: any) => (
-                    <Button
-                      variant="danger"
-                      size="sm"
-                      isIconOnly
-                      icon={<TrashIcon size={12} />}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleDeleteReturn(ret._id, ret.amount);
-                      }}
-                      title="Delete return record"
-                    />
-                  ),
-                },
-              ]}
+              columns={getPlayerReturnColumns({ handleDeleteReturn })}
             />
           </div>
         </div>

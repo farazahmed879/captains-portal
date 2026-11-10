@@ -8,6 +8,10 @@ import { Input, Select, Textarea, Button, Alert } from './ui';
 import { fetchApi } from '../lib/api';
 import { queryKeys } from '../lib/queryKeys';
 import { EditTeamFormValues } from '../types';
+import {
+  TEAM_TYPE_OPTIONS,
+  FORM_DEFAULTS,
+} from '../constants';
 
 interface EditTeamModalProps {
   isOpen: boolean;
@@ -45,8 +49,8 @@ export const EditTeamModal: React.FC<EditTeamModalProps> = ({
       shortName: '',
       teamType: 'my_team',
       phone: '',
-      city: 'Karachi',
-      primaryColor: '#0284c7',
+      city: '',
+      primaryColor: FORM_DEFAULTS.teamColor,
       description: '',
     },
   });
@@ -60,8 +64,8 @@ export const EditTeamModal: React.FC<EditTeamModalProps> = ({
         shortName: team.shortName || '',
         teamType: team.teamType || (team.name?.toLowerCase().includes('gulzar') ? 'my_team' : 'opponent'),
         phone: team.phone || '',
-        city: team.city || 'Karachi',
-        primaryColor: team.primaryColor || '#0284c7',
+        city: team.city || '',
+        primaryColor: team.primaryColor || FORM_DEFAULTS.teamColor,
         description: team.description || '',
       });
       setServerError(null);
@@ -118,17 +122,14 @@ export const EditTeamModal: React.FC<EditTeamModalProps> = ({
         <div className="grid-2">
           <Input
             label="Team Name *"
-            placeholder="e.g. Gulzar Hard Ball XI"
+            placeholder="e.g. Hard Ball XI"
             {...register('name', { required: 'Team name is required' })}
             error={errors.name?.message}
           />
           <Select
             label="Team Category *"
             {...register('teamType')}
-            options={[
-              { value: 'my_team', label: 'My Club Team' },
-              { value: 'opponent', label: 'Opponent Team' },
-            ]}
+            options={TEAM_TYPE_OPTIONS}
           />
         </div>
 
@@ -170,13 +171,13 @@ export const EditTeamModal: React.FC<EditTeamModalProps> = ({
             <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
               <input
                 type="color"
-                value={currentColor || '#0284c7'}
+                value={currentColor || FORM_DEFAULTS.teamColor}
                 onChange={(e) => setValue('primaryColor', e.target.value)}
                 style={{ width: '42px', height: '38px', padding: 0, cursor: 'pointer', borderRadius: '6px', border: '1px solid var(--border-color)' }}
               />
               <Input
                 {...register('primaryColor')}
-                placeholder="#0284c7"
+                placeholder={FORM_DEFAULTS.teamColor}
               />
             </div>
           </div>

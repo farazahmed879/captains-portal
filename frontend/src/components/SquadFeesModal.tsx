@@ -6,21 +6,21 @@ import { Button, Badge, Input, Select } from './ui';
 import {
   Search,
   X,
-  CheckCircle2,
-  Sparkles,
   Award,
   Trash2,
-  ExternalLink,
   Save,
-  Receipt,
-  Pencil,
-  ArrowUpDown,
 } from 'lucide-react';
 import { fetchApi } from '../lib/api';
 import { showToast, confirmDelete } from '../lib/alerts';
 import { PaymentMethod } from '../constants';
 import Link from 'next/link';
 import styles from './SquadFeesModal.module.css';
+import { useIsMobile } from '../lib/useMediaQuery';
+import {
+  ChevronDown,
+} from 'lucide-react';
+import { formatNumber } from '../lib/format';
+import { playerOptions } from '../lib/options';
 
 export interface SquadFeesModalProps {
   isOpen?: boolean;
@@ -90,6 +90,14 @@ export const SquadFeesModal: React.FC<SquadFeesModalProps> = ({
   const [momAwardDetails, setMomAwardDetails] = useState<string>('');
   const [showMomCard, setShowMomCard] = useState<boolean>(false);
   const [isMomDirty, setIsMomDirty] = useState(false);
+  const isMobile = useIsMobile();
+  const [isCollapsed, setIsCollapsed] = useState(false);
+  const collapseDefaulted = useRef(false);
+  useEffect(() => {
+    if (collapseDefaulted.current || !isMobile) return;
+    collapseDefaulted.current = true;
+    setIsCollapsed(true);
+  }, [isMobile]);
 
   // Stable content signature so parent re-renders (e.g. `data?.players || []`
   // producing a fresh array reference) don't wipe in-progress edits.
@@ -800,7 +808,6 @@ export const SquadFeesModal: React.FC<SquadFeesModalProps> = ({
     }
   };
 
-  const fNum = (val: number | undefined) => (val || 0).toLocaleString('en-US');
 
   const ledgerBody = (
     <div className={styles.container}>
@@ -808,6 +815,33 @@ export const SquadFeesModal: React.FC<SquadFeesModalProps> = ({
       <div className={styles.twoColGrid}>
         {/* COLUMN 1: Unified Players List (Main Column) */}
         <div className={`${styles.leftCol} ${inline ? styles.leftColCard : ''}`}>
+          {/* Collapsible header (match page only); collapsed shows a one-line summary */}
+          {inline && (
+            <div className={styles.collapseHeader}>
+              <div className={styles.collapseTitleBlock}>
+                <div className={styles.collapseTitle}>Squad fees</div>
+                <div className={styles.collapseSummary}>
+                  {stats.squadCount} in squad · Rs. {formatNumber(stats.totalCollected)} collected
+                  {stats.pendingDues > 0 && (
+                    <span className={styles.textRose}> · Rs. {formatNumber(stats.pendingDues)} due</span>
+                  )}
+                  {stats.dirtyCount > 0 && <span> · {stats.dirtyCount} unsaved</span>}
+                </div>
+              </div>
+              <button
+                type="button"
+                className={styles.collapseToggle}
+                onClick={() => setIsCollapsed((c) => !c)}
+                aria-expanded={!isCollapsed}
+              >
+                {isCollapsed ? 'Expand' : 'Collapse'}
+                <ChevronDown size={14} className={isCollapsed ? '' : styles.chevronUp} aria-hidden />
+              </button>
+            </div>
+          )}
+
+          {!(inline && isCollapsed) && (
+          <>
           {/* Top Toolbar: Search & Default Inputs */}
           <div className={styles.toolbarRow}>
               <Input
@@ -885,7 +919,7 @@ export const SquadFeesModal: React.FC<SquadFeesModalProps> = ({
                 onClick={() => setActiveTab('topi')}
                 className={`${styles.filterPill} ${activeTab === 'topi' ? styles.filterPillActive : ''}`}
               >
-                🧢 Topi <span className={styles.filterCountBadge}>{stats.topiCount}</span>
+                Topi <span className={styles.filterCountBadge}>{stats.topiCount}</span>
               </button>
               <button
                 type="button"
@@ -903,7 +937,6 @@ export const SquadFeesModal: React.FC<SquadFeesModalProps> = ({
                   type="button"
                   variant="outline"
                   size="sm"
-                  icon={<Sparkles size={12} />}
                   onClick={applyBulkDefaultToSelected}
                   disabled={selectedIds.length === 0}
                   className={styles.btnBatch}
@@ -930,7 +963,7 @@ export const SquadFeesModal: React.FC<SquadFeesModalProps> = ({
                   disabled={selectedIds.length === 0}
                   className={styles.btnBatch}
                 >
-                  🧢 Topi (Rs. 0 Paid)
+                  Topi (Rs. 0 Paid)
                 </Button>
               </div>
 
@@ -939,7 +972,6 @@ export const SquadFeesModal: React.FC<SquadFeesModalProps> = ({
                   type="button"
                   variant="outline"
                   size="sm"
-                  icon={<ArrowUpDown size={12} />}
                   onClick={handleSortSelectedToTop}
                   disabled={activeSelectionOrSquadIds.length === 0 && pinnedTopIds.length === 0}
                   className={`${styles.btnBatch} ${
@@ -1051,7 +1083,7 @@ export const SquadFeesModal: React.FC<SquadFeesModalProps> = ({
                           {displayMatches > 0 && (
                             <Badge
                               variant={tourMatches > 0 ? 'primary' : 'secondary'}
-                              className={styles.badgeStatus}
+                              className={`${styles.badgeStatus} ${styles.badgeMatches}`}
                             >
                               {displayMatches} {displayMatches === 1 ? 'match' : 'matches'}
                             </Badge>
@@ -1059,7 +1091,7 @@ export const SquadFeesModal: React.FC<SquadFeesModalProps> = ({
 
                           {isMom && (
                             <Badge variant="warning" className={styles.badgeMom}>
-                              🏆 MOM {momPrizeMoney ? `(Rs. ${momPrizeMoney})` : ''}
+                              MOM {momPrizeMoney ? `(Rs. ${momPrizeMoney})` : ''}
                             </Badge>
                           )}
 
@@ -1077,7 +1109,7 @@ export const SquadFeesModal: React.FC<SquadFeesModalProps> = ({
 
                           {isTopi && (
                             <Badge variant="danger" className={styles.badgeStatus}>
-                              🧢 TOPI
+                              TOPI
                             </Badge>
                           )}
 
@@ -1172,18 +1204,21 @@ export const SquadFeesModal: React.FC<SquadFeesModalProps> = ({
                                 isTopi ? styles.pillBtnTopiActive : ''
                               }`}
                             >
-                              Topi 🧢
+                              Topi 
                             </button>
-                            <button
-                              type="button"
-                              onClick={() => toggleMomPlayer(row.playerId)}
-                              title={`Toggle ${row.name} as MOM`}
-                              className={`${styles.pillBtn} ${styles.pillBtnMom} ${
-                                isMom ? styles.pillBtnMomActive : ''
-                              }`}
-                            >
-                              🏆 MOM
-                            </button>
+                            {/* On the match page MOM is managed in one place: the page's MOM card. */}
+                            {!inline && (
+                              <button
+                                type="button"
+                                onClick={() => toggleMomPlayer(row.playerId)}
+                                title={`Toggle ${row.name} as MOM`}
+                                className={`${styles.pillBtn} ${styles.pillBtnMom} ${
+                                  isMom ? styles.pillBtnMomActive : ''
+                                }`}
+                              >
+                                MOM
+                              </button>
+                            )}
                           </div>
 
                           {row.inSquad && (
@@ -1232,7 +1267,6 @@ export const SquadFeesModal: React.FC<SquadFeesModalProps> = ({
                   <Button
                     variant="success"
                     size="sm"
-                    icon={<Save size={14} />}
                     loading={isSaving}
                     onClick={handleSaveAll}
                   >
@@ -1241,6 +1275,8 @@ export const SquadFeesModal: React.FC<SquadFeesModalProps> = ({
                 </div>
               </div>
             )}
+          </>
+          )}
           </div>
 
           {/* COLUMN 2: Stats & Match Financials Sidebar */}
@@ -1275,17 +1311,17 @@ export const SquadFeesModal: React.FC<SquadFeesModalProps> = ({
               <div className={styles.statBoxesGrid}>
                 <div className={`${styles.statBox} ${styles.statBoxCost}`}>
                   <span className={styles.statLabel}>Ground Cost</span>
-                  <span className={styles.statVal}>Rs. {fNum(totalGroundCost)}</span>
+                  <span className={styles.statVal}>Rs. {formatNumber(totalGroundCost)}</span>
                 </div>
 
                 <div className={`${styles.statBox} ${styles.statBoxCollected}`}>
                   <span className={styles.statLabel}>Fees Collected</span>
-                  <span className={styles.statVal}>Rs. {fNum(stats.totalCollected)}</span>
+                  <span className={styles.statVal}>Rs. {formatNumber(stats.totalCollected)}</span>
                 </div>
 
                 <div className={`${styles.statBox} ${styles.statBoxPending}`}>
                   <span className={styles.statLabel}>Pending Dues</span>
-                  <span className={styles.statVal}>Rs. {fNum(stats.pendingDues)}</span>
+                  <span className={styles.statVal}>Rs. {formatNumber(stats.pendingDues)}</span>
                 </div>
 
                 <div
@@ -1299,9 +1335,9 @@ export const SquadFeesModal: React.FC<SquadFeesModalProps> = ({
                   <span className={styles.statVal}>
                     {stats.remainingDeficit === 0
                       ? stats.netBalance > 0
-                        ? `+Rs. ${fNum(stats.netBalance)}`
+                        ? `+Rs. ${formatNumber(stats.netBalance)}`
                         : 'Break-Even'
-                      : `Rs. ${fNum(stats.remainingDeficit)} Deficit`}
+                      : `Rs. ${formatNumber(stats.remainingDeficit)} Deficit`}
                   </span>
                 </div>
               </div>
@@ -1350,7 +1386,8 @@ export const SquadFeesModal: React.FC<SquadFeesModalProps> = ({
                 </div>
               </div>
 
-              {/* Organizer MOM Award Section */}
+              {/* Organizer MOM Award Section (dialog only; the match page has its own MOM card) */}
+              {!inline && (
               <div
                 className={`${styles.momSidebarCard} ${
                   momPlayerId ? styles.momSidebarCardActive : ''
@@ -1361,7 +1398,6 @@ export const SquadFeesModal: React.FC<SquadFeesModalProps> = ({
                   onClick={() => setShowMomCard(!showMomCard)}
                 >
                   <div className={styles.momSidebarTitle}>
-                    <Award size={15} color="#d97706" />
                     <span>Organizer MOM Award</span>
                   </div>
                   <span className={styles.momToggleText}>
@@ -1371,7 +1407,7 @@ export const SquadFeesModal: React.FC<SquadFeesModalProps> = ({
 
                 {momPlayerId && !showMomCard && (
                   <Badge variant="warning" className={styles.momSummaryBadge}>
-                    🏆 {players.find((p) => p._id === momPlayerId)?.name || 'Player'} (+Rs.{' '}
+                    {players.find((p) => p._id === momPlayerId)?.name || 'Player'} (+Rs.{' '}
                     {momPrizeMoney || 0})
                   </Badge>
                 )}
@@ -1381,13 +1417,7 @@ export const SquadFeesModal: React.FC<SquadFeesModalProps> = ({
                     <Select
                       label="MOM Player"
                       value={momPlayerId}
-                      options={[
-                        { value: '', label: 'None (No MOM Awarded)' },
-                        ...players.map((p) => ({
-                          value: p._id,
-                          label: `${p.name}${p.jerseyNumber ? ` (#${p.jerseyNumber})` : ''}`,
-                        })),
-                      ]}
+                      options={playerOptions(players, 'None (No MOM Awarded)')}
                       onChange={(e) => {
                         setMomPlayerId(e.target.value);
                         if (e.target.value && !momPrizeMoney) setMomPrizeMoney(1000);
@@ -1421,6 +1451,7 @@ export const SquadFeesModal: React.FC<SquadFeesModalProps> = ({
                   </div>
                 )}
               </div>
+              )}
 
               {/* Sidebar Action Buttons */}
               <div className={styles.sidebarActions}>
@@ -1428,20 +1459,18 @@ export const SquadFeesModal: React.FC<SquadFeesModalProps> = ({
                   <Button
                     variant="success"
                     size="sm"
-                    icon={<CheckCircle2 size={13} />}
                     onClick={handleMarkAllPaid}
                     disabled={isSaving}
                     className={styles.btnClearDues}
                     title="Mark all pending squad match fees as paid"
                   >
-                    Clear Player Dues (Rs. {fNum(stats.pendingDues)})
+                    Clear Player Dues (Rs. {formatNumber(stats.pendingDues)})
                   </Button>
                 )}
 
                 <Button
                   variant="primary"
                   size="sm"
-                  icon={<Save size={14} />}
                   loading={isSaving}
                   onClick={handleSaveAll}
                   className={styles.btnSaveAll}
@@ -1454,7 +1483,6 @@ export const SquadFeesModal: React.FC<SquadFeesModalProps> = ({
                     <Button
                       variant="secondary"
                       size="sm"
-                      icon={<ExternalLink size={13} />}
                       className={styles.btnFullWidth}
                     >
                       Open Match Detail Page
@@ -1469,14 +1497,12 @@ export const SquadFeesModal: React.FC<SquadFeesModalProps> = ({
               <div className={styles.sidebarCard}>
                 <div className={styles.expenseHeader}>
                   <h4 className={styles.expenseTitle}>
-                    <Receipt size={15} color="#0284c7" />
                     Itemized Ground Expenses
                   </h4>
                   {onEditExpenses && (
                     <Button
                       variant="secondary"
                       size="sm"
-                      icon={<Pencil size={11} color="#0284c7" />}
                       onClick={onEditExpenses}
                       className={styles.btnBatch}
                     >
@@ -1488,27 +1514,27 @@ export const SquadFeesModal: React.FC<SquadFeesModalProps> = ({
                 <div className={styles.expenseList}>
                   <div className={styles.expenseRow}>
                     <span>Pitch / Ground Rent</span>
-                    <strong>Rs. {fNum(match?.groundCost)}</strong>
+                    <strong>Rs. {formatNumber(match?.groundCost)}</strong>
                   </div>
                   <div className={styles.expenseRow}>
                     <span>Umpire Charges</span>
-                    <strong>Rs. {fNum(match?.umpireCost)}</strong>
+                    <strong>Rs. {formatNumber(match?.umpireCost)}</strong>
                   </div>
                   <div className={styles.expenseRow}>
                     <span>Match Balls</span>
-                    <strong>Rs. {fNum(match?.ballCost)}</strong>
+                    <strong>Rs. {formatNumber(match?.ballCost)}</strong>
                   </div>
                   <div className={styles.expenseRow}>
                     <span>Refreshments & Water</span>
-                    <strong>Rs. {fNum(match?.refreshmentCost)}</strong>
+                    <strong>Rs. {formatNumber(match?.refreshmentCost)}</strong>
                   </div>
                   <div className={styles.expenseRow}>
                     <span>Other Miscellaneous</span>
-                    <strong>Rs. {fNum(match?.otherCosts)}</strong>
+                    <strong>Rs. {formatNumber(match?.otherCosts)}</strong>
                   </div>
                   <div className={styles.expenseTotalRow}>
                     <span>Total Ground Expense</span>
-                    <span>Rs. {fNum(totalGroundCost)}</span>
+                    <span>Rs. {formatNumber(totalGroundCost)}</span>
                   </div>
                 </div>
               </div>
@@ -1549,7 +1575,6 @@ export const SquadFeesModal: React.FC<SquadFeesModalProps> = ({
             <Button
               variant="success"
               size="sm"
-              icon={<Save size={14} />}
               loading={isSaving}
               onClick={handleSaveAll}
             >

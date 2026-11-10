@@ -14,49 +14,34 @@ import {
   Input,
   Select,
   Modal,
-  Card,
   DataTable,
   Pagination,
   ViewSwitcher,
   Avatar,
-  StatBadge,
   CardGridSkeleton,
   BulkActionBar,
   GridSelectCheckbox,
+  ListToolbar,
 } from '../../components/ui';
-import {
-  PLAYER_ROLE_OPTIONS,
-  PLAYER_SORT_OPTIONS,
-  PAYMENT_METHOD_OPTIONS,
-} from '../../constants';
+import { PLAYER_ROLE_OPTIONS, PLAYER_SORT_OPTIONS, withAllOption } from '../../constants';
 import { Player } from '../../types';
 import { getPlayerColumns } from '../../columns';
 import {
-  Users,
-  Plus,
   Search,
-  Phone,
-  Trophy,
-  CheckCircle2,
-  Clock,
-  Shield,
-  Eye,
   Pencil,
   Trash2,
-  ExternalLink,
-  DollarIcon,
-  AlertCircle,
-  Calendar,
 } from '../../components/icons';
 import { PlayerReturnModal } from '../../components/PlayerReturnModal';
 import { RegisterPlayerModal } from '../../components/RegisterPlayerModal';
 import { EditPlayerModal } from '../../components/EditPlayerModal';
 import { CollectMatchFeeModal } from '../../components/CollectMatchFeeModal';
+import { useIsMobile } from '../../lib/useMediaQuery';
+import { formatNumber } from '../../lib/format';
+import { usePageSize } from '../../lib/usePageSize';
 
 export default function PlayersPage() {
   const router = useRouter();
   const queryClient = useQueryClient();
-  const [selectedTeamId, setSelectedTeamId] = useState<string>('');
   const [search, setSearch] = useState<string>('');
   const [roleFilter, setRoleFilter] = useState<string>('');
 
@@ -77,13 +62,9 @@ export default function PlayersPage() {
 
   // React Queries
   const playersQuery = useQuery({
-    queryKey: queryKeys.players({ search, selectedTeamId, roleFilter }),
-    queryFn: () => {
-      let query = `?search=${encodeURIComponent(search)}`;
-      if (selectedTeamId) query += `&teamId=${selectedTeamId}`;
-      if (roleFilter) query += `&role=${roleFilter}`;
-      return fetchApi<{ success: boolean; players: any[] }>(`/players${query}`);
-    },
+    // The whole roster is loaded once; search and role filtering happen below, on the page.
+    queryKey: queryKeys.players(),
+    queryFn: () => fetchApi<{ success: boolean; players: any[] }>('/players'),
   });
 
   const teamsQuery = useQuery({
@@ -124,9 +105,10 @@ export default function PlayersPage() {
     setIsFeeModalOpen(true);
   };
 
-  const fNum = (val: number | undefined) => (val || 0).toLocaleString('en-US');
-
-  const [viewMode, setViewMode] = useState<'table' | 'grid'>('table');
+  const [preferredView, setViewMode] = useState<'table' | 'grid'>('table');
+  // Phones always show the list; the List/Grid switch is hidden there (globals.css).
+  const isMobile = useIsMobile();
+  const viewMode = isMobile ? 'table' : preferredView;
   const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'cleared'>('all');
   const [sortBy, setSortBy] = useState<'name' | 'due' | 'matches'>('name');
   const [currentPage, setCurrentPage] = useState<number>(1);
@@ -153,7 +135,7 @@ export default function PlayersPage() {
       setIsBulkDeleting(false);
     }
   };
-  const pageSize = 12;
+  const [pageSize, setPageSize] = usePageSize('players');
 
   // Computed metrics
   const pendingCount = useMemo(
@@ -171,11 +153,20 @@ export default function PlayersPage() {
 
   // Filtered and sorted players
   const displayedPlayers = useMemo(() => {
+    const term = search.trim().toLowerCase();
     return players
       .filter((pl) => {
         const due = pl.pendingDue || 0;
         if (statusFilter === 'pending' && due <= 0) return false;
         if (statusFilter === 'cleared' && due > 0) return false;
+        if (roleFilter && pl.role !== roleFilter) return false;
+        if (
+          term &&
+          ![pl.name, pl.phone, pl.jerseyNumber != null ? `#${pl.jerseyNumber}` : '']
+            .filter(Boolean)
+            .some((v) => String(v).toLowerCase().includes(term))
+        )
+          return false;
         return true;
       })
       .sort((a, b) => {
@@ -183,7 +174,7 @@ export default function PlayersPage() {
         if (sortBy === 'matches') return (b.matchesPlayed || 0) - (a.matchesPlayed || 0);
         return (a.name || '').localeCompare(b.name || '');
       });
-  }, [players, statusFilter, sortBy]);
+  }, [players, statusFilter, roleFilter, search, sortBy]);
 
   const totalPages = Math.ceil(displayedPlayers.length / pageSize) || 1;
   const paginatedPlayers = useMemo(() => {
@@ -200,9 +191,8 @@ export default function PlayersPage() {
         },
         onEdit: handleEditOpen,
         onDelete: handleDelete,
-        fNum,
       }),
-    [fNum]
+    [openFeeModal, handleEditOpen, handleDelete]
   );
 
   return (
@@ -210,105 +200,52 @@ export default function PlayersPage() {
       <Header
         title="Player Rosters & Payment Ledgers"
         subtitle="Manage Player Profiles, Fees Assigned vs Paid, and Edit/Delete Player Details"
-        selectedTeamId={selectedTeamId}
-        onTeamChange={(id) => {
-          setSelectedTeamId(id);
-          setCurrentPage(1);
-        }}
       />
 
-      <div className="content-body" style={{ padding: '14px 24px 28px 24px' }}>
+      <div className="content-body">
         {/* Concise Filter Bar with Status Tabs & Controls */}
-        <div className="filter-bar" style={{ padding: '8px 14px', gap: '10px' }}>
-          <div className="filter-bar-left" style={{ gap: '10px', flexWrap: 'wrap' }}>
-            {/* Quick Status Tabs */}
-            <div className="ledger-tab-group">
-              <button
-                type="button"
-                className={`ledger-tab ${statusFilter === 'all' ? 'active' : ''}`}
-                onClick={() => {
-                  setStatusFilter('all');
-                  setCurrentPage(1);
-                }}
-              >
-                All Players <span className="tab-count">{players.length}</span>
-              </button>
-              <button
-                type="button"
-                className={`ledger-tab tab-pending ${statusFilter === 'pending' ? 'active' : ''}`}
-                onClick={() => {
-                  setStatusFilter('pending');
-                  setCurrentPage(1);
-                }}
-              >
-                Pending Due <span className="tab-count">{pendingCount}</span>
-              </button>
-              <button
-                type="button"
-                className={`ledger-tab tab-cleared ${statusFilter === 'cleared' ? 'active' : ''}`}
-                onClick={() => {
-                  setStatusFilter('cleared');
-                  setCurrentPage(1);
-                }}
-              >
-                Cleared <span className="tab-count">{clearedCount}</span>
-              </button>
-            </div>
-
-            {/* Search Player */}
-            <div className="filter-field filter-field-search" style={{ width: '220px' }}>
-              <Input
-                placeholder="Search player name..."
-                value={search}
-                onChange={(e) => {
-                  setSearch(e.target.value);
-                  setCurrentPage(1);
-                }}
-                icon={<Search size={14} />}
-              />
-            </div>
-
-            {/* Role Filter */}
-            <div className="filter-field" style={{ width: '150px' }}>
-              <Select
-                value={roleFilter}
-                onChange={(e) => {
-                  setRoleFilter(e.target.value);
-                  setCurrentPage(1);
-                }}
-                options={[
-                  { value: '', label: 'All Roles' },
-                  ...PLAYER_ROLE_OPTIONS,
-                ]}
-              />
-            </div>
-
-            {/* Sort Dropdown */}
-            <div className="filter-field" style={{ minWidth: '170px' }}>
-              <Select
-                value={sortBy}
-                onChange={(e) => {
-                  setSortBy(e.target.value as any);
-                  setCurrentPage(1);
-                }}
-                options={PLAYER_SORT_OPTIONS}
-              />
-            </div>
-          </div>
-
-          <div className="filter-bar-right">
-            <ViewSwitcher viewMode={viewMode} onChange={setViewMode} />
-
-            <Button
-              variant="primary"
-              size="sm"
-              icon={<Plus size={15} />}
-              onClick={() => setIsCreateOpen(true)}
-            >
-              Add Player
-            </Button>
-          </div>
-        </div>
+        <ListToolbar
+          tabs={{
+            value: statusFilter,
+            onChange: (value) => {
+              setStatusFilter(value);
+              setCurrentPage(1);
+            },
+            tabs: [
+              { value: 'all', label: 'All Players', count: players.length },
+              { value: 'pending', label: 'Pending Due', count: pendingCount, tone: 'pending' },
+              { value: 'cleared', label: 'Cleared', count: clearedCount, tone: 'cleared' },
+            ],
+          }}
+          search={{
+            placeholder: 'Search player name...',
+            value: search,
+            onChange: (value) => {
+              setSearch(value);
+              setCurrentPage(1);
+            },
+          }}
+          filters={[
+            {
+              value: roleFilter,
+              onChange: (value) => {
+                setRoleFilter(value);
+                setCurrentPage(1);
+              },
+              options: withAllOption('All Roles', PLAYER_ROLE_OPTIONS),
+            },
+            {
+              value: sortBy,
+              onChange: (value) => {
+                setSortBy(value as typeof sortBy);
+                setCurrentPage(1);
+              },
+              options: PLAYER_SORT_OPTIONS,
+            },
+          ]}
+          view={{ value: viewMode, onChange: setViewMode }}
+          add={{ label: 'Add Player', onClick: () => setIsCreateOpen(true) }}
+        />
 
         {/* Bulk Selection & Multi-Delete Bar */}
         <BulkActionBar
@@ -342,6 +279,10 @@ export default function PlayersPage() {
             totalPages={totalPages}
             totalItems={displayedPlayers.length}
             pageSize={pageSize}
+            onPageSizeChange={(size) => {
+              setPageSize(size);
+              setCurrentPage(1);
+            }}
             onPageChange={setCurrentPage}
             itemName="Players"
           />
@@ -385,7 +326,6 @@ export default function PlayersPage() {
                       <div className="player-card-titles">
                         <Link href={`/players/${pl._id}`} className="player-card-name-link">
                           <span>{pl.name}</span>
-                          <ExternalLink size={10} color="var(--accent-blue)" />
                         </Link>
                         <div className="player-card-sub">
                           <Badge variant="purple" style={{ fontSize: '9.5px', textTransform: 'capitalize', padding: '1px 5px' }}>
@@ -412,22 +352,22 @@ export default function PlayersPage() {
                       </div>
                       <div className="player-stat-col">
                         <span className="player-stat-label">Assigned</span>
-                        <span className="player-stat-val" style={{ fontSize: '11px' }}>Rs. {fNum(pl.totalFeeAssigned)}</span>
+                        <span className="player-stat-val" style={{ fontSize: '11px' }}>Rs. {formatNumber(pl.totalFeeAssigned)}</span>
                       </div>
                       <div className="player-stat-col">
                         <span className="player-stat-label">Paid</span>
-                        <span className="player-stat-val player-stat-paid" style={{ fontSize: '11px' }}>Rs. {fNum(pl.totalFeePaid)}</span>
+                        <span className="player-stat-val player-stat-paid" style={{ fontSize: '11px' }}>Rs. {formatNumber(pl.totalFeePaid)}</span>
                       </div>
                       <div className="player-stat-col">
                         <span className="player-stat-label">Returned</span>
-                        <span className="player-stat-val" style={{ fontSize: '11px', color: (pl.totalReturned || 0) > 0 ? '#b45309' : 'var(--text-muted)' }}>
-                          Rs. {fNum(pl.totalReturned || 0)}
+                        <span className="player-stat-val" style={{ fontSize: '11px', color: (pl.totalReturned || 0) > 0 ? '#334155' : 'var(--text-muted)' }}>
+                          Rs. {formatNumber(pl.totalReturned || 0)}
                         </span>
                       </div>
                       <div className="player-stat-col">
                         <span className="player-stat-label">Due</span>
                         <span className={`player-stat-val ${hasDue ? 'player-stat-due' : ''}`} style={{ fontSize: '11px' }}>
-                          {hasDue ? `Rs. ${fNum(due)}` : 'Rs. 0'}
+                          {hasDue ? `Rs. ${formatNumber(due)}` : 'Rs. 0'}
                         </span>
                       </div>
                     </div>
@@ -437,10 +377,10 @@ export default function PlayersPage() {
                       <div>
                         {hasDue ? (
                           <Badge variant="danger" style={{ fontSize: '10px', padding: '2px 6px' }}>
-                            Rs. {fNum(due)} Due
+                            Rs. {formatNumber(due)} Due
                           </Badge>
                         ) : (
-                          <Badge variant="success" icon={<CheckCircle2 size={10} />} style={{ fontSize: '10px', padding: '2px 6px' }}>
+                          <Badge variant="success" style={{ fontSize: '10px', padding: '2px 6px' }}>
                             Cleared
                           </Badge>
                         )}
@@ -450,7 +390,6 @@ export default function PlayersPage() {
                         <Button
                           variant="success"
                           size="sm"
-                          icon={<DollarIcon size={12} />}
                           onClick={() => openFeeModal(pl)}
                           title="Collect / Pay Match Fee"
                           style={{ padding: '4px 8px', fontSize: '11px' }}
@@ -460,13 +399,12 @@ export default function PlayersPage() {
                         <Button
                           variant="secondary"
                           size="sm"
-                          icon={<DollarIcon size={12} />}
                           onClick={() => {
                             setSelectedPlayerForReturn(pl);
                             setIsReturnOpen(true);
                           }}
                           title="Return excess fee or payout"
-                          style={{ padding: '4px 8px', fontSize: '11px', background: '#fef3c7', borderColor: '#fde68a', color: '#b45309', fontWeight: 700 }}
+                          style={{ padding: '4px 8px', fontSize: '11px', background: '#e2e8f0', borderColor: '#94a3b8', color: '#334155', fontWeight: 700 }}
                         >
                           Return
                         </Button>
@@ -502,6 +440,10 @@ export default function PlayersPage() {
             totalPages={totalPages}
             totalItems={displayedPlayers.length}
             pageSize={pageSize}
+            onPageSizeChange={(size) => {
+              setPageSize(size);
+              setCurrentPage(1);
+            }}
             onPageChange={setCurrentPage}
             itemName="Players"
           />

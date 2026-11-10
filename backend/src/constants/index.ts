@@ -32,6 +32,8 @@ export const PAGINATION_CONSTANTS = {
 export const SYSTEM_DEFAULTS = {
   CITY: 'Karachi',
   PRIMARY_COLOR: '#0284c7',
+  /** Name given to the club created for the very first registration. */
+  CLUB_NAME: 'My Cricket Club',
   APP_NAME: 'Captains Portal API',
 } as const;
 

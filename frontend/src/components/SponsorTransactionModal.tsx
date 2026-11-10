@@ -5,7 +5,7 @@ import { useForm } from 'react-hook-form';
 import { fetchApi } from '../lib/api';
 import { Button, Input, Select, Textarea, DatePicker, Modal, StatBadge, Alert } from './ui';
 import { TrendingUp, TrendingDown, AlertCircleIcon } from './icons';
-import { formatCurrency, formatNumber } from '../lib/format';
+import { formatCurrency } from '../lib/format';
 
 import {
   SponsorTxType,
@@ -31,6 +31,7 @@ interface SponsorTransactionModalProps {
 }
 
 import { SponsorTransactionFormValues } from '../types';
+import { tournamentOptions } from '../lib/options';
 
 export type { SponsorTransactionFormValues };
 
@@ -149,7 +150,7 @@ export const SponsorTransactionModal: React.FC<SponsorTransactionModalProps> = (
           borderRadius: '10px',
           cursor: 'pointer',
           border: `1.5px solid ${active ? color : 'var(--border-color)'}`,
-          background: active ? (type === 'investment' ? 'rgba(5,150,105,0.06)' : 'rgba(225,29,72,0.06)') : '#fff',
+          background: active ? (type === 'investment' ? 'rgba(15, 23, 42, 0.06)' : 'rgba(15, 23, 42, 0.06)') : '#fff',
           transition: 'all 150ms ease',
           display: 'flex',
           gap: '10px',
@@ -258,7 +259,7 @@ export const SponsorTransactionModal: React.FC<SponsorTransactionModalProps> = (
             id="sponsor-tx-tournament"
             label="Linked Tournament (optional)"
             value={watchedTournamentId}
-            options={[{ value: '', label: '— Not linked —' }, ...tournaments.map((t) => ({ value: t._id, label: t.name }))]}
+            options={tournamentOptions(tournaments, '— Not linked —')}
             {...register('tournamentId')}
           />
         )}

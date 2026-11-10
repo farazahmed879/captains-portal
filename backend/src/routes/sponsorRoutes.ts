@@ -9,10 +9,11 @@ import {
   updateSponsorTransaction,
   deleteSponsorTransaction,
 } from '../controllers/sponsorController';
-import { authenticate } from '../middlewares/auth';
+import { authenticate, requireWriteAccess } from '../middlewares/auth';
 
 const router = Router();
 router.use(authenticate);
+router.use(requireWriteAccess);
 
 router.get('/', getSponsors);
 router.get('/:id', getSponsorById);

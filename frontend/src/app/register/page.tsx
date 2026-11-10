@@ -112,7 +112,7 @@ export default function RegisterPage() {
           }
           description="Register your team in seconds: manage your 11-player rosters, track match fees per player, control tournament budgets, and generate transparent financial ledgers."
           badges={[
-            { icon: <Trophy size={13} color="#38bdf8" />, text: 'New Club Workspace Setup' },
+            { icon: <Trophy size={13} color="#64748b" />, text: 'New Club Workspace Setup' },
             { icon: <Users size={13} color="#94a3b8" />, text: 'Player Rosters & Ledgers' },
           ]}
           bottomText="Zero spreadsheets. 100% financial clarity."
@@ -137,7 +137,7 @@ export default function RegisterPage() {
             <div className="auth-grid-2">
               <AuthInput
                 label="Captain / Manager Name"
-                placeholder="e.g. Faraz Shaikh"
+                placeholder="e.g. Ali Khan"
                 autoComplete="name"
                 autoFocus
                 required
@@ -161,7 +161,7 @@ export default function RegisterPage() {
             <div className="auth-grid-2">
               <AuthInput
                 label="Club / Team Name"
-                placeholder="Gulzar Cricket Club"
+                placeholder="e.g. Your Cricket Club"
                 icon={<Shield size={15} />}
                 {...register('teamName')}
               />

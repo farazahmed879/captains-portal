@@ -2,3 +2,10 @@
 /frontend/node_modules
 /frontend/.next/static
 /frontend/.next
+
+# Secrets and build output
+.env
+**/.env
+!**/.env.example
+/backend/dist
+*.tsbuildinfo

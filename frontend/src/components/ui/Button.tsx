@@ -43,6 +43,9 @@ export const Button: React.FC<ButtonProps> = ({
   };
 
   const iconOnlyClass = isIconOnly ? 'btn-icon' : '';
+  // Icons only appear on icon-only buttons; labelled buttons are text-only.
+  const hasLabel = !isIconOnly && children !== undefined && children !== null && children !== false && children !== '';
+  const showIcon = icon && !hasLabel;
 
   return (
     <button
@@ -68,10 +71,10 @@ export const Button: React.FC<ButtonProps> = ({
           }}
         />
       ) : (
-        icon && <span style={{ display: 'inline-flex', alignItems: 'center' }}>{icon}</span>
+        showIcon && <span style={{ display: 'inline-flex', alignItems: 'center' }}>{icon}</span>
       )}
       {!isIconOnly && children}
-      {!loading && iconRight && (
+      {!loading && iconRight && !hasLabel && (
         <span style={{ display: 'inline-flex', alignItems: 'center' }}>{iconRight}</span>
       )}
     </button>

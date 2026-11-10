@@ -45,10 +45,33 @@ export const errorHandler = (
     return;
   }
 
+  // Mongoose: invalid ObjectId / bad value for a field, or a schema validation failure
+  if (err.name === 'CastError') {
+    res.status(HTTP_STATUS.BAD_REQUEST).json({
+      success: false,
+      statusCode: HTTP_STATUS.BAD_REQUEST,
+      message: `Invalid value for ${err.path}`,
+    });
+    return;
+  }
+  if (err.name === 'ValidationError') {
+    const errors = Object.values(err.errors || {}).map((e: any) => e.message);
+    res.status(HTTP_STATUS.BAD_REQUEST).json({
+      success: false,
+      statusCode: HTTP_STATUS.BAD_REQUEST,
+      message: errors[0] || 'Validation failed',
+      errors,
+    });
+    return;
+  }
+
   console.error('Unhandled Server Error:', err);
 
+  // Errors that carry their own HTTP status are client-facing; anything else is internal
+  // and must not leak implementation details.
   const statusCode = err.status || err.statusCode || HTTP_STATUS.INTERNAL_SERVER_ERROR;
-  const message = err.message || MESSAGES.INTERNAL_ERROR;
+  const message =
+    statusCode < HTTP_STATUS.INTERNAL_SERVER_ERROR && err.message ? err.message : MESSAGES.INTERNAL_ERROR;
 
   res.status(statusCode).json({
     success: false,

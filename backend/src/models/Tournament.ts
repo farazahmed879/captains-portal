@@ -1,4 +1,5 @@
 import { Schema, model, Document, Types } from 'mongoose';
+import { TournamentFormat, TournamentStatus } from '../enums';
 
 export interface ITournament extends Document {
   tenantId: Types.ObjectId;
@@ -28,8 +29,8 @@ const TournamentSchema = new Schema<ITournament>(
     venue: { type: String, trim: true },
     format: {
       type: String,
-      enum: ['T20', 'Tape Ball', 'Hard Ball', 'T10', '100 Balls', 'Other'],
-      default: 'T20',
+      enum: Object.values(TournamentFormat),
+      default: TournamentFormat.T20,
     },
     startDate: { type: Date, required: true },
     endDate: { type: Date },
@@ -39,8 +40,8 @@ const TournamentSchema = new Schema<ITournament>(
     actualWinningPrizeWon: { type: Number, default: 0 },
     status: {
       type: String,
-      enum: ['upcoming', 'ongoing', 'completed', 'knocked_out', 'champions'],
-      default: 'ongoing',
+      enum: Object.values(TournamentStatus),
+      default: TournamentStatus.ONGOING,
     },
     notes: { type: String },
   },

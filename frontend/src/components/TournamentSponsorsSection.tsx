@@ -6,21 +6,17 @@ import { useQuery } from '@tanstack/react-query';
 import { fetchApi } from '../lib/api';
 import { queryKeys } from '../lib/queryKeys';
 import { confirmDelete, showToast } from '../lib/alerts';
-import { formatCurrency, formatDate } from '../lib/format';
-import { SPONSOR_CONTRACT_OPTIONS, getPaymentMethodLabel } from '../constants';
+import { formatCurrency } from '../lib/format';
+import { SPONSOR_CONTRACT_OPTIONS } from '../constants';
 import { Button, Badge, Modal, Select, DataTable } from './ui';
 import {
-  Plus,
-  TrendingUp,
-  TrendingDown,
-  Building2,
   PencilIcon,
-  TrashIcon,
-  ExternalLinkIcon,
 } from './icons';
 import { SponsorTransactionModal, SponsorTxType } from './SponsorTransactionModal';
 import { CreateSponsorModal } from './CreateSponsorModal';
 import { EditSponsorModal } from './EditSponsorModal';
+import { sponsorOptions } from '../lib/options';
+import { getTournamentSponsorColumns } from '../columns/tournamentSponsorColumns';
 
 interface TournamentSponsorsSectionProps {
   tournament: any;
@@ -125,16 +121,15 @@ export const TournamentSponsorsSection: React.FC<TournamentSponsorsSectionProps>
       }}
     >
       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-        <Building2 size={16} color="#8b5cf6" />
-        <h3 style={{ fontSize: '16px', fontWeight: 800, margin: 0, color: 'var(--text-primary)' }}>
+        <h3 style={{ fontSize: '16px', fontWeight: 700, margin: 0, color: 'var(--text-primary)' }}>
           Dedicated Sponsors ({sponsors.length})
         </h3>
       </div>
       <div className="action-group">
-        <Button variant="success" size="sm" icon={<Plus size={13} />} onClick={() => setPickerOpen(true)}>
+        <Button variant="success" size="sm" onClick={() => setPickerOpen(true)}>
           Add Sponsor Funds
         </Button>
-        <Button variant="primary" size="sm" icon={<Plus size={13} />} onClick={() => setIsCreateOpen(true)}>
+        <Button variant="primary" size="sm" onClick={() => setIsCreateOpen(true)}>
           New Sponsor
         </Button>
       </div>
@@ -154,7 +149,7 @@ export const TournamentSponsorsSection: React.FC<TournamentSponsorsSectionProps>
       >
         {label}
       </div>
-      <div style={{ fontSize: '15px', fontWeight: 800, color: valueColor, marginTop: '1px' }}>{value}</div>
+      <div style={{ fontSize: '15px', fontWeight: 700, color: valueColor, marginTop: '1px' }}>{value}</div>
     </div>
   );
 
@@ -171,9 +166,9 @@ export const TournamentSponsorsSection: React.FC<TournamentSponsorsSectionProps>
           marginBottom: '14px',
         }}
       >
-        {summaryCard('Funds Received', formatCurrency(totals.received), '#f0fdf4', '#dcfce7', '#166534', '#16a34a')}
-        {summaryCard('Paid Out to Sponsors', formatCurrency(totals.paidOut), '#fff1f2', '#ffe4e6', '#9f1239', '#e11d48')}
-        {summaryCard('Net Sponsor Balance', formatCurrency(totals.net), '#f5f3ff', '#ede9fe', '#5b21b6', '#7c3aed')}
+        {summaryCard('Funds Received', formatCurrency(totals.received), '#f8fafc', '#e2e8f0', '#166534', '#15803d')}
+        {summaryCard('Paid Out to Sponsors', formatCurrency(totals.paidOut), '#f8fafc', '#f1f5f9', '#b91c1c', '#dc2626')}
+        {summaryCard('Net Sponsor Balance', formatCurrency(totals.net), '#f8fafc', '#f1f5f9', '#475569', '#64748b')}
         {summaryCard('Ledger Entries', String(ledger.length), '#f8fafc', '#e2e8f0', '#475569', '#0f172a')}
       </div>
 
@@ -229,7 +224,6 @@ export const TournamentSponsorsSection: React.FC<TournamentSponsorsSectionProps>
                     }}
                   >
                     <span>{s.companyName || s.sponsorName}</span>
-                    <ExternalLinkIcon size={10} />
                   </Link>
                   <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '1px' }}>
                     {s.companyName ? `${s.sponsorName} · ` : ''}
@@ -265,19 +259,19 @@ export const TournamentSponsorsSection: React.FC<TournamentSponsorsSectionProps>
               >
                 <div>
                   <div style={{ fontSize: '9.5px', color: 'var(--text-muted)', fontWeight: 600 }}>Received</div>
-                  <div style={{ fontSize: '12px', fontWeight: 800, color: '#16a34a' }}>
+                  <div style={{ fontSize: '12px', fontWeight: 700, color: '#15803d' }}>
                     {formatCurrency(s.tournamentInvested)}
                   </div>
                 </div>
                 <div>
                   <div style={{ fontSize: '9.5px', color: 'var(--text-muted)', fontWeight: 600 }}>Paid Out</div>
-                  <div style={{ fontSize: '12px', fontWeight: 800, color: '#e11d48' }}>
+                  <div style={{ fontSize: '12px', fontWeight: 700, color: '#dc2626' }}>
                     {formatCurrency(s.tournamentPaidOut)}
                   </div>
                 </div>
                 <div>
                   <div style={{ fontSize: '9.5px', color: 'var(--text-muted)', fontWeight: 600 }}>Net</div>
-                  <div style={{ fontSize: '12px', fontWeight: 800, color: '#7c3aed' }}>
+                  <div style={{ fontSize: '12px', fontWeight: 700, color: '#64748b' }}>
                     {formatCurrency(s.tournamentNet)}
                   </div>
                 </div>
@@ -287,7 +281,6 @@ export const TournamentSponsorsSection: React.FC<TournamentSponsorsSectionProps>
                 <Button
                   variant="success"
                   size="sm"
-                  icon={<TrendingUp size={12} />}
                   onClick={() => openTx(s, 'investment')}
                   style={{ flex: 1, height: '28px', fontSize: '11.5px', padding: '0 8px' }}
                 >
@@ -296,7 +289,6 @@ export const TournamentSponsorsSection: React.FC<TournamentSponsorsSectionProps>
                 <Button
                   variant="secondary"
                   size="sm"
-                  icon={<TrendingDown size={12} />}
                   onClick={() => openTx(s, 'payout')}
                   style={{ flex: 1, height: '28px', fontSize: '11.5px', padding: '0 8px' }}
                 >
@@ -309,7 +301,7 @@ export const TournamentSponsorsSection: React.FC<TournamentSponsorsSectionProps>
       )}
 
       {/* Ledger Header & Compact Table */}
-      <div style={{ fontSize: '13px', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '8px' }}>
+      <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '8px' }}>
         Sponsor Funding Ledger
       </div>
       <div style={{ maxHeight: '380px', overflowY: 'auto', border: '1px solid var(--border-color)', borderRadius: '8px', background: '#ffffff' }}>
@@ -318,109 +310,7 @@ export const TournamentSponsorsSection: React.FC<TournamentSponsorsSectionProps>
           data={ledgerRows}
           keyExtractor={(e) => String(e._id)}
           emptyMessage="No sponsor transactions recorded for this tournament yet."
-          columns={[
-            {
-              header: 'Date',
-              width: '12%',
-              render: (e) => (
-                <span style={{ fontSize: '11.5px', color: 'var(--text-secondary)' }}>
-                  {formatDate(e.date)}
-                </span>
-              ),
-            },
-            {
-              header: 'Sponsor',
-              width: '20%',
-              render: (e) => (
-                <Link
-                  href={`/sponsors/${e.sponsorId}`}
-                  style={{ fontWeight: 700, fontSize: '12px', color: 'var(--text-primary)', textDecoration: 'none' }}
-                >
-                  {e.companyName || e.sponsorName}
-                </Link>
-              ),
-            },
-            {
-              header: 'Type',
-              width: '12%',
-              render: (e) => (
-                <Badge variant={e.type === 'investment' ? 'success' : 'danger'} style={{ fontSize: '9.5px', padding: '1px 5px' }}>
-                  {e.type === 'investment' ? 'Funds In' : 'Payout'}
-                </Badge>
-              ),
-            },
-            {
-              header: 'Method / Ref',
-              width: '18%',
-              render: (e) => (
-                <div style={{ fontSize: '11.5px' }}>
-                  <span style={{ color: 'var(--text-secondary)' }}>{getPaymentMethodLabel(e.method)}</span>
-                  {e.reference && <span style={{ color: 'var(--text-muted)', marginLeft: '4px' }}>#{e.reference}</span>}
-                </div>
-              ),
-            },
-            {
-              header: 'Notes',
-              width: '16%',
-              render: (e) => (
-                <span style={{ fontSize: '11.5px', color: 'var(--text-muted)' }}>{e.notes || '—'}</span>
-              ),
-            },
-            {
-              header: 'Amount',
-              width: '11%',
-              align: 'right',
-              render: (e) => (
-                <span
-                  style={{
-                    fontWeight: 700,
-                    fontSize: '12px',
-                    color: e.type === 'investment' ? '#16a34a' : '#e11d48',
-                  }}
-                >
-                  {e.type === 'investment' ? '+' : '−'} {formatCurrency(e.amount)}
-                </span>
-              ),
-            },
-            {
-              header: 'Balance',
-              width: '11%',
-              align: 'right',
-              render: (e) => (
-                <span style={{ fontWeight: 700, fontSize: '12px', color: e.balance < 0 ? '#e11d48' : '#0f172a' }}>
-                  {formatCurrency(e.balance)}
-                </span>
-              ),
-            },
-            {
-              header: 'Actions',
-              width: '10%',
-              align: 'right',
-              render: (e) => (
-                <div className="action-group" style={{ justifyContent: 'flex-end', gap: '4px' }}>
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    isIconOnly
-                    icon={<PencilIcon size={11} color="var(--accent-blue)" />}
-                    title="Edit entry"
-                    onClick={() => {
-                      const sponsor = findSponsor(e.sponsorId);
-                      if (sponsor) openTx(sponsor, e.type, { ...e, tournamentId: tournament._id });
-                    }}
-                  />
-                  <Button
-                    variant="danger"
-                    size="sm"
-                    isIconOnly
-                    icon={<TrashIcon size={11} />}
-                    title="Delete entry"
-                    onClick={() => handleDeleteEntry(e)}
-                  />
-                </div>
-              ),
-            },
-          ]}
+          columns={getTournamentSponsorColumns({ findSponsor, openTx, handleDeleteEntry, tournament })}
         />
       </div>
 
@@ -459,13 +349,7 @@ export const TournamentSponsorsSection: React.FC<TournamentSponsorsSectionProps>
             placeholder={allSponsorsQuery.isLoading ? 'Loading sponsors...' : 'Select sponsor...'}
             value={pickerSponsorId}
             onChange={(e) => setPickerSponsorId(e.target.value)}
-            options={[
-              { value: '', label: 'Select sponsor...' },
-              ...allSponsors.map((s) => ({
-                value: s._id,
-                label: s.companyName ? `${s.companyName} (${s.sponsorName})` : s.sponsorName,
-              })),
-            ]}
+            options={sponsorOptions(allSponsors, 'Select sponsor...')}
           />
           <div style={{ fontSize: '12.5px', color: 'var(--text-muted)' }}>
             Sponsor not listed?{' '}

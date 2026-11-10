@@ -6,24 +6,10 @@ import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { useAuth } from '../../lib/auth';
 import {
-  Phone,
-  Lock,
-  Eye,
-  EyeOff,
-  ArrowRight,
-  ShieldCheck,
-  Trophy,
-  Users,
+  Phone, Lock, Eye, EyeOff, ArrowRight, Trophy, Users
 } from 'lucide-react';
-import {
-  AuthTopbar,
-  AuthHero,
-  AuthCard,
-  AuthInput,
-  AuthCheckbox,
-  AuthButton,
-  AuthFooter,
-} from '../../components/auth';
+import { AuthTopbar, AuthHero, AuthCard, AuthInput, AuthButton, AuthFooter } from '../../components/auth';
+import { APP_INFO } from '../../constants';
 
 interface LoginFormValues {
   phone: string;
@@ -105,7 +91,7 @@ export default function LoginPage() {
           }
           description="A calm, unified space for your cricket team: player ledger, match fees, tournament entry costs, sponsors, and squad scorecards."
           badges={[
-            { icon: <Trophy size={13} color="#38bdf8" />, text: 'Gulzar Cricket Club · Season 2026' },
+            { icon: <Trophy size={13} color="#64748b" />, text: APP_INFO.name },
             { icon: <Users size={13} color="#94a3b8" />, text: 'Squad Ledgers' },
           ]}
           bottomText="Less noise. Zero ledger confusion."
@@ -129,7 +115,6 @@ export default function LoginPage() {
                 className="auth-social-btn"
                 onClick={() => handleQuickLogin('0300-9999999', 'password123')}
               >
-                <ShieldCheck size={15} color="#34d399" />
                 <span>Fill Captain Demo Credentials</span>
               </button>
 
@@ -155,7 +140,7 @@ export default function LoginPage() {
                 </div>
                 <div className="auth-demo-row">
                   <span>Role:</span>
-                  <strong style={{ color: '#10b981' }}>Captain (Test Captain)</strong>
+                  <strong style={{ color: '#15803d' }}>Captain (Test Captain)</strong>
                 </div>
                 <div className="auth-demo-row">
                   <span>Phone / Email:</span>

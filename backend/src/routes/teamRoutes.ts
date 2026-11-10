@@ -8,10 +8,11 @@ import {
   addPlayersToTeam,
   removePlayerFromTeam,
 } from '../controllers/teamController';
-import { authenticate } from '../middlewares/auth';
+import { authenticate, requireWriteAccess } from '../middlewares/auth';
 
 const router = Router();
 router.use(authenticate);
+router.use(requireWriteAccess);
 
 router.get('/', getTeams);
 router.get('/:id', getTeamById);

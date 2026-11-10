@@ -2,10 +2,15 @@
 
 import React, { useMemo, useState } from 'react';
 import { Button, Alert, Input, Select, Badge, Checkbox } from './ui';
-import { Search, X, Users, CheckCircle2, Sparkles, Award } from 'lucide-react';
+import {
+  Search,
+  X,
+  Award,
+} from 'lucide-react';
 import { fetchApi } from '../lib/api';
 import { PaymentMethod } from '../constants';
 import styles from './AssignSquadFeeForm.module.css';
+import { playerOptions } from '../lib/options';
 
 interface AssignSquadFeeFormProps {
   matchId: string;
@@ -293,7 +298,6 @@ export const AssignSquadFeeForm: React.FC<AssignSquadFeeFormProps> = ({
       <div className={styles.headerBar}>
         <div className={styles.headerLeft}>
           <div className={styles.headerIconBox}>
-            <Users size={19} />
           </div>
           <div>
             <h3 className={styles.headerTitle}>
@@ -331,7 +335,6 @@ export const AssignSquadFeeForm: React.FC<AssignSquadFeeFormProps> = ({
         >
           <div className={styles.momHeaderLeft}>
             <div className={styles.momIconBox}>
-              <Award size={17} color="#d97706" />
             </div>
             <div>
               <span className={styles.momTitle}>
@@ -339,7 +342,7 @@ export const AssignSquadFeeForm: React.FC<AssignSquadFeeFormProps> = ({
               </span>
               {momPlayerId ? (
                 <Badge variant="warning" className={styles.momBadge}>
-                  🏆 {players.find((p) => p._id === momPlayerId)?.name || 'Player'} (+Rs. {momPrizeMoney || 0})
+                  {players.find((p) => p._id === momPlayerId)?.name || 'Player'} (+Rs. {momPrizeMoney || 0})
                 </Badge>
               ) : (
                 <span className={styles.momSubtitle}>
@@ -367,13 +370,7 @@ export const AssignSquadFeeForm: React.FC<AssignSquadFeeFormProps> = ({
             <Select
               label="MOM Player"
               value={momPlayerId}
-              options={[
-                { value: '', label: 'None (No MOM Awarded)' },
-                ...players.map((p) => ({
-                  value: p._id,
-                  label: `${p.name}${p.jerseyNumber ? ` (#${p.jerseyNumber})` : ''} — ${p.role?.replace('_', ' ') || 'Player'}`,
-                })),
-              ]}
+              options={playerOptions(players, 'None (No MOM Awarded)', { withRole: true })}
               onChange={(e) => {
                 setMomPlayerId(e.target.value);
                 if (e.target.value && !momPrizeMoney) setMomPrizeMoney(1000);
@@ -447,7 +444,6 @@ export const AssignSquadFeeForm: React.FC<AssignSquadFeeFormProps> = ({
             type="button"
             variant="outline"
             size="sm"
-            icon={<Sparkles size={13} />}
             onClick={applyBulkToSelected}
             disabled={selectedIds.length === 0}
           >
@@ -472,7 +468,7 @@ export const AssignSquadFeeForm: React.FC<AssignSquadFeeFormProps> = ({
             onClick={setAllSelectedTopi}
             disabled={selectedIds.length === 0}
           >
-            🧢 Topi Selected (Rs. 0 Paid)
+            Topi Selected (Rs. 0 Paid)
           </Button>
         </div>
 
@@ -594,7 +590,7 @@ export const AssignSquadFeeForm: React.FC<AssignSquadFeeFormProps> = ({
 
                     {momPlayerId === p._id && (
                       <Badge variant="warning" className={styles.badgeMom}>
-                        🏆 MOM {momPrizeMoney ? `(Rs. ${momPrizeMoney})` : ''}
+                        MOM {momPrizeMoney ? `(Rs. ${momPrizeMoney})` : ''}
                       </Badge>
                     )}
 
@@ -612,7 +608,7 @@ export const AssignSquadFeeForm: React.FC<AssignSquadFeeFormProps> = ({
 
                     {isChecked && isTopi && (
                       <Badge variant="danger" className={styles.badgeStatus}>
-                        🧢 TOPI (Rs. {row.feeAssigned} DUE)
+                        TOPI (Rs. {row.feeAssigned} DUE)
                       </Badge>
                     )}
                   </div>
@@ -652,7 +648,7 @@ export const AssignSquadFeeForm: React.FC<AssignSquadFeeFormProps> = ({
                         isTopi ? styles.pillBtnTopiActive : ''
                       }`}
                     >
-                      Topi 🧢
+                      Topi 
                     </button>
                     <button
                       type="button"
@@ -662,7 +658,7 @@ export const AssignSquadFeeForm: React.FC<AssignSquadFeeFormProps> = ({
                         momPlayerId === p._id ? styles.pillBtnMomActive : ''
                       }`}
                     >
-                      🏆 MOM
+                      MOM
                     </button>
                   </div>
 
@@ -748,7 +744,6 @@ export const AssignSquadFeeForm: React.FC<AssignSquadFeeFormProps> = ({
             variant="success"
             size="sm"
             type="submit"
-            icon={<CheckCircle2 size={14} />}
             loading={isSubmitting}
             disabled={selectedIds.length === 0}
           >

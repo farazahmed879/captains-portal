@@ -30,7 +30,7 @@ export const AuthInput = forwardRef<HTMLInputElement, AuthInputProps>(
         {label && (
           <label className="auth-label" htmlFor={inputId}>
             {label}
-            {required && <span style={{ color: '#f87171', marginLeft: '3px' }}>*</span>}
+            {required && <span style={{ color: '#dc2626', marginLeft: '3px' }}>*</span>}
           </label>
         )}
 
@@ -52,7 +52,7 @@ export const AuthInput = forwardRef<HTMLInputElement, AuthInputProps>(
         </div>
 
         {error && (
-          <span className="auth-input-hint" style={{ color: '#f87171' }}>
+          <span className="auth-input-hint" style={{ color: '#dc2626' }}>
             {error}
           </span>
         )}

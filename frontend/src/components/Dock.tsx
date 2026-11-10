@@ -4,24 +4,10 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  Settings2,
-  PanelBottom,
-  PanelLeft,
-  PanelRight,
-  LogOut,
-  User as UserIcon,
+  Settings2, PanelBottom, PanelLeft, PanelRight, LogOut
 } from "lucide-react";
 import { useAuth } from "../lib/auth";
-import {
-  DashboardIcon,
-  ShieldAlertIcon,
-  PlayersIcon,
-  TrophyIcon,
-  SwordsIcon,
-  ReceiptIcon,
-  SponsorIcon,
-} from "./icons";
-import { ASSETS } from "../constants";
+import { ASSETS, NAV_ITEMS, isNavActive } from "../constants";
 
 export type DockPosition = "bottom" | "left" | "right";
 
@@ -31,50 +17,8 @@ const RANGE = 135;
 const STORAGE_KEY = "cp-dock-prefs";
 const TOTAL_ITEMS = 9;
 
-const navItems = [
-  {
-    name: "Dashboard",
-    href: "/",
-    icon: DashboardIcon,
-    gradient: "linear-gradient(145deg, #38bdf8, #2563eb)",
-  },
-  {
-    name: "Teams",
-    href: "/teams",
-    icon: ShieldAlertIcon,
-    gradient: "linear-gradient(145deg, #818cf8, #7c3aed)",
-  },
-  {
-    name: "Players",
-    href: "/players",
-    icon: PlayersIcon,
-    gradient: "linear-gradient(145deg, #34d399, #059669)",
-  },
-  {
-    name: "Tournaments",
-    href: "/tournaments",
-    icon: TrophyIcon,
-    gradient: "linear-gradient(145deg, #fbbf24, #ea580c)",
-  },
-  {
-    name: "Matches",
-    href: "/matches",
-    icon: SwordsIcon,
-    gradient: "linear-gradient(145deg, #fb7185, #e11d48)",
-  },
-  {
-    name: "Expenses",
-    href: "/finances",
-    icon: ReceiptIcon,
-    gradient: "linear-gradient(145deg, #2dd4bf, #0f766e)",
-  },
-  {
-    name: "Sponsors & ROI",
-    href: "/sponsors",
-    icon: SponsorIcon,
-    gradient: "linear-gradient(145deg, #c084fc, #db2777)",
-  },
-];
+// Every dock tile shares one quiet fill; colour is not used to tell sections apart.
+const DOCK_TILE = "rgba(255, 255, 255, 0.06)";
 
 export const Dock: React.FC = () => {
   const pathname = usePathname();
@@ -354,13 +298,10 @@ export const Dock: React.FC = () => {
           <span className="dock-sep" />
 
           {/* Indices 1 to 7: App Navigation Icons */}
-          {navItems.map((item, idx) => {
+          {NAV_ITEMS.map((item, idx) => {
             const Icon = item.icon;
             const itemIndex = idx + 1;
-            const isActive =
-              item.href === "/"
-                ? pathname === "/"
-                : pathname?.startsWith(item.href);
+            const isActive = isNavActive(pathname || '/', item.href);
 
             return (
               <div
@@ -374,14 +315,14 @@ export const Dock: React.FC = () => {
                   href={item.href}
                   id={`dock-link-${item.href === "/" ? "dashboard" : item.href.slice(1)}`}
                   className="dock-icon"
-                  style={{ background: item.gradient }}
-                  aria-label={item.name}
+                  style={{ background: DOCK_TILE }}
+                  aria-label={item.label}
                   aria-current={isActive ? "page" : undefined}
                   onClick={() => !isActive && triggerBounce(item.href)}
                 >
                   <Icon size={35} strokeWidth={2.1} />
                 </Link>
-                <span className="dock-tooltip">{item.name}</span>
+                <span className="dock-tooltip">{item.label}</span>
               </div>
             );
           })}
@@ -462,7 +403,6 @@ export const Dock: React.FC = () => {
                       <div className="dock-user-box">
                         <div className="dock-user-row">
                           <div className="dock-user-avatar">
-                            <UserIcon size={14} />
                           </div>
                           <div className="dock-user-info">
                             <span className="dock-user-name">{user?.name}</span>

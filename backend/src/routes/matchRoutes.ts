@@ -6,10 +6,11 @@ import {
   updateMatch,
   deleteMatch,
 } from '../controllers/matchController';
-import { authenticate } from '../middlewares/auth';
+import { authenticate, requireWriteAccess } from '../middlewares/auth';
 
 const router = Router();
 router.use(authenticate);
+router.use(requireWriteAccess);
 
 router.get('/', getMatches);
 router.get('/:id', getMatchById);

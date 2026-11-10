@@ -1,16 +1,17 @@
 import React from 'react';
 import Link from 'next/link';
+import { cellMain, cellSub, cellNum, cellOneLine } from './cellStyles';
 import { Column } from '../components/ui/DataTable';
-import { Avatar, Badge, Button } from '../components/ui';
-import { ExternalLink, CheckCircle2, DollarIcon, Pencil, Trash2 } from '../components/icons';
+import { Avatar, Button } from '../components/ui';
+import { Pencil, Trash2 } from '../components/icons';
 import { Player } from '../types';
+import { formatNumber } from '../lib/format';
 
 interface PlayerColumnActions {
   onCollectFee: (player: Player) => void;
   onReturn: (player: Player) => void;
   onEdit: (player: Player) => void;
   onDelete: (id: string, name: string) => void;
-  fNum: (val: number | undefined) => string;
 }
 
 export const getPlayerColumns = ({
@@ -18,13 +19,11 @@ export const getPlayerColumns = ({
   onReturn,
   onEdit,
   onDelete,
-  fNum,
 }: PlayerColumnActions): Column<Player>[] => [
   {
-    header: 'Player & Jersey',
-    width: '26%',
+    header: 'Player',
     render: (pl: any) => (
-      <div style={{ display: 'flex', alignItems: 'center', gap: '9px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
         <Avatar
           name={pl.name}
           label={
@@ -34,105 +33,82 @@ export const getPlayerColumns = ({
           }
           size="sm"
         />
-        <div>
+        <div style={{ minWidth: 0 }}>
           <Link
             href={`/players/${pl._id}`}
-            style={{
-              fontWeight: 700,
-              color: 'var(--text-primary)',
-              textDecoration: 'none',
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '4px',
-            }}
+            style={{ ...cellMain, ...cellOneLine, display: 'block', textDecoration: 'none' }}
             onClick={(e) => e.stopPropagation()}
+            title={pl.name}
           >
-            <span>{pl.name}</span>
-            <ExternalLink size={10} color="var(--accent-blue)" />
+            {pl.name}
           </Link>
-          <div style={{ fontSize: '10.5px', color: 'var(--text-muted)' }}>
-            {pl.phone ? pl.phone : pl.notes || 'Squad Member'}
-          </div>
+          <div style={{ ...cellSub, whiteSpace: 'nowrap' }}>{pl.phone || 'No phone'}</div>
         </div>
       </div>
     ),
   },
   {
-    header: 'Role & Style',
-    width: '14%',
+    header: 'Role',
     render: (pl: any) => (
-      <>
-        <Badge variant="primary" style={{ textTransform: 'capitalize', fontSize: '10.5px' }}>
-          {pl.role?.replace('_', ' ')}
-        </Badge>
-        <div style={{ fontSize: '10.5px', color: 'var(--text-muted)', marginTop: '2px' }}>
-          {pl.battingStyle?.replace('_', ' ')}
+      <div style={{ whiteSpace: 'nowrap' }}>
+        <div style={{ ...cellMain, fontWeight: 500, textTransform: 'capitalize' }}>
+          {(pl.role || '—').replace(/_/g, ' ')}
         </div>
-      </>
+        <div style={{ ...cellSub, textTransform: 'capitalize' }}>{(pl.battingStyle || '').replace(/_/g, ' ')}</div>
+      </div>
     ),
   },
   {
-    header: 'Matches & Tourneys',
-    width: '14%',
+    header: 'Played',
     render: (pl: any) => (
-      <>
-        <div style={{ fontWeight: 700, fontSize: '13px' }}>{pl.matchesPlayed || 0} matches</div>
-        <div style={{ fontSize: '10.5px', color: 'var(--accent-purple)', fontWeight: 600 }}>
-          {pl.tournamentsCount || 0} tournaments
+      <div style={{ whiteSpace: 'nowrap' }}>
+        <div style={{ ...cellMain, fontWeight: 500 }}>
+          {pl.matchesPlayed || 0} match{pl.matchesPlayed === 1 ? '' : 'es'}
         </div>
-      </>
+        <div style={cellSub}>
+          {pl.tournamentsCount || 0} tournament{pl.tournamentsCount === 1 ? '' : 's'}
+        </div>
+      </div>
     ),
   },
   {
-    header: 'Fee Assigned / Paid',
-    width: '15%',
+    header: 'Fees Paid',
+    align: 'right',
     render: (pl: any) => (
-      <>
-        <div style={{ color: 'var(--accent-green)', fontWeight: 700, fontSize: '12.5px' }}>
-          Paid: Rs. {fNum(pl.totalFeePaid)}
-        </div>
-        <div style={{ fontSize: '10.5px', color: 'var(--text-muted)' }}>
-          Assigned: Rs. {fNum(pl.totalFeeAssigned)}
-        </div>
-      </>
+      <div style={cellNum}>
+        <div style={cellMain}>Rs. {formatNumber(pl.totalFeePaid)}</div>
+        <div style={cellSub}>of Rs. {formatNumber(pl.totalFeeAssigned)}</div>
+      </div>
     ),
   },
   {
     header: 'Returned',
-    width: '11%',
-    render: (pl: any) =>
-      (pl.totalReturned || 0) > 0 ? (
-        <Badge variant="warning" style={{ fontSize: '11px' }}>
-          Rs. {fNum(pl.totalReturned)}
-        </Badge>
-      ) : (
-        <span style={{ color: 'var(--text-muted)', fontSize: '12px' }}>-</span>
-      ),
+    align: 'right',
+    render: (pl: any) => (
+      <span style={{ ...cellNum, ...(pl.totalReturned ? cellMain : { color: 'var(--text-muted)' }) }}>
+        {pl.totalReturned ? `Rs. ${formatNumber(pl.totalReturned)}` : '—'}
+      </span>
+    ),
   },
   {
-    header: 'Remaining Due',
-    width: '10%',
+    header: 'Due',
+    mobile: 'summary',
+    align: 'right',
     render: (pl: any) =>
       (pl.pendingDue || 0) > 0 ? (
-        <span className="cell-due-val" style={{ fontSize: '11.5px', padding: '1px 6px' }}>
-          Rs. {fNum(pl.pendingDue)} Due
-        </span>
+        <span style={{ ...cellMain, ...cellNum, color: 'var(--accent-rose)' }}>Rs. {formatNumber(pl.pendingDue)}</span>
       ) : (
-        <Badge variant="success" icon={<CheckCircle2 size={10} />} style={{ fontSize: '10.5px' }}>
-          Cleared
-        </Badge>
+        <span style={{ ...cellNum, fontSize: '13px', fontWeight: 600, color: 'var(--accent-green)' }}>Cleared</span>
       ),
   },
   {
     header: 'Actions',
-    width: '10%',
     align: 'right',
     render: (pl: any) => (
-      <div className="action-group" style={{ justifyContent: 'flex-end', gap: '4px' }}>
+      <div className="action-group" style={{ justifyContent: 'flex-end', gap: '4px', flexWrap: 'nowrap' }}>
         <Button
-          variant="success"
+          variant="secondary"
           size="sm"
-          icon={<DollarIcon size={13} />}
           onClick={(e) => {
             e.stopPropagation();
             onCollectFee(pl);
@@ -144,12 +120,10 @@ export const getPlayerColumns = ({
         <Button
           variant="secondary"
           size="sm"
-          icon={<DollarIcon size={13} />}
           onClick={(e) => {
             e.stopPropagation();
             onReturn(pl);
           }}
-          style={{ background: '#fef3c7', borderColor: '#fde68a', color: '#b45309', fontWeight: 700 }}
           title="Return excess fee, winning prize share, or sponsor payout"
         >
           Return

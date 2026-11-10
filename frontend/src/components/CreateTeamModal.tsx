@@ -8,6 +8,10 @@ import { Input, Select, Textarea, Button, Alert, Badge, Checkbox } from "./ui";
 import { fetchApi } from "../lib/api";
 import { queryKeys } from "../lib/queryKeys";
 import { CreateTeamFormValues } from "../types";
+import {
+  TEAM_TYPE_OPTIONS,
+  FORM_DEFAULTS,
+} from "../constants";
 
 interface CreateTeamModalProps {
   isOpen: boolean;
@@ -46,8 +50,8 @@ export const CreateTeamModal: React.FC<CreateTeamModalProps> = ({
       shortName: "",
       teamType: "my_team",
       phone: "",
-      city: "Karachi",
-      primaryColor: "#0284c7",
+      city: FORM_DEFAULTS.teamCity,
+      primaryColor: FORM_DEFAULTS.teamColor,
       description: "",
     },
   });
@@ -170,17 +174,14 @@ export const CreateTeamModal: React.FC<CreateTeamModalProps> = ({
         <div className="grid-2">
           <Input
             label="Team Name *"
-            placeholder="e.g. Gulzar Hard Ball XI"
+            placeholder="e.g. Hard Ball XI"
             {...register("name", { required: "Team name is required" })}
             error={errors.name?.message}
           />
           <Select
             label="Team Category *"
             {...register("teamType")}
-            options={[
-              { value: "my_team", label: "My Club Team" },
-              { value: "opponent", label: "Opponent Team" },
-            ]}
+            options={TEAM_TYPE_OPTIONS}
           />
         </div>
 
@@ -230,7 +231,7 @@ export const CreateTeamModal: React.FC<CreateTeamModalProps> = ({
             <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
               <input
                 type="color"
-                value={currentColor || "#0284c7"}
+                value={currentColor || FORM_DEFAULTS.teamColor}
                 onChange={(e) => setValue("primaryColor", e.target.value)}
                 style={{
                   width: "42px",
@@ -241,7 +242,7 @@ export const CreateTeamModal: React.FC<CreateTeamModalProps> = ({
                   border: "1px solid var(--border-color)",
                 }}
               />
-              <Input {...register("primaryColor")} placeholder="#0284c7" />
+              <Input {...register("primaryColor")} placeholder={FORM_DEFAULTS.teamColor} />
             </div>
           </div>
         </div>

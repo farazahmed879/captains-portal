@@ -8,6 +8,7 @@ import { Input, Select, Textarea, Button, Alert } from './ui';
 import { fetchApi } from '../lib/api';
 import { queryKeys } from '../lib/queryKeys';
 import { SPONSOR_CONTRACT_OPTIONS, SPONSOR_STATUS_OPTIONS } from '../constants';
+import { tournamentOptions } from '../lib/options';
 
 interface EditSponsorFormValues {
   teamId: string;
@@ -173,13 +174,7 @@ export const EditSponsorModal: React.FC<EditSponsorModalProps> = ({
           <Select
             label="Dedicated Tournament (Optional)"
             value={watchedTournamentId}
-            options={[
-              { value: '', label: 'General Club Sponsor (No Tournament)' },
-              ...tournaments.map((trn) => ({
-                value: trn._id,
-                label: `${trn.name} (${trn.format || 'Hard Ball'})`,
-              })),
-            ]}
+            options={tournamentOptions(tournaments, 'General Club Sponsor (No Tournament)')}
             {...register('tournamentId')}
           />
         </div>

@@ -11,44 +11,12 @@ import { DetailPageSkeleton } from '../../../components/ui/Skeleton';
 import { Header } from '../../../components/Header';
 import { StatCard } from '../../../components/StatCard';
 import { fetchApi } from '../../../lib/api';
-import { formatDate } from '../../../lib/format';
+import { formatDate, formatNumber } from '../../../lib/format';
 import { confirmDelete, showToast } from '../../../lib/alerts';
-import {
-  Button,
-  Badge,
-  Input,
-  Select,
-  Textarea,
-  Modal,
-  Card,
-  DataTable,
-
-} from '../../../components/ui';
-import {
-  Handshake,
-  DollarSign,
-  TrendingUp,
-  TrendingDown,
-  Building2,
-  Calendar,
-  Phone,
-  Mail,
-  ArrowLeft,
-  Pencil,
-  Trash2,
-  CheckCircle2,
-  Trophy,
-  FileText,
-  Plus,
-  RotateCcw,
-  Receipt,
-} from '../../../components/icons';
-import {
-  SponsorTransactionModal,
-  SponsorTxType,
-  paymentMethodLabel,
-} from '../../../components/SponsorTransactionModal';
+import { Button, Badge, Modal, Card, DataTable } from '../../../components/ui';
+import { SponsorTransactionModal, SponsorTxType } from '../../../components/SponsorTransactionModal';
 import { EditSponsorModal } from '../../../components/EditSponsorModal';
+import { DetailNav } from '../../../components/DetailNav';
 
 export default function SponsorDetailPage() {
   const params = useParams();
@@ -88,8 +56,6 @@ export default function SponsorDetailPage() {
     queryClient.invalidateQueries({ queryKey: ['dashboard'] });
   };
 
-
-
   const invalidateData = () => {
     queryClient.invalidateQueries({ queryKey: queryKeys.sponsor(id) });
     queryClient.invalidateQueries({ queryKey: ['sponsors'] });
@@ -100,7 +66,7 @@ export default function SponsorDetailPage() {
 
   const handleDeleteTx = async (tx: any) => {
     const label = tx.type === 'investment' ? 'investment' : 'payout';
-    const confirmed = await confirmDelete(`${label} transaction of Rs. ${fNum(tx.amount)}`);
+    const confirmed = await confirmDelete(`${label} transaction of Rs. ${formatNumber(tx.amount)}`);
     if (!confirmed) return;
     try {
       const res = await fetchApi<{ success: boolean; sponsor: any }>(
@@ -130,14 +96,11 @@ export default function SponsorDetailPage() {
     }
   };
 
-  const fNum = (val: number | undefined) => (val || 0).toLocaleString('en-US');
-
   const transactionColumns = useMemo(
     () =>
       getSponsorTransactionColumns({
         onEdit: (t: SponsorTransaction) => openTxModal(t.type as any, t),
         onDelete: handleDeleteTx,
-        fNum,
       }),
     [id]
   );
@@ -187,61 +150,25 @@ export default function SponsorDetailPage() {
       />
 
       <div className="content-body">
-        {/* Navigation & Actions */}
-        <div
-          style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            marginBottom: '20px',
-          }}
-        >
-          <Link href="/sponsors" passHref legacyBehavior>
-            <Button variant="secondary" size="sm" icon={<ArrowLeft size={14} />}>
-              Back to All Sponsors
-            </Button>
-          </Link>
-
-          <div className="action-group">
-            <Button
-              variant="primary"
-              size="sm"
-              id="sponsor-add-funds"
-              icon={<Plus size={13} />}
-              onClick={() => openTxModal('investment')}
-            >
-              Add Funds
-            </Button>
-            <Button
-              variant="secondary"
-              size="sm"
-              id="sponsor-record-payout"
-              icon={<RotateCcw size={13} color="var(--accent-rose)" />}
-              onClick={() => openTxModal('payout')}
-            >
-              Record Payout
-            </Button>
-            <Button
-              variant="secondary"
-              size="sm"
-              icon={<Pencil size={13} color="var(--accent-blue)" />}
-              onClick={() => setIsEditOpen(true)}
-            >
-              Edit Sponsor
-            </Button>
-            <Button
-              variant="danger"
-              size="sm"
-              icon={<Trash2 size={13} />}
-              onClick={handleDeleteSponsor}
-            >
-              Delete
-            </Button>
-          </div>
-        </div>
+        <DetailNav back={{ href: "/sponsors", label: "Back to All Sponsors" }}>
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => setIsEditOpen(true)}
+          >
+            Edit Sponsor
+          </Button>
+          <Button
+            variant="danger"
+            size="sm"
+            onClick={handleDeleteSponsor}
+          >
+            Delete
+          </Button>
+        </DetailNav>
 
         {/* Hero Card */}
-        <Card style={{ marginBottom: '24px' }}>
+        <Card className="detail-hero" style={{ marginBottom: '24px' }}>
           <div
             style={{
               display: 'flex',
@@ -253,18 +180,19 @@ export default function SponsorDetailPage() {
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: '18px' }}>
               <div
+                className="detail-avatar"
                 style={{
                   width: '68px',
                   height: '68px',
                   borderRadius: '16px',
-                  background: 'linear-gradient(135deg, #059669, #0284c7)',
+                  background: '#0f172a',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
                   fontSize: '28px',
-                  fontWeight: 900,
+                  fontWeight: 700,
                   color: '#fff',
-                  boxShadow: '0 8px 20px rgba(5, 150, 105, 0.25)',
+                  boxShadow: '0 8px 20px rgba(15, 23, 42, 0.08)',
                 }}
               >
                 {(sponsor.companyName || sponsor.sponsorName || 'S').substring(0, 2).toUpperCase()}
@@ -289,7 +217,7 @@ export default function SponsorDetailPage() {
                     {sponsor.status ? sponsor.status.toUpperCase() : 'ACTIVE'}
                   </Badge>
                   {sponsor.companyName && (
-                    <Badge variant="secondary" icon={<Building2 size={11} />}>
+                    <Badge variant="secondary">
                       {sponsor.companyName}
                     </Badge>
                   )}
@@ -298,7 +226,7 @@ export default function SponsorDetailPage() {
                 <h1
                   style={{
                     fontSize: '26px',
-                    fontWeight: 800,
+                    fontWeight: 700,
                     color: 'var(--text-primary)',
                     marginBottom: '6px',
                   }}
@@ -318,44 +246,21 @@ export default function SponsorDetailPage() {
                 >
                   {sponsor.phone && (
                     <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                      <Phone size={13} color="var(--accent-blue)" />
                       {sponsor.phone}
                     </span>
                   )}
                   {sponsor.email && (
                     <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                      <Mail size={13} />
                       {sponsor.email}
                     </span>
                   )}
                   <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                    <Calendar size={13} />
                     First Investment:{' '}
                     {sponsor.investmentDate
                       ? formatDate(sponsor.investmentDate, 'N/A')
                       : 'N/A'}
                   </span>
                 </div>
-              </div>
-            </div>
-
-            {/* Net Retained Box */}
-            <div style={{ textAlign: 'right' }}>
-              <div style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase' }}>
-                Net Retained Capital
-              </div>
-              <div
-                style={{
-                  fontSize: '28px',
-                  fontWeight: 900,
-                  fontFamily: 'Outfit, sans-serif',
-                  color: 'var(--accent-green)',
-                }}
-              >
-                Rs. {fNum(netRetained)}
-              </div>
-              <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
-                {retainedPct}% of Total Inflow Retained
               </div>
             </div>
           </div>
@@ -389,7 +294,6 @@ export default function SponsorDetailPage() {
             )}
             {sponsor.tournamentId && (
               <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                <Trophy size={14} color="var(--accent-blue)" />
                 <span>Sponsored Tournament: </span>
                 <Link
                   href={`/tournaments/${sponsor.tournamentId._id}`}
@@ -411,35 +315,25 @@ export default function SponsorDetailPage() {
           </div>
         </Card>
 
-        {/* 4 Stat Cards */}
-        <div className="grid-4" style={{ marginBottom: '24px' }}>
+        {/* 3 Stat Cards (status & contract type are shown as badges in the hero) */}
+        <div className="grid-3" style={{ marginBottom: '24px' }}>
           <StatCard
             variant="blue"
             title="Capital Invested"
-            value={`Rs. ${fNum(invested)}`}
+            value={`Rs. ${formatNumber(invested)}`}
             subtitle={`${investmentCount} contribution${investmentCount === 1 ? '' : 's'}`}
-            icon={<TrendingUp size={20} color="var(--accent-blue)" />}
           />
           <StatCard
             variant="rose"
             title="Returns Paid Out"
-            value={`Rs. ${fNum(returned)}`}
+            value={`Rs. ${formatNumber(returned)}`}
             subtitle={`${payoutCount} payout${payoutCount === 1 ? '' : 's'}`}
-            icon={<TrendingDown size={20} color="var(--accent-rose)" />}
           />
           <StatCard
             variant="emerald"
             title="Net Retained Funds"
-            value={`Rs. ${fNum(netRetained)}`}
+            value={`Rs. ${formatNumber(netRetained)}`}
             subtitle={`${retainedPct}% Retained`}
-            icon={<DollarSign size={20} color="var(--accent-green)" />}
-          />
-          <StatCard
-            variant="purple"
-            title="Contract Status"
-            value={sponsor.status ? sponsor.status.toUpperCase() : 'ACTIVE'}
-            subtitle={sponsor.contractType?.replace(/_/g, ' ') || 'Grant'}
-            icon={<CheckCircle2 size={20} color="var(--accent-purple)" />}
           />
         </div>
 
@@ -465,20 +359,18 @@ export default function SponsorDetailPage() {
                 gap: '8px',
               }}
             >
-              <Receipt size={16} color="var(--accent-blue)" />
               Sponsor Ledger
               <span style={{ fontSize: '12px', fontWeight: 500, color: 'var(--text-muted)' }}>
                 ({txs.length} transaction{txs.length === 1 ? '' : 's'})
               </span>
             </h3>
             <div className="action-group">
-              <Button variant="success" size="sm" icon={<Plus size={12} />} onClick={() => openTxModal('investment')}>
+              <Button variant="success" size="sm" onClick={() => openTxModal('investment')}>
                 Add Funds
               </Button>
               <Button
                 variant="secondary"
                 size="sm"
-                icon={<RotateCcw size={12} color="var(--accent-rose)" />}
                 onClick={() => openTxModal('payout')}
               >
                 Payout
@@ -509,7 +401,6 @@ export default function SponsorDetailPage() {
                 gap: '8px',
               }}
             >
-              <FileText size={16} color="var(--accent-blue)" />
               Agreed Deliverables & Visibility
             </h3>
 
@@ -546,7 +437,6 @@ export default function SponsorDetailPage() {
                 gap: '8px',
               }}
             >
-              <Handshake size={16} color="var(--accent-purple)" />
               Captain Notes
             </h3>
 

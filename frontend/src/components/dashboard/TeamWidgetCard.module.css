@@ -32,13 +32,13 @@
 
 .teamName {
   font-size: 15px;
-  font-weight: 800;
+  font-weight: 700;
   color: var(--text-primary);
 }
 
 .teamShortNameBadge {
   font-size: 10px;
-  font-weight: 800;
+  font-weight: 700;
 }
 
 .teamSubText {
@@ -94,13 +94,13 @@
 
 .teamListName {
   font-size: 13.5px;
-  font-weight: 800;
+  font-weight: 700;
   color: var(--text-primary);
 }
 
 .teamListBadge {
   font-size: 9.5px;
-  font-weight: 800;
+  font-weight: 700;
 }
 
 .teamListCity {
@@ -126,18 +126,18 @@
 
 .teamStatValue {
   font-size: 13px;
-  font-weight: 800;
+  font-weight: 700;
   color: var(--text-primary);
 }
 
 .teamStatValueBlue {
   font-size: 13px;
-  font-weight: 800;
+  font-weight: 700;
   color: var(--accent-blue);
 }
 
 .teamStatValueGreen {
   font-size: 13px;
-  font-weight: 800;
+  font-weight: 700;
   color: var(--accent-green);
 }

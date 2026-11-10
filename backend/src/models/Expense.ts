@@ -1,4 +1,5 @@
 import { Schema, model, Document, Types } from 'mongoose';
+import { ExpenseCategory } from '../enums';
 
 export interface IExpense extends Document {
   tenantId: Types.ObjectId;
@@ -30,18 +31,9 @@ const ExpenseSchema = new Schema<IExpense>(
     tournamentId: { type: Schema.Types.ObjectId, ref: 'Tournament' },
     category: {
       type: String,
-      enum: [
-        'equipment',
-        'kit_jerseys',
-        'tournament_entry_fee',
-        'ground_booking',
-        'refreshment',
-        'transport',
-        'medication',
-        'other',
-      ],
+      enum: Object.values(ExpenseCategory),
       required: true,
-      default: 'equipment',
+      default: ExpenseCategory.EQUIPMENT,
     },
     title: { type: String, required: true, trim: true },
     amount: { type: Number, required: true },

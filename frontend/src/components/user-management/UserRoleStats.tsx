@@ -1,5 +1,5 @@
 import React from 'react';
-import { Users, Shield, ShieldCheck, Crown, User } from 'lucide-react';
+import { Users } from 'lucide-react';
 import { RoleFilterType, UserCounts } from './types';
 
 export interface UserRoleStatsProps {
@@ -22,7 +22,6 @@ export const UserRoleStats: React.FC<UserRoleStatsProps> = ({
         tabIndex={0}
       >
         <div className="admin-stat-icon total">
-          <Users size={18} />
         </div>
         <div className="admin-stat-content">
           <span className="admin-stat-number">{counts.total}</span>
@@ -37,7 +36,6 @@ export const UserRoleStats: React.FC<UserRoleStatsProps> = ({
         tabIndex={0}
       >
         <div className="admin-stat-icon captains">
-          <Shield size={18} />
         </div>
         <div className="admin-stat-content">
           <span className="admin-stat-number">{counts.captains}</span>
@@ -52,7 +50,6 @@ export const UserRoleStats: React.FC<UserRoleStatsProps> = ({
         tabIndex={0}
       >
         <div className="admin-stat-icon players">
-          <User size={18} />
         </div>
         <div className="admin-stat-content">
           <span className="admin-stat-number">{counts.normalPlayers}</span>
@@ -67,7 +64,6 @@ export const UserRoleStats: React.FC<UserRoleStatsProps> = ({
         tabIndex={0}
       >
         <div className="admin-stat-icon admin">
-          <ShieldCheck size={18} />
         </div>
         <div className="admin-stat-content">
           <span className="admin-stat-number">{counts.admins || 0}</span>
@@ -82,7 +78,6 @@ export const UserRoleStats: React.FC<UserRoleStatsProps> = ({
         tabIndex={0}
       >
         <div className="admin-stat-icon admins">
-          <Crown size={18} />
         </div>
         <div className="admin-stat-content">
           <span className="admin-stat-number">{counts.superAdmins}</span>
